@@ -1,11 +1,11 @@
-import { ClerkProvider } from "@/providers/clerk";
 import { Stack } from "expo-router";
+import { AppwriteProvider } from "@/providers/appwrite";
 import "./global.css";
 
 export default function RootLayout() {
   return (
-    <ClerkProvider>
+    <AppwriteProvider>
       <Stack screenOptions={{ headerShown: false }} />
-    </ClerkProvider>
+    </AppwriteProvider>
   );
 }

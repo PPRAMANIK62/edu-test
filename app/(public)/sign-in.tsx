@@ -1,7 +1,7 @@
-import { useSignIn } from "@clerk/clerk-expo";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,30 +13,35 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignInScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
+  const { signIn, userProfile } = useAppwrite();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async () => {
-    if (!isLoaded) return;
-
-    try {
-      setLoading(true);
-
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
-
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+  // Navigate based on user role when userProfile is set
+  useEffect(() => {
+    if (userProfile?.role) {
+      if (userProfile.role === "student") {
         router.replace("/(student)/(tabs)/dashboard");
+      } else {
+        router.replace("/(teacher)/(tabs)/dashboard");
       }
-    } catch (err: any) {
-      Alert.alert("Error", err?.errors?.[0]?.message || "Failed to sign in");
+    }
+  }, [userProfile, router]);
+
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signIn(email, password);
+    } catch (error: any) {
+      Alert.alert("Sign In Failed", error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
