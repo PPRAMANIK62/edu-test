@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function SignInScreen() {
+const SignInScreen = () => {
   const router = useRouter();
   const { signIn, userProfile } = useAppwrite();
   const [email, setEmail] = useState("");
@@ -40,8 +40,12 @@ export default function SignInScreen() {
     setLoading(true);
     try {
       await signIn(email, password);
-    } catch (error: any) {
-      Alert.alert("Sign In Failed", error.message || "An error occurred");
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert("Sign In Failed", error.message);
+      } else {
+        Alert.alert("Sign In Failed", "An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -143,4 +147,6 @@ export default function SignInScreen() {
       </View>
     </SafeAreaView>
   );
-}
+};
+
+export default SignInScreen;

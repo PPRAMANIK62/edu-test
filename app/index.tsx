@@ -1,8 +1,8 @@
-import { Redirect } from "expo-router";
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
-export default function Index() {
+const Index = () => {
   const { currentUser, userProfile, loading } = useAppwrite();
 
   if (loading) {
@@ -23,4 +23,6 @@ export default function Index() {
   }
 
   return <Redirect href="/(public)/welcome" />;
-}
+};
+
+export default Index;

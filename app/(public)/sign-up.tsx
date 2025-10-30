@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function SignUpScreen() {
+const SignUpScreen = () => {
   const router = useRouter();
   const { signUp } = useAppwrite();
   const [email, setEmail] = useState("");
@@ -40,8 +40,12 @@ export default function SignUpScreen() {
       } else {
         router.replace("/(teacher)/(tabs)/dashboard");
       }
-    } catch (error: any) {
-      Alert.alert("Sign Up Failed", error.message || "An error occurred");
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert("Sign Up Failed", error.message);
+      } else {
+        Alert.alert("Sign Up Failed", "An unexpected error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -215,4 +219,6 @@ export default function SignUpScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
+export default SignUpScreen;

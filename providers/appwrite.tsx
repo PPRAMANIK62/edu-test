@@ -40,7 +40,7 @@ const AppwriteContext = createContext<AppwriteContextType | undefined>(
   undefined
 );
 
-export function AppwriteProvider({ children }: { children: ReactNode }) {
+export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<AppwriteUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -266,12 +266,12 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
       {children}
     </AppwriteContext.Provider>
   );
-}
+};
 
-export function useAppwrite() {
+export const useAppwrite = () => {
   const context = useContext(AppwriteContext);
   if (context === undefined) {
     throw new Error("useAppwrite must be used within AppwriteProvider");
   }
   return context;
-}
+};

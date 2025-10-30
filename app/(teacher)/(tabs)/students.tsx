@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function TeacherStudents() {
+const TeacherStudents = () => {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -115,4 +115,6 @@ export default function TeacherStudents() {
       </ScrollView>
     </View>
   );
-}
+};
+
+export default TeacherStudents;

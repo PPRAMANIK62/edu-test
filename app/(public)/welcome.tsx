@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { height } = Dimensions.get("window");
 
-export default function WelcomeScreen() {
+const WelcomeScreen = () => {
   const router = useRouter();
 
   return (
@@ -86,7 +86,9 @@ export default function WelcomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
+
+export default WelcomeScreen;
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -94,7 +96,7 @@ interface FeatureCardProps {
   description: string;
 }
 
-function FeatureCard({ icon, title, description }: FeatureCardProps) {
+const FeatureCard = ({ icon, title, description }: FeatureCardProps) => {
   return (
     <View className="flex-row items-start mb-6">
       <View className="bg-primary-50 rounded-full p-3 mr-4">{icon}</View>
@@ -108,4 +110,4 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
       </View>
     </View>
   );
-}
+};

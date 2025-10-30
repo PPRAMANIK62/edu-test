@@ -3,7 +3,7 @@ import { useAppwrite as useAppwriteContext } from "@/providers/appwrite";
 export { useAppwriteContext as useAppwrite };
 
 // Additional convenience hooks can be added here
-export function useAuth() {
+export const useAuth = () => {
   const { currentUser, loading, signIn, signOut, signUp } =
     useAppwriteContext();
   return {
@@ -14,9 +14,9 @@ export function useAuth() {
     signOut,
     signUp,
   };
-}
+};
 
-export function useUser() {
+export const useUser = () => {
   const { currentUser, userProfile, loading } = useAppwriteContext();
   return {
     user: currentUser,
@@ -24,4 +24,4 @@ export function useUser() {
     loading,
     isAuthenticated: !!currentUser,
   };
-}
+};
