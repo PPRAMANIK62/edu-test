@@ -1,4 +1,4 @@
-import CourseCard from "@/components/teacher/course-card";
+import TeacherCourseCard from "@/components/teacher/course-card";
 import { MOCK_COURSES } from "@/lib/mockdata";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Plus } from "lucide-react-native";
@@ -40,7 +40,7 @@ const TeacherCourses = () => {
 
         <View className="px-6 pb-8">
           {courses?.map((course) => (
-            <CourseCard key={course.id} course={course} />
+            <TeacherCourseCard key={course.id} course={course} />
           ))}
 
           {(!courses || courses.length === 0) && (

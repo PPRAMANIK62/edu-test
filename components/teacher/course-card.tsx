@@ -3,7 +3,7 @@ import { BookOpen, Edit3, Star, Trash2, Users } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
-const CourseCard = ({ course }: { course: Course }) => {
+const TeacherCourseCard = ({ course }: { course: Course }) => {
   return (
     <View key={course.id} className="mb-4">
       <TouchableOpacity
@@ -85,4 +85,4 @@ const CourseCard = ({ course }: { course: Course }) => {
   );
 };
 
-export default CourseCard;
+export default TeacherCourseCard;
