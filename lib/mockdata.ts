@@ -2,6 +2,7 @@ import {
   Course,
   Question,
   RecentActivity,
+  Student,
   StudentDashboardStats,
   TeacherDashboardStats,
   Test,
@@ -87,6 +88,60 @@ export const MOCK_COURSES: Course[] = [
     enrollmentCount: 743,
   },
 ];
+
+export const MOCK_STUDENTS: Student[] = [
+  {
+    id: "stu-1",
+    name: "Alex Thompson",
+    email: "alex.thompson@email.com",
+    enrolledCourses: 2,
+    completedTests: 8,
+    averageScore: 87,
+    totalSpent: 129.98,
+    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    status: "active" as const,
+  },
+  {
+    id: "stu-2",
+    name: "Emma Wilson",
+    email: "emma.wilson@email.com",
+    enrolledCourses: 1,
+    completedTests: 4,
+    averageScore: 92,
+    totalSpent: 79.99,
+    lastActive: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    status: "active" as const,
+  },
+  {
+    id: "stu-3",
+    name: "Michael Chen",
+    email: "michael.chen@email.com",
+    enrolledCourses: 3,
+    completedTests: 15,
+    averageScore: 84,
+    totalSpent: 209.97,
+    lastActive: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    status: "active" as const,
+  },
+  {
+    id: "stu-4",
+    name: "Sarah Johnson",
+    email: "sarah.j@email.com",
+    enrolledCourses: 1,
+    completedTests: 2,
+    averageScore: 78,
+    totalSpent: 49.99,
+    lastActive: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "inactive" as const,
+  },
+];
+
+export const MOCK_STATS = {
+  totalActive: 3847,
+  newThisMonth: 127,
+  avgCompletion: 68,
+  topPerformer: "Emma Wilson",
+};
 
 export const MOCK_TESTS: Test[] = [
   {

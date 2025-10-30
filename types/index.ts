@@ -35,6 +35,18 @@ export interface Course {
   enrollmentCount: number;
 }
 
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  enrolledCourses: number;
+  completedTests: number;
+  averageScore: number;
+  totalSpent: number;
+  lastActive: string;
+  status: "active" | "inactive";
+}
+
 export interface Test {
   id: string;
   courseId: string;
