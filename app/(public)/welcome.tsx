@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   BookOpen,
@@ -30,12 +29,12 @@ export default function WelcomeScreen() {
         <View className="flex-1 px-6 pt-8">
           <View className="mb-12">
             <View className="flex-row items-center mb-4">
-              <GraduationCap size={40} color="#1890ff" strokeWidth={2.5} />
-              <Text className="text-3xl font-bold text-gray-900 ml-3">
+              <GraduationCap size={50} color="#1890ff" strokeWidth={2.5} />
+              <Text className="text-4xl font-bold text-gray-900 ml-3">
                 EduTest
               </Text>
             </View>
-            <Text className="text-4xl font-bold text-gray-900 mb-4">
+            <Text className="text-3xl font-bold text-gray-900 mb-4">
               Master Your {"\n"}Exam Prep
             </Text>
             <Text className="text-lg text-gray-600">
@@ -68,16 +67,9 @@ export default function WelcomeScreen() {
               className="bg-primary-600 rounded-2xl py-4 mb-4 overflow-hidden"
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={["#1890ff", "#0976e8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="py-4 items-center"
-              >
-                <Text className="text-white text-lg font-semibold">
-                  Get Started
-                </Text>
-              </LinearGradient>
+              <Text className="text-white text-lg font-semibold text-center">
+                Get Started
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
