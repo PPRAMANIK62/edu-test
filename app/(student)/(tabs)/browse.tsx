@@ -5,7 +5,7 @@ import React from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function BrowseTab() {
+const BrowseTab = () => {
   const insets = useSafeAreaInsets();
 
   const { data: courses } = useQuery({
@@ -36,4 +36,6 @@ export default function BrowseTab() {
       </ScrollView>
     </View>
   );
-}
+};
+
+export default BrowseTab;
