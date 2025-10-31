@@ -9,7 +9,6 @@ const TestCard = ({ test }: { test: Test }) => {
   const course = MOCK_COURSES.find((c) => c.id === test.courseId);
   return (
     <TouchableOpacity
-      key={test.id}
       onPress={() => router.push(`/(student)/test/${test.id}/intro`)}
       activeOpacity={0.9}
       className="bg-white rounded-2xl p-4 shadow-sm mb-4"

@@ -7,7 +7,6 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 const StudentCourseCard = ({ course }: { course: Course }) => {
   return (
     <TouchableOpacity
-      key={course.id}
       onPress={() => router.push(`/(student)/courses/${course.id}`)}
       activeOpacity={0.9}
       className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4"

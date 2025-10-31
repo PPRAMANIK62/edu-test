@@ -35,10 +35,7 @@ const BrowseCard = ({ course }: { course: Course }) => {
   });
 
   return (
-    <View
-      key={course.id}
-      className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4"
-    >
+    <View className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
       <TouchableOpacity
         onPress={() => {
           if (course.isPurchased) {
