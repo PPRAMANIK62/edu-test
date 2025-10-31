@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 
-export default function CourseDetail() {
+const CourseDetail = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -176,4 +176,6 @@ export default function CourseDetail() {
       </View>
     </>
   );
-}
+};
+
+export default CourseDetail;

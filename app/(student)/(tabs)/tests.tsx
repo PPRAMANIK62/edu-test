@@ -7,7 +7,7 @@ import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function TestsTab() {
+const TestsTab = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -58,4 +58,6 @@ export default function TestsTab() {
       </ScrollView>
     </View>
   );
-}
+};
+
+export default TestsTab;

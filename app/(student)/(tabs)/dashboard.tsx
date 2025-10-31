@@ -13,7 +13,7 @@ import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function StudentDashboard() {
+const StudentDashboard = () => {
   const insets = useSafeAreaInsets();
 
   const { data: stats } = useQuery({
@@ -128,4 +128,6 @@ export default function StudentDashboard() {
       </ScrollView>
     </View>
   );
-}
+};
+
+export default StudentDashboard;
