@@ -38,11 +38,9 @@ const BrowseCard = ({ course }: { course: Course }) => {
     <View className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
       <TouchableOpacity
         onPress={() => {
-          if (course.isPurchased) {
-            router.push(`/(student)/courses/${course.id}` as any);
-          }
+          router.push(`/(student)/courses/${course.id}`);
         }}
-        activeOpacity={course.isPurchased ? 0.9 : 1}
+        activeOpacity={0.9}
       >
         <Image
           source={{ uri: course.imageUrl }}
