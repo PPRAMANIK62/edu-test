@@ -57,19 +57,19 @@ const TeacherStudents = () => {
               icon={<Users size={20} color="#7c3aed" />}
               value={stats?.totalActive.toLocaleString() ?? "0"}
               label="Total Active"
-              bgColor="bg-violet-50"
+              iconBgColor="bg-violet-50"
             />
             <StatCard
               icon={<TrendingUp size={20} color="#10b981" />}
               value={`+${stats?.newThisMonth ?? 0}`}
               label="This Month"
-              bgColor="bg-emerald-50"
+              iconBgColor="bg-emerald-50"
             />
             <StatCard
               icon={<Award size={20} color="#0ea5e9" />}
               value={`${stats?.avgCompletion ?? 0}%`}
               label="Avg Completion"
-              bgColor="bg-sky-50"
+              iconBgColor="bg-sky-50"
             />
           </View>
 

@@ -138,3 +138,11 @@ export interface RecentActivity {
   timestamp: string;
   metadata?: Record<string, any>;
 }
+
+export interface RecentEnrollment {
+  id: string;
+  studentName: string;
+  courseTitle: string;
+  enrolledAt: string;
+  status: "active" | "completed";
+}

@@ -2,6 +2,7 @@ import {
   Course,
   Question,
   RecentActivity,
+  RecentEnrollment,
   Student,
   StudentDashboardStats,
   TeacherDashboardStats,
@@ -317,5 +318,29 @@ export const MOCK_RECENT_ACTIVITIES: RecentActivity[] = [
     title: "Complete SAT Math Preparation",
     subtitle: "Started learning • 12 tests available",
     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+export const MOCK_RECENT_ENROLLMENTS: RecentEnrollment[] = [
+  {
+    id: "enr-1",
+    studentName: "Alex Thompson",
+    courseTitle: "Complete SAT Math Preparation",
+    enrolledAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    status: "active" as const,
+  },
+  {
+    id: "enr-2",
+    studentName: "Emma Wilson",
+    courseTitle: "Medical Entrance Exam Prep",
+    enrolledAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    status: "active" as const,
+  },
+  {
+    id: "enr-3",
+    studentName: "Michael Chen",
+    courseTitle: "Complete SAT Math Preparation",
+    enrolledAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    status: "completed" as const,
   },
 ];

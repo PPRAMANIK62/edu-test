@@ -60,25 +60,25 @@ const StudentDashboard = () => {
               icon={<BookOpen size={20} color="#1890ff" />}
               label="Courses"
               value={stats?.coursesEnrolled.toString() || "0"}
-              bgColor="bg-blue-50"
+              iconBgColor="bg-blue-50"
             />
             <StatCard
               icon={<Award size={20} color="#38a169" />}
               label="Tests Done"
               value={stats?.testsCompleted.toString() || "0"}
-              bgColor="bg-green-50"
+              iconBgColor="bg-green-50"
             />
             <StatCard
               icon={<TrendingUp size={20} color="#f59e0b" />}
               label="Avg Score"
               value={`${stats?.averageScore || 0}%`}
-              bgColor="bg-amber-50"
+              iconBgColor="bg-amber-50"
             />
             <StatCard
               icon={<Clock size={20} color="#8b5cf6" />}
               label="Study Hours"
               value={stats?.totalStudyHours.toString() || "0"}
-              bgColor="bg-purple-50"
+              iconBgColor="bg-purple-50"
             />
           </View>
         </View>
