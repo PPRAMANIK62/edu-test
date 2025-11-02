@@ -146,10 +146,7 @@ const TeacherDashboard = () => {
         </View>
 
         <View className="px-6 mb-6">
-          <SectionHeader
-            title="Course Performance"
-            onViewAll={() => console.log("View all courses performance")}
-          />
+          <SectionHeader title="Course Performance" />
           <View className="gap-3">
             {coursePerformance?.map((course) => (
               <TouchableOpacity
@@ -157,7 +154,9 @@ const TeacherDashboard = () => {
                 activeOpacity={0.7}
                 className="bg-white rounded-2xl p-4 shadow-sm"
                 onPress={() => {
-                  console.log("Navigate to course analytics:", course.courseId);
+                  router.push(
+                    `/(teacher)/courses/${course.courseId}/analytics`
+                  );
                 }}
               >
                 <View className="flex-row items-start justify-between mb-3">
@@ -181,7 +180,7 @@ const TeacherDashboard = () => {
                   <TouchableOpacity
                     className="bg-violet-50 rounded-full p-2"
                     onPress={() => {
-                      console.log("Edit course:", course.courseId);
+                      router.push(`/(teacher)/courses/${course.courseId}/edit`);
                     }}
                   >
                     <Edit3 size={16} color="#7c3aed" />
@@ -208,10 +207,7 @@ const TeacherDashboard = () => {
         </View>
 
         <View className="px-6 mb-6">
-          <SectionHeader
-            title="Recent Enrollments"
-            onViewAll={() => console.log("View all enrollments")}
-          />
+          <SectionHeader title="Recent Enrollments" />
           <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
             {recentEnrollments?.map((enrollment, index) => (
               <EnrollmentItem
@@ -232,19 +228,21 @@ const TeacherDashboard = () => {
             <QuickActionButton
               icon={<BarChart3 size={20} color="#7c3aed" />}
               label="View Analytics"
-              onPress={() => console.log("Navigate to analytics")}
+              onPress={() => {
+                router.push("/(teacher)/analytics");
+              }}
               iconBgColor="bg-violet-50"
             />
             <QuickActionButton
               icon={<Users size={20} color="#0ea5e9" />}
               label="Manage Students"
-              onPress={() => router.push("/(teacher)/(tabs)/students" as any)}
+              onPress={() => router.push("/(teacher)/(tabs)/students")}
               iconBgColor="bg-sky-50"
             />
             <QuickActionButton
               icon={<BookOpen size={20} color="#10b981" />}
               label="Manage Courses"
-              onPress={() => router.push("/(teacher)/(tabs)/courses" as any)}
+              onPress={() => router.push("/(teacher)/(tabs)/courses")}
               iconBgColor="bg-emerald-50"
             />
           </View>

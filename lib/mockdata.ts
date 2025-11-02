@@ -1,5 +1,8 @@
 import {
   Course,
+  MockEnrollment,
+  MockPurchase,
+  MockTestAttempt,
   Question,
   RecentActivity,
   RecentEnrollment,
@@ -461,5 +464,317 @@ export const MOCK_STUDENT_TEST_ATTEMPTS = [
     percentage: 75,
     completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     passed: true,
+  },
+];
+
+/**
+ * Mock enrollment data for analytics calculations
+ * Includes varied enrollment dates over multiple months
+ */
+export const MOCK_ENROLLMENTS: MockEnrollment[] = [
+  // Course 1 enrollments (Complete SAT Math Preparation)
+  {
+    id: "enr-1",
+    courseId: "course-1",
+    studentId: "stu-1",
+    enrolledAt: "2025-09-15T10:00:00Z",
+    status: "active",
+    progress: 65,
+  },
+  {
+    id: "enr-2",
+    courseId: "course-1",
+    studentId: "stu-2",
+    enrolledAt: "2025-09-20T14:30:00Z",
+    status: "active",
+    progress: 45,
+  },
+  {
+    id: "enr-3",
+    courseId: "course-1",
+    studentId: "stu-3",
+    enrolledAt: "2025-10-01T09:15:00Z",
+    status: "active",
+    progress: 30,
+  },
+  {
+    id: "enr-4",
+    courseId: "course-1",
+    studentId: "stu-4",
+    enrolledAt: "2025-10-10T16:45:00Z",
+    status: "active",
+    progress: 55,
+  },
+  {
+    id: "enr-5",
+    courseId: "course-1",
+    studentId: "stu-5",
+    enrolledAt: "2025-10-15T11:20:00Z",
+    status: "completed",
+    progress: 100,
+  },
+  {
+    id: "enr-6",
+    courseId: "course-1",
+    studentId: "stu-6",
+    enrolledAt: "2025-10-25T13:00:00Z",
+    status: "active",
+    progress: 20,
+  },
+  {
+    id: "enr-7",
+    courseId: "course-1",
+    studentId: "stu-7",
+    enrolledAt: "2025-11-01T08:30:00Z",
+    status: "active",
+    progress: 15,
+  },
+  // Course 3 enrollments (Medical Entrance Exam Prep)
+  {
+    id: "enr-8",
+    courseId: "course-3",
+    studentId: "stu-1",
+    enrolledAt: "2025-09-10T12:00:00Z",
+    status: "active",
+    progress: 32,
+  },
+  {
+    id: "enr-9",
+    courseId: "course-3",
+    studentId: "stu-8",
+    enrolledAt: "2025-09-25T15:30:00Z",
+    status: "active",
+    progress: 40,
+  },
+  {
+    id: "enr-10",
+    courseId: "course-3",
+    studentId: "stu-9",
+    enrolledAt: "2025-10-05T10:45:00Z",
+    status: "active",
+    progress: 25,
+  },
+  {
+    id: "enr-11",
+    courseId: "course-3",
+    studentId: "stu-10",
+    enrolledAt: "2025-10-20T14:00:00Z",
+    status: "active",
+    progress: 18,
+  },
+];
+
+/**
+ * Mock test attempt data for analytics calculations
+ * Includes scores, completion dates, and course associations
+ */
+export const MOCK_TEST_ATTEMPTS: MockTestAttempt[] = [
+  // Course 1 test attempts
+  {
+    id: "ta-1",
+    testId: "test-1",
+    courseId: "course-1",
+    studentId: "stu-1",
+    score: 18,
+    percentage: 90,
+    completedAt: "2025-09-20T14:00:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-2",
+    testId: "test-2",
+    courseId: "course-1",
+    studentId: "stu-1",
+    score: 16,
+    percentage: 80,
+    completedAt: "2025-09-25T10:30:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-3",
+    testId: "test-1",
+    courseId: "course-1",
+    studentId: "stu-2",
+    score: 15,
+    percentage: 75,
+    completedAt: "2025-09-28T16:00:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-4",
+    testId: "test-3",
+    courseId: "course-1",
+    studentId: "stu-3",
+    score: 12,
+    percentage: 60,
+    completedAt: "2025-10-05T11:15:00Z",
+    passed: false,
+  },
+  {
+    id: "ta-5",
+    testId: "test-1",
+    courseId: "course-1",
+    studentId: "stu-4",
+    score: 19,
+    percentage: 95,
+    completedAt: "2025-10-15T09:45:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-6",
+    testId: "test-2",
+    courseId: "course-1",
+    studentId: "stu-5",
+    score: 17,
+    percentage: 85,
+    completedAt: "2025-10-20T13:20:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-7",
+    testId: "test-4",
+    courseId: "course-1",
+    studentId: "stu-5",
+    score: 20,
+    percentage: 100,
+    completedAt: "2025-10-28T15:00:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-8",
+    testId: "test-1",
+    courseId: "course-1",
+    studentId: "stu-7",
+    score: 14,
+    percentage: 70,
+    completedAt: "2025-11-01T10:00:00Z",
+    passed: true,
+  },
+  // Course 3 test attempts
+  {
+    id: "ta-9",
+    testId: "test-5",
+    courseId: "course-3",
+    studentId: "stu-1",
+    score: 16,
+    percentage: 80,
+    completedAt: "2025-09-18T12:30:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-10",
+    testId: "test-6",
+    courseId: "course-3",
+    studentId: "stu-8",
+    score: 18,
+    percentage: 90,
+    completedAt: "2025-10-02T14:45:00Z",
+    passed: true,
+  },
+  {
+    id: "ta-11",
+    testId: "test-5",
+    courseId: "course-3",
+    studentId: "stu-9",
+    score: 13,
+    percentage: 65,
+    completedAt: "2025-10-12T09:00:00Z",
+    passed: false,
+  },
+  {
+    id: "ta-12",
+    testId: "test-7",
+    courseId: "course-3",
+    studentId: "stu-10",
+    score: 15,
+    percentage: 75,
+    completedAt: "2025-10-25T11:30:00Z",
+    passed: true,
+  },
+];
+
+/**
+ * Mock purchase data for revenue analytics
+ * Includes purchase dates and amounts over multiple months
+ */
+export const MOCK_PURCHASES: MockPurchase[] = [
+  // Course 1 purchases
+  {
+    id: "pur-1",
+    courseId: "course-1",
+    studentId: "stu-1",
+    amount: 49.99,
+    purchasedAt: "2025-09-15T10:00:00Z",
+  },
+  {
+    id: "pur-2",
+    courseId: "course-1",
+    studentId: "stu-2",
+    amount: 49.99,
+    purchasedAt: "2025-09-20T14:30:00Z",
+  },
+  {
+    id: "pur-3",
+    courseId: "course-1",
+    studentId: "stu-3",
+    amount: 49.99,
+    purchasedAt: "2025-10-01T09:15:00Z",
+  },
+  {
+    id: "pur-4",
+    courseId: "course-1",
+    studentId: "stu-4",
+    amount: 49.99,
+    purchasedAt: "2025-10-10T16:45:00Z",
+  },
+  {
+    id: "pur-5",
+    courseId: "course-1",
+    studentId: "stu-5",
+    amount: 49.99,
+    purchasedAt: "2025-10-15T11:20:00Z",
+  },
+  {
+    id: "pur-6",
+    courseId: "course-1",
+    studentId: "stu-6",
+    amount: 49.99,
+    purchasedAt: "2025-10-25T13:00:00Z",
+  },
+  {
+    id: "pur-7",
+    courseId: "course-1",
+    studentId: "stu-7",
+    amount: 49.99,
+    purchasedAt: "2025-11-01T08:30:00Z",
+  },
+  // Course 3 purchases
+  {
+    id: "pur-8",
+    courseId: "course-3",
+    studentId: "stu-1",
+    amount: 79.99,
+    purchasedAt: "2025-09-10T12:00:00Z",
+  },
+  {
+    id: "pur-9",
+    courseId: "course-3",
+    studentId: "stu-8",
+    amount: 79.99,
+    purchasedAt: "2025-09-25T15:30:00Z",
+  },
+  {
+    id: "pur-10",
+    courseId: "course-3",
+    studentId: "stu-9",
+    amount: 79.99,
+    purchasedAt: "2025-10-05T10:45:00Z",
+  },
+  {
+    id: "pur-11",
+    courseId: "course-3",
+    studentId: "stu-10",
+    amount: 79.99,
+    purchasedAt: "2025-10-20T14:00:00Z",
   },
 ];

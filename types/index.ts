@@ -176,3 +176,94 @@ export interface StudentTestAttempt {
   completedAt: string;
   passed: boolean;
 }
+
+// Analytics Types
+
+/**
+ * Time range filter for analytics queries
+ */
+export type TimeRangeFilter = "7d" | "30d" | "90d" | "1y" | "all";
+
+/**
+ * Options for analytics queries
+ */
+export interface AnalyticsQueryOptions {
+  timeRange?: TimeRangeFilter;
+  courseId?: string;
+}
+
+/**
+ * Course performance metrics calculated from database
+ */
+export interface CoursePerformanceMetrics {
+  courseId: string;
+  courseTitle: string;
+  totalRevenue: number;
+  totalEnrollments: number;
+  averageRating: number;
+  completionRate: number;
+  trends: {
+    revenueChange: number; // percentage
+    enrollmentChange: number; // percentage
+    ratingChange: number; // percentage
+  };
+}
+
+/**
+ * Student engagement metrics for a course
+ */
+export interface StudentEngagementMetrics {
+  totalStudents: number;
+  activeStudents: number; // students with at least one test attempt
+  averageTestScore: number;
+  totalTestAttempts: number;
+  completionRate: number;
+}
+
+/**
+ * Revenue analytics metrics
+ */
+export interface RevenueMetrics {
+  totalRevenue: number;
+  revenueByMonth: { month: string; revenue: number }[];
+  topCourses: {
+    courseId: string;
+    courseTitle: string;
+    revenue: number;
+  }[];
+  trends: {
+    percentageChange: number;
+    comparisonPeriod: string;
+  };
+}
+
+/**
+ * Mock data types for analytics calculations
+ */
+export interface MockEnrollment {
+  id: string;
+  courseId: string;
+  studentId: string;
+  enrolledAt: string;
+  status: "active" | "completed";
+  progress: number;
+}
+
+export interface MockTestAttempt {
+  id: string;
+  testId: string;
+  courseId: string;
+  studentId: string;
+  score: number;
+  percentage: number;
+  completedAt: string;
+  passed: boolean;
+}
+
+export interface MockPurchase {
+  id: string;
+  courseId: string;
+  studentId: string;
+  amount: number;
+  purchasedAt: string;
+}
