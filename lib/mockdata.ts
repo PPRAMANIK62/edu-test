@@ -344,3 +344,122 @@ export const MOCK_RECENT_ENROLLMENTS: RecentEnrollment[] = [
     status: "completed" as const,
   },
 ];
+
+/**
+ * Mock student enrollment data for teacher views
+ * Links students to courses with progress tracking
+ */
+export const MOCK_STUDENT_ENROLLMENTS = [
+  {
+    id: "se-1",
+    studentId: "student-1",
+    courseId: "course-1",
+    courseTitle: "Complete SAT Math Preparation",
+    enrolledAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 65,
+    status: "active" as const,
+  },
+  {
+    id: "se-2",
+    studentId: "student-1",
+    courseId: "course-3",
+    courseTitle: "Medical Entrance Exam Prep",
+    enrolledAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 100,
+    status: "completed" as const,
+  },
+  {
+    id: "se-3",
+    studentId: "student-2",
+    courseId: "course-1",
+    courseTitle: "Complete SAT Math Preparation",
+    enrolledAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 30,
+    status: "active" as const,
+  },
+  {
+    id: "se-4",
+    studentId: "student-2",
+    courseId: "course-2",
+    courseTitle: "IELTS Academic Mastery",
+    enrolledAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 45,
+    status: "active" as const,
+  },
+  {
+    id: "se-5",
+    studentId: "student-3",
+    courseId: "course-3",
+    courseTitle: "Medical Entrance Exam Prep",
+    enrolledAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    progress: 20,
+    status: "active" as const,
+  },
+];
+
+/**
+ * Mock student test attempt data for performance tracking
+ * Includes scores and pass/fail status
+ */
+export const MOCK_STUDENT_TEST_ATTEMPTS = [
+  {
+    id: "sta-1",
+    studentId: "student-1",
+    testId: "test-1",
+    testTitle: "Algebra Fundamentals",
+    score: 18,
+    percentage: 90,
+    completedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: true,
+  },
+  {
+    id: "sta-2",
+    studentId: "student-1",
+    testId: "test-2",
+    testTitle: "Geometry Essentials",
+    score: 16,
+    percentage: 80,
+    completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: true,
+  },
+  {
+    id: "sta-3",
+    studentId: "student-1",
+    testId: "test-3",
+    testTitle: "Statistics & Probability",
+    score: 14,
+    percentage: 70,
+    completedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: true,
+  },
+  {
+    id: "sta-4",
+    studentId: "student-2",
+    testId: "test-1",
+    testTitle: "Algebra Fundamentals",
+    score: 12,
+    percentage: 60,
+    completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: false,
+  },
+  {
+    id: "sta-5",
+    studentId: "student-2",
+    testId: "test-4",
+    testTitle: "Reading Comprehension",
+    score: 17,
+    percentage: 85,
+    completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: true,
+  },
+  {
+    id: "sta-6",
+    studentId: "student-3",
+    testId: "test-5",
+    testTitle: "Biology Basics",
+    score: 15,
+    percentage: 75,
+    completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    passed: true,
+  },
+];

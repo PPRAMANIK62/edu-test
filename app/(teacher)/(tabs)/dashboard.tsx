@@ -119,7 +119,7 @@ const TeacherDashboard = () => {
         <View className="px-6 mb-6">
           <TouchableOpacity
             onPress={() => {
-              console.log("Navigate to create course");
+              router.push("/(teacher)/courses/create");
             }}
             activeOpacity={0.9}
             className="rounded-2xl overflow-hidden shadow-sm"
@@ -148,7 +148,7 @@ const TeacherDashboard = () => {
         <View className="px-6 mb-6">
           <SectionHeader
             title="Course Performance"
-            onViewAll={() => console.log("View all courses")}
+            onViewAll={() => console.log("View all courses performance")}
           />
           <View className="gap-3">
             {coursePerformance?.map((course) => (

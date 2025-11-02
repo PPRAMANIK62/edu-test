@@ -1,6 +1,7 @@
 import TeacherCourseCard from "@/components/teacher/course-card";
 import { MOCK_COURSES } from "@/lib/mockdata";
 import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { BookOpen, Plus } from "lucide-react-native";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -25,7 +26,7 @@ const TeacherCourses = () => {
             <Text className="text-3xl font-bold text-gray-900">My Courses</Text>
             <TouchableOpacity
               onPress={() => {
-                console.log("Create new course");
+                router.push("/(teacher)/courses/create");
               }}
               className="bg-violet-600 rounded-full p-3 shadow-sm"
               activeOpacity={0.8}
@@ -59,7 +60,7 @@ const TeacherCourses = () => {
                 className="bg-violet-600 rounded-xl px-6 py-3 flex-row items-center"
                 activeOpacity={0.8}
                 onPress={() => {
-                  console.log("Create first course");
+                  router.push("/(teacher)/courses/create");
                 }}
               >
                 <Plus size={20} color="#fff" strokeWidth={2.5} />
