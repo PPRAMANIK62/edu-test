@@ -1,5 +1,6 @@
 import { formatTimeAgo } from "@/lib/utils";
 import { Student } from "@/types";
+import { router } from "expo-router";
 import { Star } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -11,7 +12,7 @@ const StudentCard = ({ student }: { student: Student }) => {
       activeOpacity={0.7}
       className="bg-white rounded-2xl p-4 shadow-sm"
       onPress={() => {
-        console.log("View student details:", student.id);
+        router.push(`/(teacher)/students/${student.id}`);
       }}
     >
       <View className="flex-row items-start mb-3">

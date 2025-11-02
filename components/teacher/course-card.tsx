@@ -1,4 +1,5 @@
 import { Course } from "@/types";
+import { router } from "expo-router";
 import { BookOpen, Edit3, Star, Trash2, Users } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
@@ -63,7 +64,7 @@ const TeacherCourseCard = ({ course }: { course: Course }) => {
               className="flex-1 bg-violet-600 rounded-xl py-3 flex-row items-center justify-center"
               activeOpacity={0.8}
               onPress={() => {
-                console.log("Edit course:", course.id);
+                router.push(`/(teacher)/courses/${course.id}/edit`);
               }}
             >
               <Edit3 size={16} color="#fff" />
