@@ -146,3 +146,33 @@ export interface RecentEnrollment {
   enrolledAt: string;
   status: "active" | "completed";
 }
+
+export interface CourseFormData {
+  title: string;
+  description: string;
+  price: string;
+  subjects: string[];
+  estimatedHours: string;
+  imageUrl: string;
+}
+
+export interface StudentEnrollment {
+  id: string;
+  studentId: string;
+  courseId: string;
+  courseTitle: string;
+  enrolledAt: string;
+  progress: number;
+  status: "active" | "completed";
+}
+
+export interface StudentTestAttempt {
+  id: string;
+  studentId: string;
+  testId: string;
+  testTitle: string;
+  score: number;
+  percentage: number;
+  completedAt: string;
+  passed: boolean;
+}

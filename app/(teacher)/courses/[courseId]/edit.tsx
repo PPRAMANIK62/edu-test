@@ -1,0 +1,267 @@
+import FormInput from "@/components/teacher/form-input";
+import FormSection from "@/components/teacher/form-section";
+import ImagePicker from "@/components/teacher/image-picker";
+import ScreenHeader from "@/components/teacher/screen-header";
+import SubjectPicker from "@/components/teacher/subject-picker";
+import { MOCK_COURSES } from "@/lib/mockdata";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const EditCourse = () => {
+  const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const queryClient = useQueryClient();
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [estimatedHours, setEstimatedHours] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [initialValues, setInitialValues] = useState<any>(null);
+
+  const { data: course, isLoading } = useQuery({
+    queryKey: ["course", courseId],
+    queryFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return MOCK_COURSES.find((c) => c.id === courseId);
+    },
+  });
+
+  useEffect(() => {
+    if (course && !initialValues) {
+      const values = {
+        title: course.title,
+        description: course.description,
+        price: course.price.toString(),
+        subjects: course.subjects,
+        estimatedHours: course.estimatedHours.toString(),
+        imageUri: course.imageUrl || null,
+      };
+      setTitle(values.title);
+      setDescription(values.description);
+      setPrice(values.price);
+      setSubjects(values.subjects);
+      setEstimatedHours(values.estimatedHours);
+      setImageUri(values.imageUri);
+      setInitialValues(values);
+    }
+  }, [course, initialValues]);
+
+  const isDirty =
+    initialValues &&
+    (title !== initialValues.title ||
+      description !== initialValues.description ||
+      price !== initialValues.price ||
+      JSON.stringify(subjects) !== JSON.stringify(initialValues.subjects) ||
+      estimatedHours !== initialValues.estimatedHours ||
+      imageUri !== initialValues.imageUri);
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!title.trim()) {
+      newErrors.title = "Title is required";
+    }
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+    if (!price.trim()) {
+      newErrors.price = "Price is required";
+    } else if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      newErrors.price = "Price must be a positive number";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return {
+        ...course,
+        title,
+        description,
+        price: parseFloat(price),
+        subjects,
+        estimatedHours: estimatedHours ? parseInt(estimatedHours) : 10,
+        imageUrl:
+          imageUri ||
+          "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+      Alert.alert("Success", "Course updated successfully!", [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ]);
+    },
+    onError: () => {
+      Alert.alert("Error", "Failed to update course. Please try again.");
+    },
+  });
+
+  const handleUpdate = () => {
+    if (validate()) {
+      updateMutation.mutate();
+    }
+  };
+
+  const handleCancel = () => {
+    if (isDirty) {
+      Alert.alert(
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to cancel?",
+        [
+          { text: "Keep Editing", style: "cancel" },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } else {
+      router.back();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white items-center justify-center"
+        edges={["top"]}
+      >
+        <ScreenHeader title="Edit Course" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#7c3aed" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!course) {
+    return (
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <ScreenHeader title="Edit Course" />
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-gray-900 font-bold text-xl mb-2">
+            Course Not Found
+          </Text>
+          <Text className="text-gray-600 text-center mb-6">
+            The course you&apos;re trying to edit doesn&apos;t exist.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="bg-violet-600 rounded-xl px-6 py-3"
+            activeOpacity={0.8}
+          >
+            <Text className="text-white font-semibold">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      <ScreenHeader title="Edit Course" onBack={handleCancel} />
+      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+        <View className="py-4">
+          <FormSection title="Basic Information">
+            <FormInput
+              label="Course Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g., Complete SAT Math Preparation"
+              error={errors.title}
+            />
+            <FormInput
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe what students will learn..."
+              error={errors.description}
+              multiline
+            />
+            <FormInput
+              label="Price (USD)"
+              value={price}
+              onChangeText={setPrice}
+              placeholder="49.99"
+              error={errors.price}
+              keyboardType="numeric"
+            />
+          </FormSection>
+
+          <FormSection title="Course Details">
+            <SubjectPicker
+              label="Subjects Covered"
+              subjects={subjects}
+              onSubjectsChange={setSubjects}
+            />
+            <FormInput
+              label="Estimated Hours"
+              value={estimatedHours}
+              onChangeText={setEstimatedHours}
+              placeholder="24"
+              keyboardType="numeric"
+            />
+            <ImagePicker
+              label="Course Image"
+              imageUri={imageUri}
+              onImageSelected={setImageUri}
+              onImageRemoved={() => setImageUri(null)}
+            />
+          </FormSection>
+
+          <View className="gap-3 mb-8">
+            <TouchableOpacity
+              onPress={handleUpdate}
+              disabled={updateMutation.isPending}
+              className="bg-violet-600 rounded-xl py-4 items-center"
+              activeOpacity={0.8}
+            >
+              {updateMutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white font-bold text-base">
+                  Save Changes
+                </Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleCancel}
+              disabled={updateMutation.isPending}
+              className="border border-gray-300 rounded-xl py-4 items-center"
+              activeOpacity={0.8}
+            >
+              <Text className="text-gray-700 font-semibold text-base">
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default EditCourse;
