@@ -1,5 +1,7 @@
 import TeacherCourseCard from "@/components/teacher/course-card";
 import { MOCK_COURSES } from "@/lib/mockdata";
+import { isTeacher } from "@/lib/permissions";
+import { useAppwrite } from "@/providers/appwrite";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { BookOpen, Plus } from "lucide-react-native";
@@ -8,6 +10,9 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherCourses = () => {
+  const { userProfile } = useAppwrite();
+  const canCreate = userProfile ? isTeacher(userProfile.role) : false;
+
   const insets = useSafeAreaInsets();
 
   const { data: courses } = useQuery({
@@ -24,15 +29,17 @@ const TeacherCourses = () => {
         <View className="px-6 pb-4" style={{ paddingTop: insets.top + 24 }}>
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-3xl font-bold text-gray-900">My Courses</Text>
-            <TouchableOpacity
-              onPress={() => {
-                router.push("/(teacher)/courses/create");
-              }}
-              className="bg-violet-600 rounded-full p-3 shadow-sm"
-              activeOpacity={0.8}
-            >
-              <Plus size={20} color="#fff" strokeWidth={2.5} />
-            </TouchableOpacity>
+            {canCreate && (
+              <TouchableOpacity
+                onPress={() => {
+                  router.push("/(teacher)/courses/create");
+                }}
+                className="bg-violet-600 rounded-full p-3 shadow-sm"
+                activeOpacity={0.8}
+              >
+                <Plus size={20} color="#fff" strokeWidth={2.5} />
+              </TouchableOpacity>
+            )}
           </View>
           <Text className="text-base text-gray-600">
             Manage your published courses and tests
@@ -41,10 +48,10 @@ const TeacherCourses = () => {
 
         <View className="px-6 pb-8">
           {courses?.map((course) => (
-            <TeacherCourseCard key={course.id} course={course} />
+            <TeacherCourseCard key={course.id} course={course} canCreate={canCreate} />
           ))}
 
-          {(!courses || courses.length === 0) && (
+          {(!courses || courses.length === 0) && canCreate && (
             <View className="items-center justify-center py-12">
               <View className="bg-violet-100 rounded-full p-6 mb-4">
                 <BookOpen size={40} color="#7c3aed" />

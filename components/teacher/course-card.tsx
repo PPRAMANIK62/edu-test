@@ -4,7 +4,13 @@ import { BookOpen, Edit3, Star, Trash2, Users } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
-const TeacherCourseCard = ({ course }: { course: Course }) => {
+const TeacherCourseCard = ({
+  course,
+  canCreate,
+}: {
+  course: Course;
+  canCreate: boolean;
+}) => {
   return (
     <View key={course.id} className="mb-4">
       <TouchableOpacity
@@ -70,15 +76,17 @@ const TeacherCourseCard = ({ course }: { course: Course }) => {
               <Edit3 size={16} color="#fff" />
               <Text className="text-white font-semibold ml-2">Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              className="bg-red-50 rounded-xl px-4 py-3"
-              activeOpacity={0.8}
-              onPress={() => {
-                console.log("Delete course:", course.id);
-              }}
-            >
-              <Trash2 size={16} color="#ef4444" />
-            </TouchableOpacity>
+            {canCreate && (
+              <TouchableOpacity
+                className="bg-red-50 rounded-xl px-4 py-3"
+                activeOpacity={0.8}
+                onPress={() => {
+                  console.log("Delete course:", course.id);
+                }}
+              >
+                <Trash2 size={16} color="#ef4444" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </TouchableOpacity>

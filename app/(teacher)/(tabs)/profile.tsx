@@ -1,4 +1,5 @@
-import { useAppwrite } from "@/providers/appwrite";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { isTeacher } from "@/lib/permissions";
 import { useRouter } from "expo-router";
 import {
   Bell,
@@ -10,31 +11,11 @@ import {
   Mail,
   Shield,
   User,
+  Users,
 } from "lucide-react-native";
 import React from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const ACCOUNT_ITEMS = [
-  {
-    icon: <User size={20} color="#7c3aed" />,
-    label: "Edit Profile",
-    onPress: () => console.log("Edit profile"),
-    iconBgColor: "bg-violet-50",
-  },
-  {
-    icon: <Mail size={20} color="#0ea5e9" />,
-    label: "Email Settings",
-    onPress: () => console.log("Email settings"),
-    iconBgColor: "bg-sky-50",
-  },
-  {
-    icon: <Bell size={20} color="#f59e0b" />,
-    label: "Notifications",
-    onPress: () => console.log("Notifications"),
-    iconBgColor: "bg-amber-50",
-  },
-];
 
 const BUSINESS_ITEMS = [
   {
@@ -85,6 +66,38 @@ const TeacherProfile = () => {
     ]);
   };
 
+  // Create account items array dynamically based on user permissions
+  const accountItems = [
+    {
+      icon: <User size={20} color="#7c3aed" />,
+      label: "Edit Profile",
+      onPress: () => console.log("Edit profile"),
+      iconBgColor: "bg-violet-50",
+    },
+    {
+      icon: <Mail size={20} color="#0ea5e9" />,
+      label: "Email Settings",
+      onPress: () => console.log("Email settings"),
+      iconBgColor: "bg-sky-50",
+    },
+    {
+      icon: <Bell size={20} color="#f59e0b" />,
+      label: "Notifications",
+      onPress: () => console.log("Notifications"),
+      iconBgColor: "bg-amber-50",
+    },
+  ];
+
+  // Add "Manage Users" only if user has permission
+  if (user && isTeacher(user.role)) {
+    accountItems.push({
+      icon: <Users size={20} color="#ec4899" />,
+      label: "Manage Users",
+      onPress: () => router.push("/(teacher)/user-management"),
+      iconBgColor: "bg-pink-50",
+    });
+  }
+
   return (
     <View className="flex-1 bg-gray-50">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -110,7 +123,7 @@ const TeacherProfile = () => {
             </View>
           </View>
 
-          <MenuSection title="ACCOUNT" items={ACCOUNT_ITEMS} />
+          <MenuSection title="ACCOUNT" items={accountItems} />
           <MenuSection title="BUSINESS" items={BUSINESS_ITEMS} />
           <MenuSection title="SUPPORT" items={SUPPORT_ITEMS} />
 

@@ -1,6 +1,8 @@
 import StatCard from "@/components/teacher/stat-card";
 import StudentCard from "@/components/teacher/student-card";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import { MOCK_STATS, MOCK_STUDENTS } from "@/lib/mockdata";
+import { isTeacher } from "@/lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { Award, Filter, Search, TrendingUp, Users } from "lucide-react-native";
 import React, { useState } from "react";
@@ -15,7 +17,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherStudents = () => {
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Check if user can view revenue/spending data
+  const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
   const { data: students } = useQuery({
     queryKey: ["teacher-students"],
@@ -59,12 +65,15 @@ const TeacherStudents = () => {
               label="Total Active"
               iconBgColor="bg-violet-50"
             />
-            <StatCard
-              icon={<TrendingUp size={20} color="#10b981" />}
-              value={`+${stats?.newThisMonth ?? 0}`}
-              label="This Month"
-              iconBgColor="bg-emerald-50"
-            />
+            {/* This Month card - only visible to teachers */}
+            {showRevenue && (
+              <StatCard
+                icon={<TrendingUp size={20} color="#10b981" />}
+                value={`+${stats?.newThisMonth ?? 0}`}
+                label="This Month"
+                iconBgColor="bg-emerald-50"
+              />
+            )}
             <StatCard
               icon={<Award size={20} color="#0ea5e9" />}
               value={`${stats?.avgCompletion ?? 0}%`}
@@ -73,7 +82,7 @@ const TeacherStudents = () => {
             />
           </View>
 
-          <View className="bg-white rounded-xl p-4 flex-row items-center shadow-sm mb-4">
+          <View className="bg-white rounded-xl px-4 py-2 flex-row items-center shadow-sm">
             <Search size={20} color="#9ca3af" />
             <TextInput
               className="flex-1 ml-3 text-gray-900 text-base"
@@ -94,7 +103,11 @@ const TeacherStudents = () => {
           </Text>
           <View className="gap-3">
             {filteredStudents?.map((student) => (
-              <StudentCard key={student.id} student={student} />
+              <StudentCard
+                key={student.id}
+                student={student}
+                showRevenue={showRevenue}
+              />
             ))}
           </View>
 

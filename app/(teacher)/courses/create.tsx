@@ -3,9 +3,11 @@ import FormSection from "@/components/teacher/form-section";
 import ImagePicker from "@/components/teacher/image-picker";
 import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { isTeacher } from "@/lib/permissions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const CreateCourse = () => {
+  const { userProfile } = useAppwrite();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -26,6 +29,22 @@ const CreateCourse = () => {
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Redirect TAs - only teachers can create courses
+  useEffect(() => {
+    if (userProfile && !isTeacher(userProfile.role)) {
+      Alert.alert(
+        "Access Denied",
+        "You don't have permission to create courses.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    }
+  }, [userProfile]);
 
   const isDirty =
     title ||

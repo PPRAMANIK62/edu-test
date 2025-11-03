@@ -1,5 +1,4 @@
 import { useAppwrite } from "@/hooks/use-appwrite";
-import type { UserRole } from "@/types";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
@@ -21,7 +20,6 @@ const SignUpScreen = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<UserRole>("student");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -33,13 +31,10 @@ const SignUpScreen = () => {
 
     setLoading(true);
     try {
-      await signUp(email, password, firstName, lastName, role);
-      // Navigate based on role
-      if (role === "student") {
-        router.replace("/(student)/(tabs)/dashboard");
-      } else {
-        router.replace("/(teacher)/(tabs)/dashboard");
-      }
+      // All new sign-ups default to student role
+      await signUp(email, password, firstName, lastName, "student");
+      // Navigate to student dashboard
+      router.replace("/(student)/(tabs)/dashboard");
     } catch (error) {
       if (error instanceof Error) {
         Alert.alert("Sign Up Failed", error.message);
@@ -116,7 +111,7 @@ const SignUpScreen = () => {
             />
           </View>
 
-          <View className="mb-5">
+          <View className="mb-6">
             <Text className="text-sm font-medium text-gray-700 mb-2">
               Password
             </Text>
@@ -140,48 +135,6 @@ const SignUpScreen = () => {
                 ) : (
                   <Eye size={20} color="#6b7280" />
                 )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View className="mb-6">
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              I am a...
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setRole("student")}
-                className={`flex-1 py-4 px-4 rounded-xl border-2 ${
-                  role === "student"
-                    ? "border-primary-600 bg-primary-50"
-                    : "border-gray-200 bg-gray-50"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`text-center font-semibold ${
-                    role === "student" ? "text-primary-600" : "text-gray-700"
-                  }`}
-                >
-                  Student
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setRole("teacher")}
-                className={`flex-1 py-4 px-4 rounded-xl border-2 ${
-                  role === "teacher"
-                    ? "border-primary-600 bg-primary-50"
-                    : "border-gray-200 bg-gray-50"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`text-center font-semibold ${
-                    role === "teacher" ? "text-primary-600" : "text-gray-700"
-                  }`}
-                >
-                  Teacher
-                </Text>
               </TouchableOpacity>
             </View>
           </View>

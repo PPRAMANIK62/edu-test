@@ -1,6 +1,9 @@
 import StatCard from "@/components/teacher/stat-card";
+import TimeRangeSelector from "@/components/teacher/time-range-selector";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import { useRevenueAnalytics } from "@/hooks/use-teacher-analytics";
 import { MOCK_COURSES } from "@/lib/mockdata";
+import { isTeacher } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { TimeRangeFilter } from "@/types";
 import { router } from "expo-router";
@@ -24,7 +27,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherAnalytics = () => {
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
   const [timeRange, setTimeRange] = useState<TimeRangeFilter>("30d");
+
+  // Check if user can view revenue
+  const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
   // Fetch analytics data
   const {
@@ -32,11 +39,6 @@ const TeacherAnalytics = () => {
     isLoading,
     error,
   } = useRevenueAnalytics("teacher-1", timeRange);
-
-  const timeRangeOptions: { label: string; value: TimeRangeFilter }[] = [
-    { label: "Last 30 Days", value: "30d" },
-    { label: "Overall", value: "all" },
-  ];
 
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
@@ -53,28 +55,7 @@ const TeacherAnalytics = () => {
 
         {/* Time Range Selector */}
         <View className="px-6 pb-4">
-          <View className="flex-row gap-2">
-            {timeRangeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setTimeRange(option.value)}
-                className={`flex-1 px-4 py-3 rounded-xl ${
-                  timeRange === option.value
-                    ? "bg-violet-600"
-                    : "bg-white border border-gray-200"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`font-semibold text-sm text-center ${
-                    timeRange === option.value ? "text-white" : "text-gray-700"
-                  }`}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
         </View>
         {/* Loading State */}
         {isLoading && (
@@ -104,13 +85,53 @@ const TeacherAnalytics = () => {
             {/* Key Stats */}
             <View className="px-6 mb-6">
               <View className="flex-row flex-wrap gap-3">
-                <StatCard
-                  icon={<DollarSign size={20} color="#10b981" />}
-                  label="Total Revenue"
-                  value={formatCurrency(revenueData.totalRevenue)}
-                  bgColor="bg-emerald-50"
-                  iconBgColor="bg-emerald-100"
-                />
+                {/* Revenue stats - only visible to teachers */}
+                {showRevenue && (
+                  <>
+                    <StatCard
+                      icon={<DollarSign size={20} color="#10b981" />}
+                      label="Total Revenue"
+                      value={formatCurrency(revenueData.totalRevenue)}
+                      bgColor="bg-emerald-50"
+                      iconBgColor="bg-emerald-100"
+                    />
+                    <StatCard
+                      icon={<TrendingUp size={20} color="#0ea5e9" />}
+                      label="Avg/Course"
+                      value={formatCurrency(
+                        revenueData.topCourses.length > 0
+                          ? revenueData.totalRevenue /
+                              revenueData.topCourses.length
+                          : 0
+                      )}
+                      bgColor="bg-sky-50"
+                      iconBgColor="bg-sky-100"
+                    />
+                    <StatCard
+                      icon={
+                        revenueData.trends.percentageChange >= 0 ? (
+                          <ArrowUp size={20} color="#10b981" />
+                        ) : (
+                          <ArrowDown size={20} color="#ef4444" />
+                        )
+                      }
+                      label="Growth"
+                      value={`${revenueData.trends.percentageChange >= 0 ? "+" : ""}${revenueData.trends.percentageChange.toFixed(1)}%`}
+                      bgColor={
+                        revenueData.trends.percentageChange >= 0
+                          ? "bg-emerald-50"
+                          : "bg-red-50"
+                      }
+                      iconBgColor={
+                        revenueData.trends.percentageChange >= 0
+                          ? "bg-emerald-100"
+                          : "bg-red-100"
+                      }
+                    />
+                  </>
+                )}
+
+                {/* Non-revenue stats - visible to all */}
                 <StatCard
                   icon={<BookOpen size={20} color="#7c3aed" />}
                   label="Active Courses"
@@ -118,43 +139,11 @@ const TeacherAnalytics = () => {
                   bgColor="bg-violet-50"
                   iconBgColor="bg-violet-100"
                 />
-                <StatCard
-                  icon={<TrendingUp size={20} color="#0ea5e9" />}
-                  label="Avg/Course"
-                  value={formatCurrency(
-                    revenueData.topCourses.length > 0
-                      ? revenueData.totalRevenue / revenueData.topCourses.length
-                      : 0
-                  )}
-                  bgColor="bg-sky-50"
-                  iconBgColor="bg-sky-100"
-                />
-                <StatCard
-                  icon={
-                    revenueData.trends.percentageChange >= 0 ? (
-                      <ArrowUp size={20} color="#10b981" />
-                    ) : (
-                      <ArrowDown size={20} color="#ef4444" />
-                    )
-                  }
-                  label="Growth"
-                  value={`${revenueData.trends.percentageChange >= 0 ? "+" : ""}${revenueData.trends.percentageChange.toFixed(1)}%`}
-                  bgColor={
-                    revenueData.trends.percentageChange >= 0
-                      ? "bg-emerald-50"
-                      : "bg-red-50"
-                  }
-                  iconBgColor={
-                    revenueData.trends.percentageChange >= 0
-                      ? "bg-emerald-100"
-                      : "bg-red-100"
-                  }
-                />
               </View>
             </View>
 
-            {/* Monthly Revenue Chart */}
-            {revenueData.revenueByMonth.length > 0 && (
+            {/* Monthly Revenue Chart - only visible to teachers */}
+            {showRevenue && revenueData.revenueByMonth.length > 0 && (
               <View className="px-6 mb-6">
                 <Text className="text-lg font-bold text-gray-900 mb-3">
                   Revenue by Month
@@ -253,14 +242,17 @@ const TeacherAnalytics = () => {
                           </View>
                         </View>
 
-                        <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
-                          <Text className="text-gray-600 text-sm font-medium">
-                            Revenue
-                          </Text>
-                          <Text className="text-gray-900 font-bold text-lg">
-                            {formatCurrency(course.revenue)}
-                          </Text>
-                        </View>
+                        {/* Revenue info - only visible to teachers */}
+                        {showRevenue && (
+                          <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
+                            <Text className="text-gray-600 text-sm font-medium">
+                              Revenue
+                            </Text>
+                            <Text className="text-gray-900 font-bold text-lg">
+                              {formatCurrency(course.revenue)}
+                            </Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     );
                   })}

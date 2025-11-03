@@ -5,7 +5,13 @@ import { Star } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
-const StudentCard = ({ student }: { student: Student }) => {
+const StudentCard = ({
+  student,
+  showRevenue = true,
+}: {
+  student: Student;
+  showRevenue?: boolean;
+}) => {
   return (
     <TouchableOpacity
       key={student.id}
@@ -59,8 +65,13 @@ const StudentCard = ({ student }: { student: Student }) => {
           label="Avg Score"
           icon={<Star size={14} color="#f59e0b" fill="#f59e0b" />}
         />
-        <Divider />
-        <StudentStat value={`$${student.totalSpent}`} label="Spent" />
+        {/* Spending - only visible to teachers */}
+        {showRevenue && (
+          <>
+            <Divider />
+            <StudentStat value={`$${student.totalSpent}`} label="Spent" />
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );

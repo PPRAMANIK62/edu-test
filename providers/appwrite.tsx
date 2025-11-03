@@ -1,5 +1,5 @@
 import { account, APPWRITE_CONFIG, databases } from "@/lib/appwrite";
-import type { AppwriteUser, UserProfile } from "@/types";
+import type { AppwriteUser, UserProfile, UserRole } from "@/types";
 import { Query } from "appwrite";
 import * as SecureStore from "expo-secure-store";
 import React, {
@@ -29,7 +29,7 @@ interface AppwriteContextType {
     password: string,
     firstName: string,
     lastName: string,
-    role: "student" | "teacher"
+    role: UserRole
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -117,7 +117,7 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     firstName: string,
     lastName: string,
-    role: "student" | "teacher"
+    role: UserRole
   ) => {
     try {
       // Create Appwrite user account

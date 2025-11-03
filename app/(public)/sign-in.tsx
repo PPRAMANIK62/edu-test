@@ -25,7 +25,11 @@ const SignInScreen = () => {
     if (userProfile?.role) {
       if (userProfile.role === "student") {
         router.replace("/(student)/(tabs)/dashboard");
-      } else {
+      } else if (
+        userProfile.role === "teacher" ||
+        userProfile.role === "teaching_assistant"
+      ) {
+        // Both teachers and teaching assistants navigate to teacher dashboard
         router.replace("/(teacher)/(tabs)/dashboard");
       }
     }

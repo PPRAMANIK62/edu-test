@@ -1,4 +1,4 @@
-export type UserRole = "teacher" | "student";
+export type UserRole = "teacher" | "teaching_assistant" | "student";
 
 export interface UserProfile {
   $id: string;
@@ -6,6 +6,7 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   role: UserRole;
+  isPrimaryTeacher?: boolean;
 }
 
 export interface AppwriteUser {

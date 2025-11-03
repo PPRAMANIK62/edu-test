@@ -1,0 +1,190 @@
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import type { UserProfile, UserRole } from "@/types";
+import { Query } from "appwrite";
+
+/**
+ * User management functions for fetching and updating user data
+ */
+
+/**
+ * Fetch all users from the database
+ * @returns Array of user profiles
+ */
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  try {
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.limit(1000)], // Increase limit if needed
+    });
+
+    return (response.rows as unknown as UserProfile[]) || [];
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw new Error("Failed to fetch users");
+  }
+};
+
+/**
+ * Fetch users filtered by role
+ * @param role - The role to filter by
+ * @returns Array of user profiles matching the role
+ */
+export const getUsersByRole = async (
+  role: UserRole
+): Promise<UserProfile[]> => {
+  try {
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.equal("role", role), Query.limit(1000)],
+    });
+
+    return (response.rows as unknown as UserProfile[]) || [];
+  } catch (error) {
+    console.error(`Error fetching users with role ${role}:`, error);
+    throw new Error(`Failed to fetch users with role ${role}`);
+  }
+};
+
+/**
+ * Search users by name or email
+ * @param searchTerm - The search term to match against name or email
+ * @returns Array of user profiles matching the search term
+ */
+export const searchUsers = async (
+  searchTerm: string
+): Promise<UserProfile[]> => {
+  try {
+    if (!searchTerm.trim()) {
+      return await getAllUsers();
+    }
+
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.limit(1000)],
+    });
+
+    const allUsers = (response.rows as unknown as UserProfile[]) || [];
+
+    // Client-side filtering for name and email
+    const searchLower = searchTerm.toLowerCase();
+    return allUsers.filter((user) => {
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      const email = user.email.toLowerCase();
+      return fullName.includes(searchLower) || email.includes(searchLower);
+    });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    throw new Error("Failed to search users");
+  }
+};
+
+/**
+ * Update a user's role
+ * @param userId - The ID of the user to update
+ * @param newRole - The new role to assign
+ * @param currentUserProfile - The profile of the user making the change (for validation)
+ * @returns Updated user profile
+ */
+export const updateUserRole = async (
+  userId: string,
+  newRole: UserRole,
+  currentUserProfile: UserProfile
+): Promise<UserProfile> => {
+  try {
+    // Validation: Only teachers can update roles
+    if (currentUserProfile.role !== "teacher") {
+      throw new Error("Only teachers can update user roles");
+    }
+
+    // Fetch the user being updated
+    const userResponse = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.equal("$id", userId)],
+    });
+
+    if (!userResponse.rows || userResponse.rows.length === 0) {
+      throw new Error("User not found");
+    }
+
+    const targetUser = userResponse.rows[0] as unknown as UserProfile;
+
+    // Validation: Cannot demote primary teacher
+    if (targetUser.isPrimaryTeacher && newRole !== "teacher") {
+      throw new Error("Cannot demote the primary teacher");
+    }
+
+    // Update the user's role
+    const updatedRow = await databases.updateRow({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      rowId: userId,
+      data: {
+        role: newRole,
+      },
+    });
+
+    return updatedRow as unknown as UserProfile;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error updating user role:", error.message);
+      throw error;
+    }
+    console.error("Error updating user role:", error);
+    throw new Error("Failed to update user role");
+  }
+};
+
+/**
+ * Check if a user is the primary teacher
+ * @param userId - The ID of the user to check
+ * @returns true if the user is the primary teacher
+ */
+export const isPrimaryTeacher = async (userId: string): Promise<boolean> => {
+  try {
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.equal("$id", userId)],
+    });
+
+    if (!response.rows || response.rows.length === 0) {
+      return false;
+    }
+
+    const user = response.rows[0] as unknown as UserProfile;
+    return user.isPrimaryTeacher === true;
+  } catch (error) {
+    console.error("Error checking primary teacher status:", error);
+    return false;
+  }
+};
+
+/**
+ * Get a single user by ID
+ * @param userId - The ID of the user to fetch
+ * @returns User profile
+ */
+export const getUserById = async (
+  userId: string
+): Promise<UserProfile | null> => {
+  try {
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.equal("$id", userId)],
+    });
+
+    if (!response.rows || response.rows.length === 0) {
+      return null;
+    }
+
+    return response.rows[0] as unknown as UserProfile;
+  } catch (error) {
+    console.error("Error fetching user by ID:", error);
+    return null;
+  }
+};

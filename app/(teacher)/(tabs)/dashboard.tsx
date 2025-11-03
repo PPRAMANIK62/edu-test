@@ -1,9 +1,11 @@
 import StatCard from "@/components/teacher/stat-card";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import {
   MOCK_COURSES,
   MOCK_RECENT_ENROLLMENTS,
   MOCK_TEACHER_STATS,
 } from "@/lib/mockdata";
+import { isTeacher } from "@/lib/permissions";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils";
 import { RecentEnrollment } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +38,10 @@ interface CoursePerformance {
 const TeacherDashboard = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
+
+  // Check permissions
+  const canCreate = userProfile ? isTeacher(userProfile.role) : false;
 
   const { data: stats } = useQuery({
     queryKey: ["teacher-stats"],
@@ -99,112 +105,127 @@ const TeacherDashboard = () => {
               bgColor="bg-sky-50"
               iconBgColor="bg-sky-100"
             />
-            <StatCard
-              icon={<DollarSign size={20} color="#10b981" />}
-              label="Revenue"
-              value={formatCurrency(stats?.totalRevenue || 0)}
-              bgColor="bg-emerald-50"
-              iconBgColor="bg-emerald-100"
-            />
-            <StatCard
-              icon={<Star size={20} color="#f59e0b" />}
-              label="Avg Rating"
-              value={stats?.averageRating.toFixed(1) || "0.0"}
-              bgColor="bg-amber-50"
-              iconBgColor="bg-amber-100"
-            />
+            {/* Revenue card - only visible to teachers */}
+            {canCreate && (
+              <StatCard
+                icon={<DollarSign size={20} color="#10b981" />}
+                label="Revenue"
+                value={formatCurrency(stats?.totalRevenue || 0)}
+                bgColor="bg-emerald-50"
+                iconBgColor="bg-emerald-100"
+              />
+            )}
+            {/* Average rating - only visible to teachers */}
+            {canCreate && (
+              <StatCard
+                icon={<Star size={20} color="#f59e0b" />}
+                label="Avg Rating"
+                value={stats?.averageRating.toFixed(1) || "0.0"}
+                bgColor="bg-amber-50"
+                iconBgColor="bg-amber-100"
+              />
+            )}
           </View>
         </View>
 
-        <View className="px-6 mb-6">
-          <TouchableOpacity
-            onPress={() => {
-              router.push("/(teacher)/courses/create");
-            }}
-            activeOpacity={0.9}
-            className="rounded-2xl overflow-hidden shadow-sm"
-          >
-            <LinearGradient
-              colors={["#7c3aed", "#6d28d9"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="p-5 flex-row items-center justify-between"
+        {/* Create course button - only visible to teachers */}
+        {canCreate && (
+          <View className="px-6 mb-6">
+            <TouchableOpacity
+              onPress={() => {
+                router.push("/(teacher)/courses/create");
+              }}
+              activeOpacity={0.9}
+              className="rounded-2xl overflow-hidden shadow-sm"
             >
-              <View className="flex-1">
-                <Text className="text-white text-xl font-bold mb-1">
-                  Create New Course
-                </Text>
-                <Text className="text-violet-100 text-sm">
-                  Build and publish a new course bundle
-                </Text>
-              </View>
-              <View className="bg-white/20 rounded-full p-3 ml-4">
-                <Plus size={24} color="#fff" strokeWidth={2.5} />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        <View className="px-6 mb-6">
-          <SectionHeader title="Course Performance" />
-          <View className="gap-3">
-            {coursePerformance?.map((course) => (
-              <TouchableOpacity
-                key={course.courseId}
-                activeOpacity={0.7}
-                className="bg-white rounded-2xl p-4 shadow-sm"
-                onPress={() => {
-                  router.push(
-                    `/(teacher)/courses/${course.courseId}/analytics`
-                  );
-                }}
+              <LinearGradient
+                colors={["#7c3aed", "#6d28d9"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="p-5 flex-row items-center justify-between"
               >
-                <View className="flex-row items-start justify-between mb-3">
-                  <View className="flex-1 pr-3">
-                    <Text
-                      className="text-gray-900 font-bold text-base mb-1"
-                      numberOfLines={2}
-                    >
-                      {course.title}
-                    </Text>
-                    <View className="flex-row items-center gap-1">
-                      <Star size={14} color="#f59e0b" fill="#f59e0b" />
-                      <Text className="text-gray-600 text-sm font-semibold">
-                        {course.rating.toFixed(1)}
-                      </Text>
-                      <Text className="text-gray-400 text-sm ml-1">
-                        • {course.enrollmentCount} students
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    className="bg-violet-50 rounded-full p-2"
-                    onPress={() => {
-                      router.push(`/(teacher)/courses/${course.courseId}/edit`);
-                    }}
-                  >
-                    <Edit3 size={16} color="#7c3aed" />
-                  </TouchableOpacity>
-                </View>
-
-                <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
-                  <View className="flex-row items-center gap-4">
-                    <View className="flex-row items-center gap-1">
-                      <TrendingUp size={16} color="#10b981" />
-                      <Text className="text-emerald-600 font-bold text-sm">
-                        +{course.recentEnrollments}
-                      </Text>
-                      <Text className="text-gray-500 text-xs">this month</Text>
-                    </View>
-                  </View>
-                  <Text className="text-gray-900 font-bold text-base">
-                    {formatCurrency(course.revenue)}
+                <View className="flex-1">
+                  <Text className="text-white text-xl font-bold mb-1">
+                    Create New Course
+                  </Text>
+                  <Text className="text-violet-100 text-sm">
+                    Build and publish a new course bundle
                   </Text>
                 </View>
-              </TouchableOpacity>
-            ))}
+                <View className="bg-white/20 rounded-full p-3 ml-4">
+                  <Plus size={24} color="#fff" strokeWidth={2.5} />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </View>
+        )}
+
+        {canCreate && (
+          <View className="px-6 mb-6">
+            <SectionHeader title="Course Performance" />
+            <View className="gap-3">
+              {coursePerformance?.map((course) => (
+                <TouchableOpacity
+                  key={course.courseId}
+                  activeOpacity={0.7}
+                  className="bg-white rounded-2xl p-4 shadow-sm"
+                  onPress={() => {
+                    router.push(
+                      `/(teacher)/courses/${course.courseId}/analytics`
+                    );
+                  }}
+                >
+                  <View className="flex-row items-start justify-between mb-3">
+                    <View className="flex-1 pr-3">
+                      <Text
+                        className="text-gray-900 font-bold text-base mb-1"
+                        numberOfLines={2}
+                      >
+                        {course.title}
+                      </Text>
+                      <View className="flex-row items-center gap-1">
+                        <Star size={14} color="#f59e0b" fill="#f59e0b" />
+                        <Text className="text-gray-600 text-sm font-semibold">
+                          {course.rating.toFixed(1)}
+                        </Text>
+                        <Text className="text-gray-400 text-sm ml-1">
+                          • {course.enrollmentCount} students
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      className="bg-violet-50 rounded-full p-2"
+                      onPress={() => {
+                        router.push(
+                          `/(teacher)/courses/${course.courseId}/edit`
+                        );
+                      }}
+                    >
+                      <Edit3 size={16} color="#7c3aed" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
+                    <View className="flex-row items-center gap-4">
+                      <View className="flex-row items-center gap-1">
+                        <TrendingUp size={16} color="#10b981" />
+                        <Text className="text-emerald-600 font-bold text-sm">
+                          +{course.recentEnrollments}
+                        </Text>
+                        <Text className="text-gray-500 text-xs">
+                          this month
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-gray-900 font-bold text-base">
+                      {formatCurrency(course.revenue)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View className="px-6 mb-6">
           <SectionHeader title="Recent Enrollments" />
@@ -225,14 +246,16 @@ const TeacherDashboard = () => {
             Quick Actions
           </Text>
           <View className="gap-3">
-            <QuickActionButton
-              icon={<BarChart3 size={20} color="#7c3aed" />}
-              label="View Analytics"
-              onPress={() => {
-                router.push("/(teacher)/analytics");
-              }}
-              iconBgColor="bg-violet-50"
-            />
+            {canCreate && (
+              <QuickActionButton
+                icon={<BarChart3 size={20} color="#7c3aed" />}
+                label="View Analytics"
+                onPress={() => {
+                  router.push("/(teacher)/analytics");
+                }}
+                iconBgColor="bg-violet-50"
+              />
+            )}
             <QuickActionButton
               icon={<Users size={20} color="#0ea5e9" />}
               label="Manage Students"

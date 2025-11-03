@@ -3,7 +3,9 @@ import FormSection from "@/components/teacher/form-section";
 import ImagePicker from "@/components/teacher/image-picker";
 import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import { MOCK_COURSES } from "@/lib/mockdata";
+import { isTA, isTeacher } from "@/lib/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -19,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const EditCourse = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
+  const { userProfile } = useAppwrite();
   const queryClient = useQueryClient();
 
   const [title, setTitle] = useState("");
@@ -58,6 +61,26 @@ const EditCourse = () => {
       setInitialValues(values);
     }
   }, [course, initialValues]);
+
+  // Check if user can edit courses
+  useEffect(() => {
+    if (
+      userProfile &&
+      !isTeacher(userProfile.role) &&
+      !isTA(userProfile.role)
+    ) {
+      Alert.alert(
+        "Access Denied",
+        "You don't have permission to edit courses.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    }
+  }, [userProfile]);
 
   const isDirty =
     initialValues &&
@@ -117,6 +140,40 @@ const EditCourse = () => {
       Alert.alert("Error", "Failed to update course. Please try again.");
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
+      Alert.alert("Success", "Course deleted successfully!", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/(teacher)/(tabs)/courses"),
+        },
+      ]);
+    },
+    onError: () => {
+      Alert.alert("Error", "Failed to delete course. Please try again.");
+    },
+  });
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Course",
+      "Are you sure you want to delete this course? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(),
+        },
+      ]
+    );
+  };
 
   const handleUpdate = () => {
     if (validate()) {
@@ -258,10 +315,27 @@ const EditCourse = () => {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Delete Course Button - Only for teachers */}
+          {userProfile && isTeacher(userProfile.role) && (
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="border border-red-300 bg-red-50 rounded-xl py-4 items-center mt-4"
+              activeOpacity={0.8}
+            >
+              {deleteMutation.isPending ? (
+                <ActivityIndicator color="#ef4444" />
+              ) : (
+                <Text className="text-red-600 font-semibold text-base">
+                  Delete Course
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
 export default EditCourse;

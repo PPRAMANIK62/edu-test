@@ -5,6 +5,7 @@ import {
   MOCK_STUDENTS,
 } from "@/lib/mockdata";
 import { formatTimeAgo } from "@/lib/utils";
+import { useAppwrite } from "@/providers/appwrite";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -29,6 +30,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const StudentDetail = () => {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
+  const { userProfile } = useAppwrite();
+
+  const isTeacher = userProfile?.role === "teacher";
 
   const { data: student, isLoading: studentLoading } = useQuery({
     queryKey: ["student", studentId],
@@ -152,12 +156,14 @@ const StudentDetail = () => {
                   label="Avg Score"
                   bgColor="bg-amber-50"
                 />
-                <StatItem
-                  icon={<DollarSign size={24} color="#3b82f6" />}
-                  value={`$${student.totalSpent}`}
-                  label="Spent"
-                  bgColor="bg-blue-50"
-                />
+                {isTeacher && (
+                  <StatItem
+                    icon={<DollarSign size={24} color="#3b82f6" />}
+                    value={`$${student.totalSpent}`}
+                    label="Spent"
+                    bgColor="bg-blue-50"
+                  />
+                )}
               </View>
             </View>
 

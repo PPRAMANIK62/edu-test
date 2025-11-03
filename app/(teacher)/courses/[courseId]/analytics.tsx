@@ -1,15 +1,18 @@
+import ScreenHeader from "@/components/teacher/screen-header";
 import StatCard from "@/components/teacher/stat-card";
+import TimeRangeSelector from "@/components/teacher/time-range-selector";
+import { useAppwrite } from "@/hooks/use-appwrite";
 import {
   useCoursePerformance,
   useStudentEngagement,
 } from "@/hooks/use-teacher-analytics";
 import { MOCK_COURSES } from "@/lib/mockdata";
+import { isTeacher } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { TimeRangeFilter } from "@/types";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   Award,
   BookOpen,
@@ -19,19 +22,17 @@ import {
   Users,
 } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CourseAnalytics = () => {
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const [timeRange, setTimeRange] = useState<TimeRangeFilter>("30d");
+
+  // Check if user can view revenue
+  const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
   // Get course details
   const course = MOCK_COURSES.find((c) => c.id === courseId);
@@ -52,11 +53,6 @@ const CourseAnalytics = () => {
   const isLoading = isLoadingPerformance || isLoadingEngagement;
   const error = performanceError || engagementError;
 
-  const timeRangeOptions: { label: string; value: TimeRangeFilter }[] = [
-    { label: "Last 30 Days", value: "30d" },
-    { label: "Overall", value: "all" },
-  ];
-
   if (!course) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center">
@@ -69,49 +65,11 @@ const CourseAnalytics = () => {
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="px-6 pb-4 pt-6">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mb-4"
-            activeOpacity={0.7}
-          >
-            <View className="flex-row items-center">
-              <ArrowLeft size={20} color="#6b7280" />
-              <Text className="text-gray-600 ml-2 font-medium">Back</Text>
-            </View>
-          </TouchableOpacity>
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            Course Analytics
-          </Text>
-          <Text className="text-base text-gray-600" numberOfLines={2}>
-            {course.title}
-          </Text>
-        </View>
+        <ScreenHeader title="Course Analytics" subtitle={course.title} />
 
         {/* Time Range Selector */}
         <View className="px-6 pb-4">
-          <View className="flex-row gap-2">
-            {timeRangeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setTimeRange(option.value)}
-                className={`flex-1 px-4 py-3 rounded-xl ${
-                  timeRange === option.value
-                    ? "bg-violet-600"
-                    : "bg-white border border-gray-200"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`font-semibold text-sm text-center ${
-                    timeRange === option.value ? "text-white" : "text-gray-700"
-                  }`}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
         </View>
         {/* Loading State */}
         {isLoading && (
@@ -141,13 +99,18 @@ const CourseAnalytics = () => {
             {/* Key Metrics */}
             <View className="px-6 mb-6">
               <View className="flex-row flex-wrap gap-3">
-                <StatCard
-                  icon={<DollarSign size={20} color="#10b981" />}
-                  label="Revenue"
-                  value={formatCurrency(performanceData.totalRevenue)}
-                  bgColor="bg-emerald-50"
-                  iconBgColor="bg-emerald-100"
-                />
+                {/* Revenue - only visible to teachers */}
+                {showRevenue && (
+                  <StatCard
+                    icon={<DollarSign size={20} color="#10b981" />}
+                    label="Revenue"
+                    value={formatCurrency(performanceData.totalRevenue)}
+                    bgColor="bg-emerald-50"
+                    iconBgColor="bg-emerald-100"
+                  />
+                )}
+
+                {/* Non-revenue metrics - visible to all */}
                 <StatCard
                   icon={<Users size={20} color="#0ea5e9" />}
                   label="Enrollments"
@@ -173,35 +136,39 @@ const CourseAnalytics = () => {
             </View>
 
             {/* Performance Trends */}
-            {(performanceData.trends.revenueChange !== 0 ||
+            {((showRevenue && performanceData.trends.revenueChange !== 0) ||
               performanceData.trends.enrollmentChange !== 0) && (
               <View className="px-6 mb-6">
                 <Text className="text-lg font-bold text-gray-900 mb-3">
                   Trends
                 </Text>
                 <View className="bg-white rounded-2xl p-4 shadow-sm">
-                  {performanceData.trends.revenueChange !== 0 && (
-                    <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
-                      <Text className="text-gray-700 font-medium">
-                        Revenue Change
-                      </Text>
-                      <View className="flex-row items-center gap-1">
-                        {performanceData.trends.revenueChange >= 0 ? (
-                          <ArrowUp size={16} color="#10b981" />
-                        ) : (
-                          <ArrowDown size={16} color="#ef4444" />
-                        )}
-                        <Text
-                          className={`font-bold ${performanceData.trends.revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
-                        >
-                          {Math.abs(
-                            performanceData.trends.revenueChange
-                          ).toFixed(1)}
-                          %
+                  {/* Revenue change - only visible to teachers */}
+                  {showRevenue &&
+                    performanceData.trends.revenueChange !== 0 && (
+                      <View
+                        className={`flex-row items-center justify-between py-3 ${performanceData.trends.enrollmentChange !== 0 ? "border-b border-gray-100" : ""}`}
+                      >
+                        <Text className="text-gray-700 font-medium">
+                          Revenue Change
                         </Text>
+                        <View className="flex-row items-center gap-1">
+                          {performanceData.trends.revenueChange >= 0 ? (
+                            <ArrowUp size={16} color="#10b981" />
+                          ) : (
+                            <ArrowDown size={16} color="#ef4444" />
+                          )}
+                          <Text
+                            className={`font-bold ${performanceData.trends.revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                          >
+                            {Math.abs(
+                              performanceData.trends.revenueChange
+                            ).toFixed(1)}
+                            %
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  )}
+                    )}
                   {performanceData.trends.enrollmentChange !== 0 && (
                     <View className="flex-row items-center justify-between py-3">
                       <Text className="text-gray-700 font-medium">
