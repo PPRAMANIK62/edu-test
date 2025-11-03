@@ -118,7 +118,9 @@ const TeacherProfile = () => {
             <Text className="text-gray-500 text-sm mb-3">{user?.email}</Text>
             <View className="bg-violet-100 rounded-full px-3 py-1">
               <Text className="text-violet-700 font-semibold text-sm">
-                Teacher Account
+                {user && isTeacher(user.role)
+                  ? "Teacher Account"
+                  : "Teaching Assistant Account"}
               </Text>
             </View>
           </View>
