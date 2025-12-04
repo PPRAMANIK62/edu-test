@@ -82,7 +82,9 @@ const TeacherDashboard = () => {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="px-6 pb-4" style={{ paddingTop: insets.top + 24 }}>
           <Text className="text-3xl font-bold text-gray-900 mb-2">
-            {userProfile && isTeacher(userProfile.role) ? "Teacher Dashboard" : "TA Dashboard"}
+            {userProfile && isTeacher(userProfile.role)
+              ? "Teacher Dashboard"
+              : "TA Dashboard"}
           </Text>
           <Text className="text-base text-gray-600">
             Manage your courses and track performance
