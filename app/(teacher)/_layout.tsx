@@ -14,6 +14,18 @@ const TeacherLayout = () => {
         name="students/[studentId]"
         options={{ presentation: "card" }}
       />
+      <Stack.Screen
+        name="tests/[testId]/questions/index"
+        options={{ presentation: "card" }}
+      />
+      <Stack.Screen
+        name="tests/[testId]/questions/create"
+        options={{ presentation: "card" }}
+      />
+      <Stack.Screen
+        name="tests/[testId]/questions/[questionId]/edit"
+        options={{ presentation: "card" }}
+      />
     </Stack>
   );
 };

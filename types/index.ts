@@ -68,7 +68,44 @@ export interface Subject {
   questionCount: number;
 }
 
-export interface Question {
+/**
+ * Question type discriminator
+ */
+export type QuestionType = "mcq";
+
+/**
+ * Base question fields shared across all question types
+ */
+export interface BaseQuestion {
+  id: string;
+  testId: string;
+  subjectId: string;
+  subjectName: string;
+  text: string;
+  order: number;
+}
+
+/**
+ * MCQ Question type with multiple choice options
+ */
+export interface MCQQuestion extends BaseQuestion {
+  type: "mcq";
+  options: QuestionOption[];
+  correctOptionId: string;
+  explanation: string;
+}
+
+/**
+ * Union type for all question types
+ * Currently only MCQ, but designed for future extensibility
+ */
+export type Question = MCQQuestion;
+
+/**
+ * Legacy Question interface for backward compatibility
+ * @deprecated Use Question (MCQQuestion) with type field instead
+ */
+export interface LegacyQuestion {
   id: string;
   testId: string;
   subjectId: string;
@@ -82,8 +119,19 @@ export interface Question {
 
 export interface QuestionOption {
   id: string;
-  label: "A" | "B" | "C" | "D";
+  label: "A" | "B" | "C" | "D" | "E" | "F";
   text: string;
+}
+
+/**
+ * Form data for creating/editing MCQ questions
+ */
+export interface MCQFormData {
+  text: string;
+  subjectId: string;
+  options: QuestionOption[];
+  correctOptionId: string;
+  explanation: string;
 }
 
 export interface Attempt {

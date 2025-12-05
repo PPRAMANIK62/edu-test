@@ -204,6 +204,7 @@ export const MOCK_QUESTIONS: Question[] = [
     testId: "test-1",
     subjectId: "subj-1",
     subjectName: "Algebra",
+    type: "mcq",
     text: "If 3x + 7 = 22, what is the value of x?",
     options: [
       { id: "opt-1a", label: "A", text: "3" },
@@ -221,6 +222,7 @@ export const MOCK_QUESTIONS: Question[] = [
     testId: "test-1",
     subjectId: "subj-1",
     subjectName: "Algebra",
+    type: "mcq",
     text: "What is the slope of the line passing through points (2, 3) and (6, 11)?",
     options: [
       { id: "opt-2a", label: "A", text: "1" },
@@ -238,6 +240,7 @@ export const MOCK_QUESTIONS: Question[] = [
     testId: "test-1",
     subjectId: "subj-2",
     subjectName: "Geometry",
+    type: "mcq",
     text: "A circle has a radius of 7 cm. What is its area? (Use π ≈ 3.14)",
     options: [
       { id: "opt-3a", label: "A", text: "43.96 cm²" },
@@ -254,6 +257,7 @@ export const MOCK_QUESTIONS: Question[] = [
     testId: "test-1",
     subjectId: "subj-3",
     subjectName: "Statistics",
+    type: "mcq",
     text: "What is the median of the following set: 3, 7, 9, 12, 15, 18, 21?",
     options: [
       { id: "opt-4a", label: "A", text: "9" },
@@ -271,6 +275,7 @@ export const MOCK_QUESTIONS: Question[] = [
     testId: "test-1",
     subjectId: "subj-4",
     subjectName: "Advanced Math",
+    type: "mcq",
     text: "If f(x) = 2x² - 3x + 1, what is f(3)?",
     options: [
       { id: "opt-5a", label: "A", text: "8" },
