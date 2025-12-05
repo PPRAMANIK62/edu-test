@@ -9,6 +9,7 @@ import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
 import { isTA, isTeacher } from "@/lib/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
+import { Plus } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -314,6 +315,22 @@ const EditCourse = () => {
                 </Text>
               </View>
             )}
+
+            {/* Add Test Button */}
+            <TouchableOpacity
+              onPress={() =>
+                router.push(
+                  `/(teacher)/courses/${courseId}/tests/create` as any
+                )
+              }
+              className="mt-4 border-2 border-dashed border-violet-300 rounded-xl py-4 flex-row items-center justify-center bg-violet-50"
+              activeOpacity={0.7}
+            >
+              <Plus size={20} color="#7c3aed" />
+              <Text className="text-violet-600 font-semibold ml-2">
+                Add New Test
+              </Text>
+            </TouchableOpacity>
           </FormSection>
 
           <View className="gap-3 mb-8">

@@ -15,6 +15,10 @@ const TeacherLayout = () => {
         options={{ presentation: "card" }}
       />
       <Stack.Screen
+        name="courses/[courseId]/tests/create"
+        options={{ presentation: "card" }}
+      />
+      <Stack.Screen
         name="tests/[testId]/questions/index"
         options={{ presentation: "card" }}
       />
