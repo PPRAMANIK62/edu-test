@@ -1,6 +1,7 @@
 import QuestionForm from "@/components/teacher/question-form";
 import ScreenHeader from "@/components/teacher/screen-header";
 import { MOCK_QUESTIONS, MOCK_TESTS } from "@/lib/mockdata";
+import { mcqFormSchema, validateForm } from "@/lib/schemas";
 import { MCQFormData, MCQQuestion } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
@@ -78,38 +79,12 @@ export default function EditQuestionScreen() {
   };
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.text.trim()) {
-      newErrors.text = "Question text is required";
-    }
-
-    if (!formData.subjectId) {
-      newErrors.subjectId = "Please select a subject";
-    }
-
-    const filledOptions = formData.options.filter((o) => o.text.trim());
-    if (filledOptions.length < 2) {
-      newErrors.options = "At least 2 options are required";
-    }
-
-    if (!formData.correctOptionId) {
-      newErrors.correctOptionId = "Please select the correct answer";
-    } else {
-      const correctOption = formData.options.find(
-        (o) => o.id === formData.correctOptionId
-      );
-      if (!correctOption?.text.trim()) {
-        newErrors.correctOptionId = "The correct answer option must have text";
-      }
-    }
-
-    if (!formData.explanation.trim()) {
-      newErrors.explanation = "Explanation is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const { isValid, errors: validationErrors } = validateForm(
+      mcqFormSchema,
+      formData
+    );
+    setErrors(validationErrors);
+    return isValid;
   };
 
   const updateMutation = useMutation({

@@ -1,4 +1,5 @@
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { signInSchema, validateForm } from "@/lib/schemas";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -19,6 +20,7 @@ const SignInScreen = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Navigate based on user role when userProfile is set
   useEffect(() => {
@@ -35,9 +37,21 @@ const SignInScreen = () => {
     }
   }, [userProfile, router]);
 
+  const validate = () => {
+    const { isValid, errors: validationErrors } = validateForm(signInSchema, {
+      email,
+      password,
+    });
+    setErrors(validationErrors);
+    return isValid;
+  };
+
   const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password");
+    if (!validate()) {
+      const errorMessages = Object.values(errors).filter(Boolean);
+      if (errorMessages.length > 0) {
+        Alert.alert("Error", errorMessages[0]);
+      }
       return;
     }
 

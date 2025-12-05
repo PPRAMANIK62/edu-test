@@ -7,6 +7,7 @@ import TeacherTestCard from "@/components/teacher/test-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
 import { isTA, isTeacher } from "@/lib/permissions";
+import { courseFormSchema, validateForm } from "@/lib/schemas";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus } from "lucide-react-native";
@@ -103,22 +104,12 @@ const EditCourse = () => {
       imageUri !== initialValues.imageUri);
 
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!title.trim()) {
-      newErrors.title = "Title is required";
-    }
-    if (!description.trim()) {
-      newErrors.description = "Description is required";
-    }
-    if (!price.trim()) {
-      newErrors.price = "Price is required";
-    } else if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      newErrors.price = "Price must be a positive number";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const { isValid, errors: validationErrors } = validateForm(
+      courseFormSchema,
+      { title, description, price, subjects, estimatedHours, imageUri }
+    );
+    setErrors(validationErrors);
+    return isValid;
   };
 
   const updateMutation = useMutation({

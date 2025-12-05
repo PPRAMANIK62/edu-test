@@ -2,6 +2,7 @@ import FormInput from "@/components/teacher/form-input";
 import FormSection from "@/components/teacher/form-section";
 import ScreenHeader from "@/components/teacher/screen-header";
 import { MOCK_COURSES } from "@/lib/mockdata";
+import { TestFormData, testFormSchema, validateForm } from "@/lib/schemas";
 import { Subject } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,14 +18,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-interface TestFormData {
-  title: string;
-  description: string;
-  durationMinutes: string;
-  passingScore: string;
-  subjects: Subject[];
-}
 
 export default function CreateTestScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
@@ -57,40 +50,12 @@ export default function CreateTestScreen() {
     formData.passingScore !== "70";
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = "Test title is required";
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
-
-    if (!formData.durationMinutes.trim()) {
-      newErrors.durationMinutes = "Duration is required";
-    } else if (
-      isNaN(parseInt(formData.durationMinutes)) ||
-      parseInt(formData.durationMinutes) <= 0
-    ) {
-      newErrors.durationMinutes = "Duration must be a positive number";
-    }
-
-    if (!formData.passingScore.trim()) {
-      newErrors.passingScore = "Passing score is required";
-    } else {
-      const score = parseInt(formData.passingScore);
-      if (isNaN(score) || score < 0 || score > 100) {
-        newErrors.passingScore = "Passing score must be between 0 and 100";
-      }
-    }
-
-    if (formData.subjects.length === 0) {
-      newErrors.subjects = "At least one subject is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const { isValid, errors: validationErrors } = validateForm(
+      testFormSchema,
+      formData
+    );
+    setErrors(validationErrors);
+    return isValid;
   };
 
   const createMutation = useMutation({

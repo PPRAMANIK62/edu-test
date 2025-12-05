@@ -1,4 +1,5 @@
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { signUpSchema, validateForm } from "@/lib/schemas";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
@@ -22,10 +23,25 @@ const SignUpScreen = () => {
   const [lastName, setLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const { isValid, errors: validationErrors } = validateForm(signUpSchema, {
+      email,
+      password,
+      firstName,
+      lastName,
+    });
+    setErrors(validationErrors);
+    return isValid;
+  };
 
   const handleSignUp = async () => {
-    if (!email || !password || !firstName || !lastName) {
-      Alert.alert("Error", "Please fill in all fields");
+    if (!validate()) {
+      const errorMessages = Object.values(errors).filter(Boolean);
+      if (errorMessages.length > 0) {
+        Alert.alert("Error", errorMessages[0]);
+      }
       return;
     }
 
