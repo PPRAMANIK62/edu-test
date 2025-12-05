@@ -3,8 +3,9 @@ import FormSection from "@/components/teacher/form-section";
 import ImagePicker from "@/components/teacher/image-picker";
 import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
+import TeacherTestCard from "@/components/teacher/test-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
-import { MOCK_COURSES } from "@/lib/mockdata";
+import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
 import { isTA, isTeacher } from "@/lib/permissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
@@ -39,6 +40,15 @@ const EditCourse = () => {
     queryFn: async () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
       return MOCK_COURSES.find((c) => c.id === courseId);
+    },
+  });
+
+  // Fetch tests for this course
+  const { data: tests } = useQuery({
+    queryKey: ["course-tests", courseId],
+    queryFn: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return MOCK_TESTS.filter((t) => t.courseId === courseId);
     },
   });
 
@@ -287,6 +297,23 @@ const EditCourse = () => {
               onImageSelected={setImageUri}
               onImageRemoved={() => setImageUri(null)}
             />
+          </FormSection>
+
+          {/* Tests Section */}
+          <FormSection title="Course Tests">
+            {tests && tests.length > 0 ? (
+              <View className="gap-3">
+                {tests.map((test) => (
+                  <TeacherTestCard key={test.id} test={test} />
+                ))}
+              </View>
+            ) : (
+              <View className="bg-gray-50 rounded-xl p-6 items-center">
+                <Text className="text-gray-500 text-center">
+                  No tests created for this course yet.
+                </Text>
+              </View>
+            )}
           </FormSection>
 
           <View className="gap-3 mb-8">

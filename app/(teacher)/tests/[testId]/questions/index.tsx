@@ -292,17 +292,6 @@ export default function QuestionListScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Floating Add Button */}
-      {questions && questions.length > 0 && (
-        <TouchableOpacity
-          onPress={handleCreateQuestion}
-          className="absolute bottom-6 right-6 bg-violet-600 w-14 h-14 rounded-full items-center justify-center shadow-lg"
-          activeOpacity={0.8}
-        >
-          <Plus size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
     </SafeAreaView>
   );
 }
