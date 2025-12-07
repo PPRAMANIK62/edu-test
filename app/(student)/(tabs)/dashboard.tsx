@@ -2,45 +2,98 @@ import QuickActionButton from "@/components/student/quick-action-button";
 import RecentActivityCard from "@/components/student/recent-activity-card";
 import TestProgressCard from "@/components/student/test-progress-card";
 import StatCard from "@/components/teacher/stat-card";
-import {
-  MOCK_COURSES,
-  MOCK_RECENT_ACTIVITIES,
-  MOCK_STUDENT_STATS,
-} from "@/lib/mockdata";
-import { useQuery } from "@tanstack/react-query";
+import { useRecentActivities } from "@/hooks/use-activities";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAttemptsByStudent } from "@/hooks/use-attempts";
+import { useEnrolledCourses } from "@/hooks/use-courses";
+import { useActiveEnrollmentsByStudent } from "@/hooks/use-enrollments";
 import { Award, BookOpen, Clock, TrendingUp } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const StudentDashboard = () => {
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
-  const { data: stats } = useQuery({
-    queryKey: ["student-stats"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_STUDENT_STATS;
-    },
-  });
+  // Fetch enrolled courses for the student
+  const { data: enrolledCoursesData } = useEnrolledCourses(studentId);
 
-  const { data: recentActivities } = useQuery({
-    queryKey: ["recent-activities"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_RECENT_ACTIVITIES;
-    },
-  });
+  // Fetch active enrollments with progress
+  const { data: enrollmentsData } = useActiveEnrollmentsByStudent(studentId);
 
-  const { data: continueCourse } = useQuery({
-    queryKey: ["continue-course"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_COURSES.find(
-        (c) => c.isPurchased && c.progress && c.progress > 0
-      );
-    },
-  });
+  // Fetch recent activities for the student
+  const { data: recentActivities } = useRecentActivities(studentId, 5);
+
+  // Fetch completed attempts to compute stats
+  const { data: attemptsData } = useAttemptsByStudent(studentId);
+
+  // Compute student stats from real data
+  const stats = useMemo(() => {
+    const coursesEnrolled = enrolledCoursesData?.total || 0;
+
+    const completedAttempts =
+      attemptsData?.documents.filter((a) => a.status === "completed") || [];
+    const testsCompleted = completedAttempts.length;
+
+    const averageScore =
+      testsCompleted > 0
+        ? Math.round(
+            completedAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) /
+              testsCompleted
+          )
+        : 0;
+
+    // Estimate study hours (avg 30 min per test attempt)
+    const totalStudyHours = Math.round((attemptsData?.total || 0) * 0.5);
+
+    return {
+      coursesEnrolled,
+      testsCompleted,
+      averageScore,
+      totalStudyHours,
+    };
+  }, [enrolledCoursesData, attemptsData]);
+
+  // Find a course to continue learning (enrolled with progress > 0)
+  const continueCourse = useMemo(() => {
+    if (!enrollmentsData?.documents || !enrolledCoursesData?.documents)
+      return null;
+
+    // Find enrollment with progress > 0
+    const inProgressEnrollment = enrollmentsData.documents.find(
+      (e) => e.progress > 0 && e.status === "active"
+    );
+
+    if (!inProgressEnrollment) return null;
+
+    // Find the corresponding course
+    const course = enrolledCoursesData.documents.find(
+      (c) => c.$id === inProgressEnrollment.courseId
+    );
+
+    if (!course) return null;
+
+    // Return course with progress info for TestProgressCard
+    return {
+      id: course.$id,
+      title: course.title,
+      description: course.description,
+      imageUrl: course.imageUrl,
+      price: course.price,
+      currency: course.currency,
+      teacherId: course.teacherId,
+      teacherName: "Instructor", // TODO: Fetch teacher name if needed
+      totalTests: 0, // Will be computed when navigating to course detail
+      totalQuestions: 0,
+      estimatedHours: course.estimatedHours,
+      subjects: course.subjects,
+      isPurchased: true,
+      progress: inProgressEnrollment.progress,
+      enrollmentCount: 0,
+    };
+  }, [enrollmentsData, enrolledCoursesData]);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -99,12 +152,25 @@ const StudentDashboard = () => {
           <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
             {recentActivities?.map((activity, index) => (
               <RecentActivityCard
-                key={activity.id}
-                activity={activity}
+                key={activity.$id}
+                activity={{
+                  id: activity.$id,
+                  type: activity.type,
+                  title: activity.title,
+                  subtitle: activity.subtitle,
+                  timestamp: activity.$createdAt,
+                }}
                 index={index}
                 length={recentActivities.length}
               />
             ))}
+            {(!recentActivities || recentActivities.length === 0) && (
+              <View className="p-4">
+                <Text className="text-gray-500 text-center">
+                  No recent activity
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

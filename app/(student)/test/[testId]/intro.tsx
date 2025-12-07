@@ -1,12 +1,14 @@
 import TestInfoCard from "@/components/student/tests/test-info-card";
-import { MOCK_TESTS } from "@/lib/mockdata";
-import { Subject } from "@/types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { useStartAttempt } from "@/hooks/use-attempts";
+import { useTestWithSubjects } from "@/hooks/use-tests";
+import { Subject, Test } from "@/types";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { AlertCircle, Play } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -17,36 +19,83 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const TestIntro = () => {
   const { testId } = useLocalSearchParams<{ testId: string }>();
   const router = useRouter();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
-  const { data: test } = useQuery({
-    queryKey: ["test", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_TESTS.find((t) => t.id === testId);
-    },
-  });
+  // Fetch test with subjects
+  const { data: testData, isLoading } = useTestWithSubjects(testId);
 
-  const startMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const serverTime = new Date();
-      const endTime = new Date(
-        serverTime.getTime() + (test?.durationMinutes || 60) * 60 * 1000
-      );
+  // Start attempt mutation
+  const startMutation = useStartAttempt();
 
-      return {
-        attemptId: `attempt-${Date.now()}`,
-        startTime: serverTime.toISOString(),
-        endTime: endTime.toISOString(),
-      };
-    },
-    onSuccess: (data) => {
-      router.replace(`/(student)/attempt/${data.attemptId}`);
-    },
-  });
+  // Map database test to Test type expected by TestInfoCard
+  const test = useMemo((): Test | null => {
+    if (!testData) return null;
 
-  if (!test) {
-    return null;
+    const subjects: Subject[] = testData.subjects.map((s) => ({
+      id: s.$id,
+      name: s.name,
+      questionCount: s.questionCount,
+    }));
+
+    const totalQuestions = subjects.reduce(
+      (sum, s) => sum + s.questionCount,
+      0
+    );
+
+    return {
+      id: testData.$id,
+      courseId: testData.courseId,
+      title: testData.title,
+      description: testData.description,
+      durationMinutes: testData.durationMinutes,
+      totalQuestions,
+      subjects,
+      passingScore: testData.passingScore,
+      attemptCount: 0, // TODO: Fetch from attempts
+      isAvailable: testData.isPublished,
+    };
+  }, [testData]);
+
+  const handleStartTest = () => {
+    console.log("Starting test with:", {
+      studentId,
+      testId,
+      courseId: testData?.courseId,
+    });
+    if (!studentId || !testId || !testData) {
+      console.log("Missing required data:", { studentId, testId, testData });
+      return;
+    }
+
+    startMutation.mutate(
+      {
+        studentId,
+        testId,
+        courseId: testData.courseId,
+      },
+      {
+        onSuccess: (attempt) => {
+          console.log("Attempt created successfully:", attempt.$id);
+          router.replace(`/(student)/attempt/${attempt.$id}`);
+        },
+        onError: (error) => {
+          console.error("Failed to start test:", error);
+          Alert.alert("Error", "Failed to start the test. Please try again.");
+        },
+      }
+    );
+  };
+
+  if (isLoading || !test) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white items-center justify-center"
+        edges={["top"]}
+      >
+        <ActivityIndicator size="large" color="#1890ff" />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -68,14 +117,20 @@ const TestIntro = () => {
               Test Breakdown
             </Text>
             <View className="bg-gray-50 rounded-xl p-4">
-              {test.subjects.map((subject, index) => (
-                <SubjectInfo
-                  key={subject.id}
-                  subject={subject}
-                  index={index}
-                  length={test.subjects.length}
-                />
-              ))}
+              {test.subjects.length > 0 ? (
+                test.subjects.map((subject, index) => (
+                  <SubjectInfo
+                    key={subject.id}
+                    subject={subject}
+                    index={index}
+                    length={test.subjects.length}
+                  />
+                ))
+              ) : (
+                <Text className="text-gray-500 text-center py-2">
+                  No subjects defined
+                </Text>
+              )}
             </View>
           </View>
 
@@ -135,7 +190,7 @@ const TestIntro = () => {
 
       <View className="p-6 border-t border-gray-100">
         <TouchableOpacity
-          onPress={() => startMutation.mutate()}
+          onPress={handleStartTest}
           disabled={startMutation.isPending}
           className="bg-primary-600 rounded-2xl py-4 flex-row items-center justify-center"
           activeOpacity={0.8}

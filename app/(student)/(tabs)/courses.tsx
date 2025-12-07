@@ -1,23 +1,62 @@
 import StudentCourseCard from "@/components/student/course-card";
-import { MOCK_COURSES } from "@/lib/mockdata";
-import { useQuery } from "@tanstack/react-query";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { useEnrolledCourses } from "@/hooks/use-courses";
+import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
+import type { Course } from "@/types";
 import { useRouter } from "expo-router";
 import { BookOpen } from "lucide-react-native";
-import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useMemo } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CoursesTab = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
-  const { data: courses } = useQuery({
-    queryKey: ["my-courses"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_COURSES.filter((c) => c.isPurchased);
-    },
-  });
+  // Fetch enrolled courses for the student
+  const { data: enrolledCoursesData, isLoading } =
+    useEnrolledCourses(studentId);
+
+  // Fetch enrollments to get progress info
+  const { data: enrollmentsData } = useEnrollmentsByStudent(studentId);
+
+  // Map courses with progress from enrollments
+  const courses = useMemo(() => {
+    if (!enrolledCoursesData?.documents) return [];
+
+    return enrolledCoursesData.documents.map((course): Course => {
+      // Find enrollment progress for this course
+      const enrollment = enrollmentsData?.documents.find(
+        (e) => e.courseId === course.$id
+      );
+
+      return {
+        id: course.$id,
+        title: course.title,
+        description: course.description,
+        imageUrl: course.imageUrl,
+        price: course.price,
+        currency: course.currency,
+        teacherId: course.teacherId,
+        teacherName: "Instructor", // TODO: Fetch teacher name
+        totalTests: 0, // Will be computed on course detail page
+        totalQuestions: 0,
+        estimatedHours: course.estimatedHours,
+        subjects: course.subjects,
+        isPurchased: true, // They are enrolled so they have access
+        progress: enrollment?.progress || 0,
+        enrollmentCount: 0,
+      };
+    });
+  }, [enrolledCoursesData, enrollmentsData]);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -32,11 +71,15 @@ const CoursesTab = () => {
         </View>
 
         <View className="px-6 pb-6">
-          {courses?.map((course) => (
-            <StudentCourseCard key={course.id} course={course} />
-          ))}
-
-          {courses?.length === 0 && (
+          {isLoading ? (
+            <View className="items-center justify-center py-20">
+              <ActivityIndicator size="large" color="#1890ff" />
+            </View>
+          ) : courses.length > 0 ? (
+            courses.map((course) => (
+              <StudentCourseCard key={course.id} course={course} />
+            ))
+          ) : (
             <View className="items-center justify-center py-20">
               <BookOpen size={64} color="#d1d5db" />
               <Text className="text-gray-500 text-lg font-semibold mt-4 mb-2">

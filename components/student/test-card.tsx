@@ -1,12 +1,15 @@
-import { MOCK_COURSES } from "@/lib/mockdata";
 import { Test } from "@/types";
 import { router } from "expo-router";
 import { Clock, FileText, Trophy } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
-const TestCard = ({ test }: { test: Test }) => {
-  const course = MOCK_COURSES.find((c) => c.id === test.courseId);
+type Props = {
+  test: Test;
+  courseName?: string;
+};
+
+const TestCard = ({ test, courseName }: Props) => {
   return (
     <TouchableOpacity
       onPress={() => router.push(`/(student)/test/${test.id}/intro`)}
@@ -15,9 +18,11 @@ const TestCard = ({ test }: { test: Test }) => {
     >
       <View className="flex-row items-start justify-between mb-2">
         <View className="flex-1">
-          <Text className="text-sm text-primary-600 font-medium mb-1">
-            {course?.title}
-          </Text>
+          {courseName && (
+            <Text className="text-sm text-primary-600 font-medium mb-1">
+              {courseName}
+            </Text>
+          )}
           <Text className="text-lg font-bold text-gray-900 mb-1">
             {test.title}
           </Text>

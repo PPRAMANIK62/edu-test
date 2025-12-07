@@ -163,7 +163,7 @@ export interface TestAttemptDocument extends BaseDocument {
   startedAt: string;
   completedAt: string | null;
   status: "in_progress" | "completed" | "expired";
-  answers: string; // JSON.stringify(Answer[])
+  answers: string[]; // Array of JSON strings, each representing an Answer tuple
   score: number | null;
   percentage: number | null;
   passed: boolean | null;

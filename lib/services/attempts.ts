@@ -125,7 +125,10 @@ export async function getAttemptById(
  * Get parsed answers from attempt
  */
 export function getAnswersFromAttempt(attempt: TestAttemptDocument): Answer[] {
-  return parseJSON<Answer[]>(attempt.answers, []);
+  // Each element in the array is a JSON string representing an Answer tuple
+  return attempt.answers.map((answerStr) =>
+    parseJSON<Answer>(answerStr, [0, -1, false])
+  );
 }
 
 /**
@@ -210,7 +213,7 @@ export async function startAttempt(
       startedAt: now,
       completedAt: null,
       status: "in_progress",
-      answers: "[]", // Empty answers array
+      answers: [], // Empty answers array
       score: null,
       percentage: null,
       passed: null,
@@ -260,13 +263,13 @@ export async function submitAnswer(
   // Sort answers by question index for consistency
   answers.sort((a, b) => a[0] - b[0]);
 
-  // Update attempt with new answers
+  // Update attempt with new answers (each answer as JSON string in array)
   const response = await databases.updateRow<TestAttemptDocument>({
     databaseId: databaseId!,
     tableId: tables.testAttempts!,
     rowId: attemptId,
     data: {
-      answers: JSON.stringify(answers),
+      answers: answers.map((a) => JSON.stringify(a)),
     },
   });
 
@@ -306,13 +309,13 @@ export async function submitAnswersBatch(
   // Sort answers by question index
   answers.sort((a, b) => a[0] - b[0]);
 
-  // Update attempt
+  // Update attempt (each answer as JSON string in array)
   const response = await databases.updateRow<TestAttemptDocument>({
     databaseId: databaseId!,
     tableId: tables.testAttempts!,
     rowId: attemptId,
     data: {
-      answers: JSON.stringify(answers),
+      answers: answers.map((a) => JSON.stringify(a)),
     },
   });
 

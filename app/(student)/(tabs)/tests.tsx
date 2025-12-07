@@ -1,26 +1,76 @@
 import TestCard from "@/components/student/test-card";
-import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { useEnrolledCourses } from "@/hooks/use-courses";
+import { getPublishedTestsByCourse } from "@/lib/services/tests";
+import type { Test } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { FileText } from "lucide-react-native";
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TestsTab = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
-  const { data: availableTests } = useQuery({
-    queryKey: ["available-tests"],
+  // Fetch enrolled courses
+  const { data: enrolledCoursesData, isLoading: coursesLoading } =
+    useEnrolledCourses(studentId);
+
+  // Fetch tests for all enrolled courses
+  const { data: availableTests, isLoading: testsLoading } = useQuery({
+    queryKey: [
+      "available-tests",
+      enrolledCoursesData?.documents?.map((c) => c.$id),
+    ],
     queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const purchasedCourseIds = MOCK_COURSES.filter((c) => c.isPurchased).map(
-        (c) => c.id
+      if (
+        !enrolledCoursesData?.documents ||
+        enrolledCoursesData.documents.length === 0
+      ) {
+        return [];
+      }
+
+      // Fetch tests for each enrolled course
+      const testsPromises = enrolledCoursesData.documents.map(
+        async (course) => {
+          const testsResult = await getPublishedTestsByCourse(course.$id);
+          return testsResult.documents.map(
+            (test): Test & { courseName: string } => ({
+              id: test.$id,
+              courseId: test.courseId,
+              title: test.title,
+              description: test.description,
+              durationMinutes: test.durationMinutes,
+              totalQuestions: 0, // Will be fetched in test intro
+              subjects: [],
+              passingScore: test.passingScore,
+              attemptCount: 0, // TODO: Fetch from attempts
+              isAvailable: test.isPublished,
+              courseName: course.title,
+            })
+          );
+        }
       );
-      return MOCK_TESTS.filter((t) => purchasedCourseIds.includes(t.courseId));
+
+      const testsArrays = await Promise.all(testsPromises);
+      return testsArrays.flat();
     },
+    enabled:
+      !!enrolledCoursesData?.documents &&
+      enrolledCoursesData.documents.length > 0,
   });
+
+  const isLoading = coursesLoading || testsLoading;
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -33,11 +83,19 @@ const TestsTab = () => {
         </View>
 
         <View className="px-6 pb-6">
-          {availableTests?.map((test) => (
-            <TestCard key={test.id} test={test} />
-          ))}
-
-          {availableTests?.length === 0 && (
+          {isLoading ? (
+            <View className="items-center justify-center py-20">
+              <ActivityIndicator size="large" color="#1890ff" />
+            </View>
+          ) : availableTests && availableTests.length > 0 ? (
+            availableTests.map((test) => (
+              <TestCard
+                key={test.id}
+                test={test}
+                courseName={test.courseName}
+              />
+            ))
+          ) : (
             <View className="items-center justify-center py-20">
               <FileText size={64} color="#d1d5db" />
               <Text className="text-gray-500 text-lg font-semibold mt-4 mb-2">

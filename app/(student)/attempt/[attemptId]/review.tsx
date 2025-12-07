@@ -1,41 +1,98 @@
 import ActionButton from "@/components/student/attempt/action-button";
 import QuestionReviewCard from "@/components/student/attempt/question-review";
 import ResultsOverview from "@/components/student/attempt/results-overview";
-import { MOCK_QUESTIONS } from "@/lib/mockdata";
-import { useQuery } from "@tanstack/react-query";
+import { getAnswersFromAttempt, useAttempt } from "@/hooks/use-attempts";
+import { useQuestionsByTest } from "@/hooks/use-questions";
+import type { Question } from "@/types";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import React, { useMemo } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ReviewScreen = () => {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const router = useRouter();
 
-  const { data: reviewData } = useQuery({
-    queryKey: ["review", attemptId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  // Fetch attempt data with answers and results
+  const { data: attemptData, isLoading: attemptLoading } =
+    useAttempt(attemptId);
 
-      const correctCount = 4;
-      const totalQuestions = MOCK_QUESTIONS.length;
-      const percentage = Math.round((correctCount / totalQuestions) * 100);
+  // Fetch questions for the test
+  const { data: questionsData, isLoading: questionsLoading } =
+    useQuestionsByTest(attemptData?.testId);
+
+  // Compute review data from attempt and questions
+  const reviewData = useMemo(() => {
+    if (!attemptData || !questionsData?.documents) return null;
+
+    const questions = questionsData.documents;
+    const answers = getAnswersFromAttempt(attemptData);
+
+    // Create answer map: questionIndex -> selectedIndex
+    const answerMap = new Map<number, number>();
+    for (const [questionIndex, selectedIndex] of answers) {
+      answerMap.set(questionIndex, selectedIndex);
+    }
+
+    // Map questions with answer data
+    const reviewQuestions: (Question & {
+      selectedOptionId: string;
+      isCorrect: boolean;
+    })[] = questions.map((q, index) => {
+      const selectedIndex = answerMap.get(index);
+      const isCorrect =
+        selectedIndex !== undefined && selectedIndex === q.correctIndex;
+
+      // Map options to the format expected by components
+      const labels = ["A", "B", "C", "D"] as const;
+      const options = q.options.map((text, optIndex) => ({
+        id: `opt-${optIndex}`,
+        label: labels[optIndex],
+        text,
+      }));
 
       return {
-        score: correctCount,
-        total: totalQuestions,
-        percentage,
-        passed: percentage >= 70,
-        questions: MOCK_QUESTIONS.map((q, idx) => ({
-          ...q,
-          selectedOptionId: idx < 4 ? q.correctOptionId : q.options[0].id,
-          isCorrect: idx < 4,
-        })),
+        id: q.$id,
+        type: "mcq" as const,
+        testId: q.testId,
+        subjectId: q.subjectId,
+        subjectName: q.subjectName,
+        text: q.text,
+        options,
+        correctOptionId: `opt-${q.correctIndex}`,
+        explanation: q.explanation,
+        order: q.order,
+        selectedOptionId:
+          selectedIndex !== undefined ? `opt-${selectedIndex}` : "",
+        isCorrect,
       };
-    },
-  });
+    });
 
-  if (!reviewData) return null;
+    const score = attemptData.score ?? 0;
+    const total = questions.length;
+    const percentage = attemptData.percentage ?? 0;
+    const passed = attemptData.passed ?? false;
+
+    return {
+      score,
+      total,
+      percentage,
+      passed,
+      questions: reviewQuestions,
+    };
+  }, [attemptData, questionsData]);
+
+  if (attemptLoading || questionsLoading || !reviewData) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white items-center justify-center"
+        edges={["top"]}
+      >
+        <ActivityIndicator size="large" color="#1890ff" />
+        <Text className="text-gray-500 mt-4">Loading review...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>

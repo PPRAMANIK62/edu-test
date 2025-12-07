@@ -1,10 +1,16 @@
 import ProgressBar from "@/components/student/courses/progress-bar";
 import CoursesTestCard from "@/components/student/courses/test-card";
-import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import { useCourse } from "@/hooks/use-courses";
+import {
+  useEnrollStudent,
+  useIsStudentEnrolled,
+} from "@/hooks/use-enrollments";
+import { usePublishedTestsByCourse } from "@/hooks/use-tests";
+import type { Course, Test } from "@/types";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Clock, FileText } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,42 +24,88 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const CourseDetail = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
-  const { data: course } = useQuery({
-    queryKey: ["course", courseId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_COURSES.find((c) => c.id === courseId);
-    },
-  });
+  // Fetch course details
+  const { data: courseData, isLoading: courseLoading } = useCourse(courseId);
 
-  const { data: tests } = useQuery({
-    queryKey: ["course-tests", courseId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_TESTS.filter((t) => t.courseId === courseId);
-    },
-  });
+  // Fetch tests for this course
+  const { data: testsData, isLoading: testsLoading } =
+    usePublishedTestsByCourse(courseId);
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (courseId: string) => {
-      // TODO: Implement purchase logic
-      // await purchaseCourse(courseId);
-      return courseId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      queryClient.invalidateQueries({ queryKey: ["browse-courses"] });
-      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
-      Alert.alert("Success", "Course purchased successfully!");
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to purchase course. Please try again.");
-    },
-  });
+  // Check if student is enrolled
+  const { data: isEnrolled } = useIsStudentEnrolled(studentId, courseId);
 
-  if (!course) return null;
+  // Enrollment mutation
+  const enrollMutation = useEnrollStudent();
+
+  // Map course data to Course type
+  const course = useMemo((): Course | null => {
+    if (!courseData) return null;
+
+    return {
+      id: courseData.$id,
+      title: courseData.title,
+      description: courseData.description,
+      imageUrl: courseData.imageUrl,
+      price: courseData.price,
+      currency: courseData.currency,
+      teacherId: courseData.teacherId,
+      teacherName: "Instructor", // TODO: Fetch teacher name
+      totalTests: testsData?.total || 0,
+      totalQuestions: 0, // Could compute from tests if needed
+      estimatedHours: courseData.estimatedHours,
+      subjects: courseData.subjects,
+      isPurchased: isEnrolled || false,
+      enrollmentCount: 0,
+    };
+  }, [courseData, testsData, isEnrolled]);
+
+  // Map tests to Test type
+  const tests = useMemo((): Test[] => {
+    if (!testsData?.documents) return [];
+
+    return testsData.documents.map((test) => ({
+      id: test.$id,
+      courseId: test.courseId,
+      title: test.title,
+      description: test.description,
+      durationMinutes: test.durationMinutes,
+      totalQuestions: 0, // Will be fetched in test intro
+      subjects: [], // Will be fetched in test intro
+      passingScore: test.passingScore,
+      attemptCount: 0, // Will be computed from attempts
+      isAvailable: test.isPublished,
+    }));
+  }, [testsData]);
+
+  const handlePurchase = () => {
+    if (!studentId || !courseId) return;
+
+    enrollMutation.mutate(
+      { studentId, courseId },
+      {
+        onSuccess: () => {
+          Alert.alert("Success", "Course purchased and enrolled successfully!");
+        },
+        onError: () => {
+          Alert.alert("Error", "Failed to purchase course. Please try again.");
+        },
+      }
+    );
+  };
+
+  if (courseLoading || !course) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white items-center justify-center"
+        edges={["top"]}
+      >
+        <ActivityIndicator size="large" color="#1890ff" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -95,7 +147,8 @@ const CourseDetail = () => {
               <View className="flex-row items-center justify-between mb-4">
                 <View>
                   <Text className="text-2xl font-bold text-gray-900 mb-1">
-                    ${course.price}
+                    {course.currency === "INR" ? "₹" : "$"}
+                    {course.price}
                   </Text>
                   <Text className="text-sm text-gray-600">
                     One-time purchase
@@ -103,12 +156,12 @@ const CourseDetail = () => {
                 </View>
               </View>
               <TouchableOpacity
-                onPress={() => purchaseMutation.mutate(course.id)}
-                disabled={purchaseMutation.isPending}
+                onPress={handlePurchase}
+                disabled={enrollMutation.isPending}
                 className="bg-primary-600 rounded-xl py-3.5 items-center"
                 activeOpacity={0.8}
               >
-                {purchaseMutation.isPending ? (
+                {enrollMutation.isPending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text className="text-white font-bold text-base">
@@ -130,16 +183,24 @@ const CourseDetail = () => {
 
           <View className="mb-6">
             <Text className="text-lg font-bold text-gray-900 mb-3">
-              Tests ({tests?.length || 0})
+              Tests ({tests.length})
             </Text>
             <View className="gap-3">
-              {tests?.map((test) => (
-                <CoursesTestCard
-                  key={test.id}
-                  test={test}
-                  isPurchased={course.isPurchased}
-                />
-              ))}
+              {testsLoading ? (
+                <ActivityIndicator size="small" color="#1890ff" />
+              ) : tests.length > 0 ? (
+                tests.map((test) => (
+                  <CoursesTestCard
+                    key={test.id}
+                    test={test}
+                    isPurchased={course.isPurchased}
+                  />
+                ))
+              ) : (
+                <Text className="text-gray-500 text-center py-4">
+                  No tests available yet
+                </Text>
+              )}
             </View>
           </View>
 

@@ -1,6 +1,11 @@
-import { MOCK_QUESTIONS } from "@/lib/mockdata";
-import { AttemptAnswer } from "@/types";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAppwrite } from "@/hooks/use-appwrite";
+import {
+  getAnswersFromAttempt,
+  useAttempt,
+  useCompleteAttempt,
+  useSubmitAnswer,
+} from "@/hooks/use-attempts";
+import { useQuestionsByTest } from "@/hooks/use-questions";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   AlertCircle,
@@ -9,8 +14,15 @@ import {
   Clock,
   Flag,
 } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
+  ActivityIndicator,
   Alert,
   AppState,
   AppStateStatus,
@@ -21,43 +33,118 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Local answer state for UI (before syncing to DB)
+interface LocalAnswer {
+  questionIndex: number;
+  selectedIndex: number | null;
+  isMarkedForReview: boolean;
+}
+
 export default function AttemptScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const router = useRouter();
+  const { userProfile } = useAppwrite();
+  const studentId = userProfile?.$id;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, AttemptAnswer>>({});
+  const [localAnswers, setLocalAnswers] = useState<Record<number, LocalAnswer>>(
+    {}
+  );
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isBackgrounded, setIsBackgrounded] = useState(false);
   const endTimeRef = useRef<Date | null>(null);
 
-  const { data: attemptData } = useQuery({
-    queryKey: ["attempt", attemptId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const serverEndTime = new Date(Date.now() + 80 * 60 * 1000);
-      endTimeRef.current = serverEndTime;
+  // Fetch attempt data
+  const { data: attemptData, isLoading: attemptLoading } =
+    useAttempt(attemptId);
 
-      return {
-        attemptId,
-        testId: "test-1",
-        endTime: serverEndTime.toISOString(),
-        startTime: new Date().toISOString(),
-      };
-    },
-  });
+  // Fetch questions for the test
+  const { data: questionsData, isLoading: questionsLoading } =
+    useQuestionsByTest(attemptData?.testId);
 
-  const { data: questions } = useQuery({
-    queryKey: ["attempt-questions", attemptId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_QUESTIONS;
-    },
-    enabled: !!attemptData,
-  });
+  // Mutations
+  const submitAnswerMutation = useSubmitAnswer();
+  const completeAttemptMutation = useCompleteAttempt();
 
+  // Map database questions to UI format
+  const questions = useMemo(() => {
+    if (!questionsData?.documents) return [];
+
+    return questionsData.documents.map((q, index) => ({
+      id: q.$id,
+      index,
+      subjectName: q.subjectName,
+      text: q.text,
+      options: q.options.map((text, optIndex) => ({
+        id: `opt-${optIndex}`,
+        label: String.fromCharCode(65 + optIndex), // A, B, C, D
+        text,
+      })),
+      correctIndex: q.correctIndex,
+    }));
+  }, [questionsData]);
+
+  // Initialize local answers from database answers when attempt loads
   useEffect(() => {
     if (!attemptData) return;
+
+    const dbAnswers = getAnswersFromAttempt(attemptData);
+    const initialAnswers: Record<number, LocalAnswer> = {};
+
+    for (const answer of dbAnswers) {
+      const [questionIndex, selectedIndex, isMarkedForReview] = answer;
+      initialAnswers[questionIndex] = {
+        questionIndex,
+        selectedIndex,
+        isMarkedForReview,
+      };
+    }
+
+    setLocalAnswers(initialAnswers);
+  }, [attemptData]);
+
+  const handleSubmitTest = useCallback(() => {
+    if (!attemptId || !attemptData || !studentId) return;
+
+    completeAttemptMutation.mutate(
+      {
+        attemptId,
+        studentId,
+        testId: attemptData.testId,
+      },
+      {
+        onSuccess: () => {
+          router.replace(`/(student)/attempt/${attemptId}/review`);
+        },
+        onError: () => {
+          Alert.alert("Error", "Failed to submit test. Please try again.");
+        },
+      }
+    );
+  }, [attemptId, attemptData, studentId, completeAttemptMutation, router]);
+
+  const handleAutoSubmit = useCallback(() => {
+    if (!completeAttemptMutation.isPending && attemptData && studentId) {
+      Alert.alert("Time Up!", "Your test has been submitted automatically.", [
+        { text: "OK", onPress: () => handleSubmitTest() },
+      ]);
+    }
+  }, [
+    completeAttemptMutation.isPending,
+    attemptData,
+    studentId,
+    handleSubmitTest,
+  ]);
+
+  // Timer setup
+  useEffect(() => {
+    if (!attemptData) return;
+
+    // Calculate end time based on test duration
+    const startTime = new Date(attemptData.startedAt);
+    // Assume 80 minutes duration - in production, get this from test data
+    const endTime = new Date(startTime.getTime() + 80 * 60 * 1000);
+    endTimeRef.current = endTime;
 
     const calculateTimeRemaining = () => {
       if (!endTimeRef.current) return 0;
@@ -82,8 +169,9 @@ export default function AttemptScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [attemptData]);
+  }, [attemptData, handleAutoSubmit]);
 
+  // App state handling for background/foreground
   useEffect(() => {
     const subscription = AppState.addEventListener(
       "change",
@@ -113,41 +201,11 @@ export default function AttemptScreen() {
     };
   });
 
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const answeredCount = Object.values(answers).filter(
-        (a) => a.selectedOptionId
-      ).length;
-      const correctCount = Object.values(answers).filter((a) => {
-        const question = questions?.find((q) => q.id === a.questionId);
-        return question && a.selectedOptionId === question.correctOptionId;
-      }).length;
-
-      return {
-        score: correctCount,
-        total: questions?.length || 0,
-        percentage: Math.round((correctCount / (questions?.length || 1)) * 100),
-      };
-    },
-    onSuccess: () => {
-      router.replace(`/(student)/attempt/${attemptId}/review`);
-    },
-  });
-
-  const handleAutoSubmit = () => {
-    if (!submitMutation.isPending) {
-      Alert.alert("Time Up!", "Your test has been submitted automatically.", [
-        { text: "OK", onPress: () => submitMutation.mutate() },
-      ]);
-    }
-  };
-
   const handleSubmit = () => {
     const unanswered =
-      (questions?.length || 0) -
-      Object.values(answers).filter((a) => a.selectedOptionId).length;
+      questions.length -
+      Object.values(localAnswers).filter((a) => a.selectedIndex !== null)
+        .length;
 
     if (unanswered > 0) {
       Alert.alert(
@@ -158,49 +216,90 @@ export default function AttemptScreen() {
           {
             text: "Submit",
             style: "destructive",
-            onPress: () => submitMutation.mutate(),
+            onPress: handleSubmitTest,
           },
         ]
       );
     } else {
       Alert.alert("Submit Test", "Are you sure you want to submit your test?", [
         { text: "Cancel", style: "cancel" },
-        { text: "Submit", onPress: () => submitMutation.mutate() },
+        { text: "Submit", onPress: handleSubmitTest },
       ]);
     }
   };
 
-  const handleSelectAnswer = (questionId: string, optionId: string) => {
-    setAnswers((prev) => ({
+  const handleSelectAnswer = (questionIndex: number, optionIndex: number) => {
+    if (!attemptId) return;
+
+    const currentAnswer = localAnswers[questionIndex];
+    const isMarkedForReview = currentAnswer?.isMarkedForReview || false;
+
+    // Update local state immediately for responsive UI
+    setLocalAnswers((prev) => ({
       ...prev,
-      [questionId]: {
-        questionId,
-        selectedOptionId: optionId,
-        isMarkedForReview: prev[questionId]?.isMarkedForReview || false,
+      [questionIndex]: {
+        questionIndex,
+        selectedIndex: optionIndex,
+        isMarkedForReview,
       },
     }));
+
+    // Sync to database
+    submitAnswerMutation.mutate({
+      attemptId,
+      questionIndex,
+      selectedIndex: optionIndex,
+      isMarkedForReview,
+    });
   };
 
-  const handleToggleFlag = (questionId: string) => {
-    setAnswers((prev) => ({
+  const handleToggleFlag = (questionIndex: number) => {
+    if (!attemptId) return;
+
+    const currentAnswer = localAnswers[questionIndex];
+    const newIsMarkedForReview = !currentAnswer?.isMarkedForReview;
+    const selectedIndex = currentAnswer?.selectedIndex ?? -1;
+
+    // Update local state immediately
+    setLocalAnswers((prev) => ({
       ...prev,
-      [questionId]: {
-        ...(prev[questionId] || {
-          questionId,
-          selectedOptionId: undefined,
-          isMarkedForReview: false,
-        }),
-        isMarkedForReview: !prev[questionId]?.isMarkedForReview,
+      [questionIndex]: {
+        questionIndex,
+        selectedIndex: currentAnswer?.selectedIndex ?? null,
+        isMarkedForReview: newIsMarkedForReview,
       },
     }));
+
+    // Only sync if there's a selected answer
+    if (selectedIndex >= 0) {
+      submitAnswerMutation.mutate({
+        attemptId,
+        questionIndex,
+        selectedIndex,
+        isMarkedForReview: newIsMarkedForReview,
+      });
+    }
   };
 
-  if (!questions || questions.length === 0) {
-    return null;
+  if (
+    attemptLoading ||
+    questionsLoading ||
+    !attemptData ||
+    questions.length === 0
+  ) {
+    return (
+      <SafeAreaView
+        className="flex-1 bg-white items-center justify-center"
+        edges={["top", "bottom"]}
+      >
+        <ActivityIndicator size="large" color="#1890ff" />
+        <Text className="text-gray-500 mt-4">Loading test...</Text>
+      </SafeAreaView>
+    );
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentAnswer = answers[currentQuestion.id];
+  const currentAnswer = localAnswers[currentQuestionIndex];
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = timeRemaining % 60;
 
@@ -220,7 +319,7 @@ export default function AttemptScreen() {
         </Text>
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={isBackgrounded || submitMutation.isPending}
+          disabled={isBackgrounded || completeAttemptMutation.isPending}
           className="bg-white/20 rounded-lg px-4 py-2"
         >
           <Text className="text-white font-semibold text-sm">Submit</Text>
@@ -248,7 +347,7 @@ export default function AttemptScreen() {
               {currentQuestion.subjectName}
             </Text>
             <TouchableOpacity
-              onPress={() => handleToggleFlag(currentQuestion.id)}
+              onPress={() => handleToggleFlag(currentQuestionIndex)}
               activeOpacity={0.7}
             >
               <Flag
@@ -264,13 +363,13 @@ export default function AttemptScreen() {
         </View>
 
         <View className="gap-3 mb-6">
-          {currentQuestion.options.map((option) => {
-            const isSelected = currentAnswer?.selectedOptionId === option.id;
+          {currentQuestion.options.map((option, optionIndex) => {
+            const isSelected = currentAnswer?.selectedIndex === optionIndex;
             return (
               <TouchableOpacity
                 key={option.id}
                 onPress={() =>
-                  handleSelectAnswer(currentQuestion.id, option.id)
+                  handleSelectAnswer(currentQuestionIndex, optionIndex)
                 }
                 disabled={isBackgrounded}
                 activeOpacity={0.7}
@@ -329,8 +428,9 @@ export default function AttemptScreen() {
         >
           <View className="flex-row gap-2">
             {questions.map((q, idx) => {
-              const ans = answers[q.id];
-              const isAnswered = !!ans?.selectedOptionId;
+              const ans = localAnswers[idx];
+              const isAnswered =
+                ans?.selectedIndex !== null && ans?.selectedIndex !== undefined;
               const isFlagged = !!ans?.isMarkedForReview;
               const isCurrent = idx === currentQuestionIndex;
 
