@@ -50,7 +50,10 @@ const TestsTab = () => {
           // Fetch attempt count for each test
           const testsWithAttempts = await Promise.all(
             testsResult.documents.map(async (test) => {
-              const attemptCount = await getTestAttemptCount(studentId, test.$id);
+              const attemptCount = await getTestAttemptCount(
+                studentId,
+                test.$id
+              );
               return {
                 id: test.$id,
                 courseId: test.courseId,

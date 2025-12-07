@@ -24,10 +24,6 @@ export type {
   PaginatedResponse,
   PurchaseDocument,
   QuestionDocument,
-  ServiceError,
-  // Service response types
-  ServiceResponse,
-  ServiceResult,
   TestAttemptDocument,
   TestDocument,
   TestSubjectDocument,
@@ -48,11 +44,9 @@ export {
   MAX_LIMIT,
   buildQueries,
   dateRangeQuery,
-  equalQuery,
   getDateRangeFromFilter,
   nowISO,
   parseJSON,
-  searchQuery,
 } from "./helpers";
 
 // ============================================================================
@@ -98,6 +92,7 @@ export {
   createQuestion,
   deleteQuestion,
   getQuestionById,
+  getQuestionCount,
   getQuestionsBySubject,
   getQuestionsByTest,
   reorderQuestions,
@@ -113,6 +108,8 @@ export {
   enrollStudent,
   getActiveEnrollmentsByStudent,
   getEnrollment,
+  getEnrollmentById,
+  getEnrollmentCount,
   getEnrollmentsByCourse,
   getEnrollmentsByStudent,
   getRecentEnrollments,
@@ -183,13 +180,11 @@ export {
 
 export {
   getAverageCompletionRate,
-  getCourseAnalyticsSummary,
   getCoursePerformanceData,
   getCoursePerformanceMetrics,
   getEnrichedRecentEnrollments,
   getRevenueAnalytics,
   getStudentEngagementMetrics,
-  getStudentStats,
   getStudentsWithStats,
   getTeacherDashboardStats,
   getTestAttemptCount,

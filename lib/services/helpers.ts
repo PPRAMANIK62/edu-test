@@ -45,23 +45,6 @@ export function buildQueries(options: QueryOptions = {}): string[] {
 }
 
 /**
- * Build equality filter query
- */
-export function equalQuery(
-  field: string,
-  value: string | number | boolean
-): string {
-  return Query.equal(field, value);
-}
-
-/**
- * Build search query for text fields
- */
-export function searchQuery(field: string, value: string): string {
-  return Query.search(field, value);
-}
-
-/**
  * Build date range query
  */
 export function dateRangeQuery(

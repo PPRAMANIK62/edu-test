@@ -14,7 +14,6 @@ import {
   getActiveEnrollmentsByStudent,
   getEnrollment,
   getEnrollmentById,
-  getEnrollmentCount,
   getEnrollmentsByCourse,
   getEnrollmentsByStudent,
   getRecentEnrollments,
@@ -167,26 +166,6 @@ export function useStudentCourseEnrollment(
     queryKey: queryKeys.enrollments.enrollment(studentId!, courseId!),
     queryFn: () => getEnrollment(studentId!, courseId!),
     enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch enrollment count for a course
- *
- * @param courseId - The course ID
- * @returns TanStack Query result with count
- *
- * @example
- * ```tsx
- * const { data: count } = useEnrollmentCount('course-123');
- * ```
- */
-export function useEnrollmentCount(courseId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.enrollments.count(courseId!),
-    queryFn: () => getEnrollmentCount(courseId!),
-    enabled: !!courseId,
     staleTime: 5 * 60 * 1000,
   });
 }

@@ -9,12 +9,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { invalidateUserActivities, queryKeys } from "@/lib/query-keys";
 import {
-  deleteActivitiesByUser,
-  deleteActivity,
   getActivitiesByType,
   getActivitiesByUser,
   getActivityById,
-  getActivityCountByType,
   getActivityMetadata,
   getRecentActivitiesByUser,
   logAchievement,
@@ -120,26 +117,6 @@ export function useActivitiesByType(
     queryFn: () => getActivitiesByType(userId!, type!, options),
     enabled: !!userId && !!type,
     staleTime: 2 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch activity count by type for a user
- *
- * @param userId - The user's ID
- * @returns TanStack Query result with counts by type
- *
- * @example
- * ```tsx
- * const { data: counts } = useActivityCountByType('user-123');
- * ```
- */
-export function useActivityCountByType(userId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.activities.countByType(userId!),
-    queryFn: () => getActivityCountByType(userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -263,54 +240,6 @@ export function useLogAchievement() {
       achievementType?: string;
     }) => logAchievement(userId, title, description, achievementType),
     onSuccess: (_, { userId }) => {
-      invalidateUserActivities(queryClient, userId);
-    },
-  });
-}
-
-/**
- * Delete an activity
- *
- * @returns Mutation object for deleting activities
- *
- * @example
- * ```tsx
- * const { mutate: remove } = useDeleteActivity();
- * remove({ activityId: 'activity-123', userId: 'user-456' });
- * ```
- */
-export function useDeleteActivity() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ activityId }: { activityId: string; userId: string }) =>
-      deleteActivity(activityId),
-    onSuccess: (_, { activityId, userId }) => {
-      // Remove from cache
-      queryClient.removeQueries({
-        queryKey: queryKeys.activities.detail(activityId),
-      });
-
-      // Invalidate user's activities
-      invalidateUserActivities(queryClient, userId);
-    },
-  });
-}
-
-/**
- * Delete all activities for a user
- * Use with caution - primarily for account cleanup
- *
- * @returns Mutation object for bulk deleting activities
- */
-export function useDeleteActivitiesByUser() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ userId }: { userId: string }) =>
-      deleteActivitiesByUser(userId),
-    onSuccess: (_, { userId }) => {
-      // Invalidate all user's activities
       invalidateUserActivities(queryClient, userId);
     },
   });

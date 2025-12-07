@@ -10,16 +10,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invalidateAfterAttempt, queryKeys } from "@/lib/query-keys";
 import {
   completeAttempt,
-  expireAttempt,
   getAnswersFromAttempt,
   getAttemptById,
   getAttemptsByStudent,
   getAttemptsByTest,
-  getBestAttempt,
   getCompletedAttemptsByTest,
   getInProgressAttempt,
   getStudentTestHistory,
-  getTestAttemptStats,
   startAttempt,
   submitAnswer,
   submitAnswersBatch,
@@ -148,30 +145,6 @@ export function useInProgressAttempt(
 }
 
 /**
- * Fetch best attempt (highest score) for student and test
- *
- * @param studentId - The student's user ID
- * @param testId - The test ID
- * @returns TanStack Query result with best attempt or null
- *
- * @example
- * ```tsx
- * const { data: bestAttempt } = useBestAttempt('student-123', 'test-456');
- * ```
- */
-export function useBestAttempt(
-  studentId: string | undefined,
-  testId: string | undefined
-) {
-  return useQuery({
-    queryKey: queryKeys.attempts.best(studentId!, testId!),
-    queryFn: () => getBestAttempt(studentId!, testId!),
-    enabled: !!studentId && !!testId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
  * Fetch student's test history for a specific test
  *
  * @param studentId - The student's user ID
@@ -193,26 +166,6 @@ export function useStudentTestHistory(
     queryKey: queryKeys.attempts.history(studentId!, testId!),
     queryFn: () => getStudentTestHistory(studentId!, testId!, options),
     enabled: !!studentId && !!testId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch attempt statistics for a test
- *
- * @param testId - The test ID
- * @returns TanStack Query result with test statistics
- *
- * @example
- * ```tsx
- * const { data: stats } = useTestAttemptStats('test-123');
- * ```
- */
-export function useTestAttemptStats(testId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.attempts.stats(testId!),
-    queryFn: () => getTestAttemptStats(testId!),
-    enabled: !!testId,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -365,46 +318,6 @@ export function useCompleteAttempt() {
 
       // Comprehensive invalidation after attempt completion
       invalidateAfterAttempt(queryClient, studentId, testId, attemptId);
-    },
-  });
-}
-
-/**
- * Mark an attempt as expired
- *
- * @returns Mutation object for expiring attempts
- *
- * @example
- * ```tsx
- * const { mutate: expire } = useExpireAttempt();
- * expire({ attemptId: 'attempt-123', studentId: 'student-456', testId: 'test-789' });
- * ```
- */
-export function useExpireAttempt() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      attemptId,
-    }: {
-      attemptId: string;
-      studentId: string;
-      testId: string;
-    }) => expireAttempt(attemptId),
-    onSuccess: (expiredAttempt, { attemptId, studentId, testId }) => {
-      // Update the cache directly
-      queryClient.setQueryData<TestAttemptDocument>(
-        queryKeys.attempts.detail(attemptId),
-        expiredAttempt
-      );
-
-      // Invalidate related queries
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.attempts.inProgress(studentId, testId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.attempts.byStudent(studentId),
-      });
     },
   });
 }

@@ -14,7 +14,6 @@ import {
   createQuestion,
   deleteQuestion,
   getQuestionById,
-  getQuestionCount,
   getQuestionsBySubject,
   getQuestionsByTest,
   reorderQuestions,
@@ -96,26 +95,6 @@ export function useQuestion(questionId: string | undefined) {
     queryKey: queryKeys.questions.detail(questionId!),
     queryFn: () => getQuestionById(questionId!),
     enabled: !!questionId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch question count for a test
- *
- * @param testId - The test ID
- * @returns TanStack Query result with question count
- *
- * @example
- * ```tsx
- * const { data: count } = useQuestionCount('test-123');
- * ```
- */
-export function useQuestionCount(testId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.questions.count(testId!),
-    queryFn: () => getQuestionCount(testId!),
-    enabled: !!testId,
     staleTime: 5 * 60 * 1000,
   });
 }

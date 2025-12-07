@@ -5,33 +5,8 @@
 import type { Models } from "appwrite";
 
 // ============================================================================
-// Service Response Types
+// Response Types
 // ============================================================================
-
-/**
- * Standard service response wrapper
- */
-export interface ServiceResponse<T> {
-  data: T;
-  success: true;
-}
-
-/**
- * Service error response
- */
-export interface ServiceError {
-  success: false;
-  error: {
-    message: string;
-    code?: string;
-    details?: unknown;
-  };
-}
-
-/**
- * Union type for service results
- */
-export type ServiceResult<T> = ServiceResponse<T> | ServiceError;
 
 /**
  * Paginated list response

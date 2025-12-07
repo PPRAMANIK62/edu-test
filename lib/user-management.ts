@@ -139,57 +139,6 @@ export const updateUserRole = async (
 };
 
 /**
- * Check if a user is the primary teacher
- * @param userId - The ID of the user to check
- * @returns true if the user is the primary teacher
- */
-export const isPrimaryTeacher = async (userId: string): Promise<boolean> => {
-  try {
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.equal("$id", userId)],
-    });
-
-    if (!response.rows || response.rows.length === 0) {
-      return false;
-    }
-
-    const user = response.rows[0] as unknown as UserProfile;
-    return user.isPrimaryTeacher === true;
-  } catch (error) {
-    console.error("Error checking primary teacher status:", error);
-    return false;
-  }
-};
-
-/**
- * Get a single user by ID
- * @param userId - The ID of the user to fetch
- * @returns User profile
- */
-export const getUserById = async (
-  userId: string
-): Promise<UserProfile | null> => {
-  try {
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.equal("$id", userId)],
-    });
-
-    if (!response.rows || response.rows.length === 0) {
-      return null;
-    }
-
-    return response.rows[0] as unknown as UserProfile;
-  } catch (error) {
-    console.error("Error fetching user by ID:", error);
-    return null;
-  }
-};
-
-/**
  * Get multiple users by IDs (batch fetch)
  * @param userIds - Array of user IDs to fetch
  * @returns Map of user ID to user name
