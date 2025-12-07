@@ -644,9 +644,7 @@ export async function getStudentStats(studentId: string): Promise<{
 /**
  * Get stats for multiple students in batch (for students list)
  */
-export async function getStudentsWithStats(
-  studentIds: string[]
-): Promise<
+export async function getStudentsWithStats(studentIds: string[]): Promise<
   Map<
     string,
     {
@@ -785,9 +783,7 @@ export async function getAverageCompletionRate(
 /**
  * Get course performance data with real enrollment counts
  */
-export async function getCoursePerformanceData(
-  courseIds: string[]
-): Promise<
+export async function getCoursePerformanceData(courseIds: string[]): Promise<
   Map<
     string,
     {
@@ -862,9 +858,7 @@ export async function getCoursePerformanceData(
 /**
  * Get enriched enrollment data with student and course names
  */
-export async function getEnrichedRecentEnrollments(
-  limit: number = 10
-): Promise<
+export async function getEnrichedRecentEnrollments(limit: number = 10): Promise<
   {
     id: string;
     studentId: string;

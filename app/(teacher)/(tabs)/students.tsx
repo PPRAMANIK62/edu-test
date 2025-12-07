@@ -1,6 +1,7 @@
 import StatCard from "@/components/teacher/stat-card";
 import StudentCard from "@/components/teacher/student-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { useCoursesByTeacher } from "@/hooks/use-courses";
 import { useRecentEnrollments } from "@/hooks/use-enrollments";
 import { isTeacher } from "@/lib/permissions";
 import {
@@ -19,7 +20,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useCoursesByTeacher } from "@/hooks/use-courses";
 
 const TeacherStudents = () => {
   const insets = useSafeAreaInsets();

@@ -1,12 +1,12 @@
 import StatCard from "@/components/teacher/stat-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useCoursesByTeacher } from "@/hooks/use-courses";
+import { isTeacher } from "@/lib/permissions";
 import {
   getCoursePerformanceData,
   getEnrichedRecentEnrollments,
   getTeacherDashboardStats,
 } from "@/lib/services/analytics";
-import { isTeacher } from "@/lib/permissions";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
