@@ -31,12 +31,13 @@ const TeacherCourses = () => {
       currency: course.currency,
       teacherId: course.teacherId,
       teacherName: "You",
-      totalTests: 0, // Would be computed from tests count
+      totalTests: course.testCount,
       totalQuestions: 0,
       estimatedHours: course.estimatedHours,
       subjects: course.subjects,
       isPurchased: true,
-      enrollmentCount: 0, // Would come from enrollment count query
+      enrollmentCount: course.enrollmentCount,
+      rating: course.rating,
       isPublished: course.isPublished,
     }));
   }, [coursesData]);

@@ -49,12 +49,20 @@ export async function getCourseById(id: string): Promise<CourseDocument> {
 }
 
 /**
- * Get courses by teacher ID
+ * Get courses by teacher ID with computed stats (enrollment count, test count)
  */
 export async function getCoursesByTeacher(
   teacherId: string,
   options: QueryOptions = {}
-): Promise<PaginatedResponse<CourseDocument>> {
+): Promise<
+  PaginatedResponse<
+    CourseDocument & {
+      enrollmentCount: number;
+      testCount: number;
+      rating?: number;
+    }
+  >
+> {
   const queries = [
     Query.equal("teacherId", teacherId),
     ...buildQueries(options),
@@ -66,10 +74,58 @@ export async function getCoursesByTeacher(
     queries,
   });
 
+  const documents = response.rows as CourseDocument[];
+
+  if (documents.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  // Get course IDs
+  const courseIds = documents.map((c) => c.$id);
+
+  // Count enrollments per course
+  const enrollmentResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.enrollments!,
+    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+  });
+
+  // Count tests per course
+  const testResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.tests!,
+    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+  });
+
+  // Build enrollment count map
+  const enrollmentCountMap = new Map<string, number>();
+  for (const enrollment of enrollmentResponse.rows) {
+    const courseId = (enrollment as unknown as { courseId: string }).courseId;
+    enrollmentCountMap.set(
+      courseId,
+      (enrollmentCountMap.get(courseId) || 0) + 1
+    );
+  }
+
+  // Build test count map
+  const testCountMap = new Map<string, number>();
+  for (const test of testResponse.rows) {
+    const courseId = (test as unknown as { courseId: string }).courseId;
+    testCountMap.set(courseId, (testCountMap.get(courseId) || 0) + 1);
+  }
+
+  // Merge stats with courses
+  const coursesWithStats = documents.map((course) => ({
+    ...course,
+    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
+    testCount: testCountMap.get(course.$id) || 0,
+    rating: 4.5, // Placeholder - would come from reviews
+  }));
+
   return {
-    documents: response.rows as CourseDocument[],
+    documents: coursesWithStats,
     total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    hasMore: response.total > (options.offset || 0) + documents.length,
   };
 }
 
