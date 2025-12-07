@@ -5,13 +5,17 @@ import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
 import TeacherTestCard from "@/components/teacher/test-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
-import { MOCK_COURSES, MOCK_TESTS } from "@/lib/mockdata";
+import {
+  useCourse,
+  useDeleteCourse,
+  useUpdateCourse,
+} from "@/hooks/use-courses";
+import { useTestsByCourse } from "@/hooks/use-tests";
 import { isTA, isTeacher } from "@/lib/permissions";
 import { courseFormSchema, validateForm } from "@/lib/schemas";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +29,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const EditCourse = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const { userProfile } = useAppwrite();
-  const queryClient = useQueryClient();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -37,22 +40,33 @@ const EditCourse = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [initialValues, setInitialValues] = useState<any>(null);
 
-  const { data: course, isLoading } = useQuery({
-    queryKey: ["course", courseId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_COURSES.find((c) => c.id === courseId);
-    },
-  });
+  // Fetch course from database
+  const { data: course, isLoading } = useCourse(courseId);
 
-  // Fetch tests for this course
-  const { data: tests } = useQuery({
-    queryKey: ["course-tests", courseId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_TESTS.filter((t) => t.courseId === courseId);
-    },
-  });
+  // Fetch tests for this course from database
+  const { data: testsData } = useTestsByCourse(courseId);
+
+  // Transform tests data for TeacherTestCard
+  const tests = useMemo(() => {
+    if (!testsData?.documents) return [];
+
+    return testsData.documents.map((test) => ({
+      id: test.$id,
+      courseId: test.courseId,
+      title: test.title,
+      description: test.description,
+      durationMinutes: test.durationMinutes,
+      totalQuestions: 0, // Would come from questions count
+      subjects: [], // Would come from test_subjects
+      passingScore: test.passingScore,
+      attemptCount: 0,
+      isAvailable: test.isPublished,
+    }));
+  }, [testsData]);
+
+  // Use mutation hooks for update and delete
+  const updateMutation = useUpdateCourse();
+  const deleteMutation = useDeleteCourse();
 
   useEffect(() => {
     if (course && !initialValues) {
@@ -68,7 +82,7 @@ const EditCourse = () => {
       setDescription(values.description);
       setPrice(values.price);
       setSubjects(values.subjects);
-      setEstimatedHours(values.estimatedHours);
+      setEstimatedHours(values.estimatedHours.toString());
       setImageUri(values.imageUri);
       setInitialValues(values);
     }
@@ -112,56 +126,6 @@ const EditCourse = () => {
     return isValid;
   };
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return {
-        ...course,
-        title,
-        description,
-        price: parseFloat(price),
-        subjects,
-        estimatedHours: estimatedHours ? parseInt(estimatedHours) : 10,
-        imageUrl:
-          imageUri ||
-          "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",
-      };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
-      queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      Alert.alert("Success", "Course updated successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to update course. Please try again.");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
-      Alert.alert("Success", "Course deleted successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(teacher)/(tabs)/courses"),
-        },
-      ]);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to delete course. Please try again.");
-    },
-  });
-
   const handleDelete = () => {
     Alert.alert(
       "Delete Course",
@@ -171,15 +135,60 @@ const EditCourse = () => {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteMutation.mutate(),
+          onPress: () => {
+            if (!courseId) return;
+            deleteMutation.mutate(courseId, {
+              onSuccess: () => {
+                Alert.alert("Success", "Course deleted successfully!", [
+                  {
+                    text: "OK",
+                    onPress: () => router.replace("/(teacher)/(tabs)/courses"),
+                  },
+                ]);
+              },
+              onError: () => {
+                Alert.alert(
+                  "Error",
+                  "Failed to delete course. Please try again."
+                );
+              },
+            });
+          },
         },
       ]
     );
   };
 
   const handleUpdate = () => {
-    if (validate()) {
-      updateMutation.mutate();
+    if (validate() && courseId) {
+      updateMutation.mutate(
+        {
+          courseId,
+          data: {
+            title,
+            description,
+            price: parseFloat(price),
+            subjects,
+            estimatedHours: estimatedHours ? parseInt(estimatedHours) : 10,
+            imageUrl:
+              imageUri ||
+              "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",
+          },
+        },
+        {
+          onSuccess: () => {
+            Alert.alert("Success", "Course updated successfully!", [
+              {
+                text: "OK",
+                onPress: () => router.back(),
+              },
+            ]);
+          },
+          onError: () => {
+            Alert.alert("Error", "Failed to update course. Please try again.");
+          },
+        }
+      );
     }
   };
 

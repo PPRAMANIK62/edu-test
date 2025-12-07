@@ -1,27 +1,45 @@
 import TeacherCourseCard from "@/components/teacher/course-card";
-import { MOCK_COURSES } from "@/lib/mockdata";
+import { useCoursesByTeacher } from "@/hooks/use-courses";
 import { isTeacher } from "@/lib/permissions";
 import { useAppwrite } from "@/providers/appwrite";
-import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { BookOpen, Plus } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherCourses = () => {
   const { userProfile } = useAppwrite();
   const canCreate = userProfile ? isTeacher(userProfile.role) : false;
+  const teacherId = userProfile?.$id;
 
   const insets = useSafeAreaInsets();
 
-  const { data: courses } = useQuery({
-    queryKey: ["teacher-courses"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_COURSES.filter((c) => c.teacherId === "teacher-1");
-    },
-  });
+  // Fetch teacher's courses from database
+  const { data: coursesData, isLoading } = useCoursesByTeacher(teacherId);
+
+  // Transform courses to match CourseCard expected format
+  const courses = useMemo(() => {
+    if (!coursesData?.documents) return [];
+
+    return coursesData.documents.map((course) => ({
+      id: course.$id,
+      title: course.title,
+      description: course.description,
+      imageUrl: course.imageUrl,
+      price: course.price,
+      currency: course.currency,
+      teacherId: course.teacherId,
+      teacherName: "You",
+      totalTests: 0, // Would be computed from tests count
+      totalQuestions: 0,
+      estimatedHours: course.estimatedHours,
+      subjects: course.subjects,
+      isPurchased: true,
+      enrollmentCount: 0, // Would come from enrollment count query
+      isPublished: course.isPublished,
+    }));
+  }, [coursesData]);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -48,7 +66,11 @@ const TeacherCourses = () => {
 
         <View className="px-6 pb-8">
           {courses?.map((course) => (
-            <TeacherCourseCard key={course.id} course={course} canCreate={canCreate} />
+            <TeacherCourseCard
+              key={course.id}
+              course={course}
+              canCreate={canCreate}
+            />
           ))}
 
           {(!courses || courses.length === 0) && canCreate && (

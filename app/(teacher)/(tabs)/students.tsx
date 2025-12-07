@@ -1,11 +1,16 @@
 import StatCard from "@/components/teacher/stat-card";
 import StudentCard from "@/components/teacher/student-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
-import { MOCK_STATS, MOCK_STUDENTS } from "@/lib/mockdata";
+import { useRecentEnrollments } from "@/hooks/use-enrollments";
 import { isTeacher } from "@/lib/permissions";
+import {
+  getAverageCompletionRate,
+  getStudentsWithStats,
+} from "@/lib/services/analytics";
+import { getUsersByRole } from "@/lib/user-management";
 import { useQuery } from "@tanstack/react-query";
 import { Award, Filter, Search, TrendingUp, Users } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ScrollView,
   Text,
@@ -14,30 +19,94 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCoursesByTeacher } from "@/hooks/use-courses";
 
 const TeacherStudents = () => {
   const insets = useSafeAreaInsets();
   const { userProfile } = useAppwrite();
   const [searchQuery, setSearchQuery] = useState("");
+  const teacherId = userProfile?.$id;
 
   // Check if user can view revenue/spending data
   const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
-  const { data: students } = useQuery({
-    queryKey: ["teacher-students"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_STUDENTS;
-    },
+  // Fetch teacher's courses to get course IDs
+  const { data: coursesData } = useCoursesByTeacher(teacherId);
+  const courseIds = useMemo(
+    () => coursesData?.documents.map((c) => c.$id) || [],
+    [coursesData]
+  );
+
+  // Fetch students from database
+  const { data: studentsData } = useQuery({
+    queryKey: ["students", "student"],
+    queryFn: () => getUsersByRole("student"),
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ["student-stats-overview"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_STATS;
-    },
+  // Fetch recent enrollments for activity stats
+  const { data: recentEnrollments } = useRecentEnrollments(100);
+
+  // Fetch student stats from analytics service
+  const studentIds = useMemo(
+    () => studentsData?.map((s) => s.$id) || [],
+    [studentsData]
+  );
+
+  const { data: studentStatsMap } = useQuery({
+    queryKey: ["students-stats", studentIds],
+    queryFn: () => getStudentsWithStats(studentIds),
+    enabled: studentIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch average completion rate
+  const { data: avgCompletionRate } = useQuery({
+    queryKey: ["avg-completion-rate", courseIds],
+    queryFn: () => getAverageCompletionRate(courseIds),
+    enabled: courseIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Transform student data for display with real stats
+  const students = useMemo(() => {
+    if (!studentsData) return [];
+
+    return studentsData.map((user) => {
+      const stats = studentStatsMap?.get(user.$id);
+      return {
+        id: user.$id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        enrolledCourses: stats?.enrolledCourses || 0,
+        completedTests: stats?.completedTests || 0,
+        averageScore: stats?.averageScore || 0,
+        totalSpent: stats?.totalSpent || 0,
+        lastActive: new Date().toISOString(), // Would need activity tracking
+        status: "active" as const,
+      };
+    });
+  }, [studentsData, studentStatsMap]);
+
+  // Compute stats from real data
+  const stats = useMemo(() => {
+    const totalActive = students?.length || 0;
+    const newThisMonth = recentEnrollments?.length || 0;
+
+    // Find top performer by average score
+    const topPerformer =
+      students?.reduce(
+        (best, student) =>
+          student.averageScore > (best?.averageScore || 0) ? student : best,
+        students[0]
+      )?.name || "N/A";
+
+    return {
+      totalActive,
+      newThisMonth,
+      avgCompletion: avgCompletionRate || 0,
+      topPerformer,
+    };
+  }, [students, recentEnrollments, avgCompletionRate]);
 
   const filteredStudents = students?.filter(
     (student) =>

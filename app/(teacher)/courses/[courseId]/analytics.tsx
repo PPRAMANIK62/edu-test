@@ -2,11 +2,11 @@ import ScreenHeader from "@/components/teacher/screen-header";
 import StatCard from "@/components/teacher/stat-card";
 import TimeRangeSelector from "@/components/teacher/time-range-selector";
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { useCourseWithStats } from "@/hooks/use-courses";
 import {
   useCoursePerformance,
   useStudentEngagement,
 } from "@/hooks/use-teacher-analytics";
-import { MOCK_COURSES } from "@/lib/mockdata";
 import { isTeacher } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { TimeRangeFilter } from "@/types";
@@ -34,8 +34,9 @@ const CourseAnalytics = () => {
   // Check if user can view revenue
   const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
-  // Get course details
-  const course = MOCK_COURSES.find((c) => c.id === courseId);
+  // Fetch course details from database
+  const { data: courseData, isLoading: isLoadingCourse } =
+    useCourseWithStats(courseId);
 
   // Fetch analytics data
   const {
@@ -50,10 +51,24 @@ const CourseAnalytics = () => {
     error: engagementError,
   } = useStudentEngagement(courseId || "");
 
-  const isLoading = isLoadingPerformance || isLoadingEngagement;
+  const isLoading =
+    isLoadingCourse || isLoadingPerformance || isLoadingEngagement;
   const error = performanceError || engagementError;
 
-  if (!course) {
+  // Transform course data to expected format
+  const course = courseData
+    ? {
+        id: courseData.$id,
+        title: courseData.title,
+        totalTests: courseData.testCount,
+        totalQuestions: courseData.questionCount,
+        estimatedHours: courseData.estimatedHours,
+        price: courseData.price,
+        enrollmentCount: courseData.enrollmentCount,
+      }
+    : null;
+
+  if (!course && !isLoadingCourse) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center">
         <Text className="text-gray-600 text-lg">Course not found</Text>
@@ -65,7 +80,7 @@ const CourseAnalytics = () => {
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <ScreenHeader title="Course Analytics" subtitle={course.title} />
+        <ScreenHeader title="Course Analytics" subtitle={course?.title} />
 
         {/* Time Range Selector */}
         <View className="px-6 pb-4">
@@ -276,7 +291,7 @@ const CourseAnalytics = () => {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700 font-medium">Total Tests</Text>
                   <Text className="text-gray-900 font-bold">
-                    {course.totalTests}
+                    {course?.totalTests ?? 0}
                   </Text>
                 </View>
 
@@ -287,7 +302,7 @@ const CourseAnalytics = () => {
                     Total Questions
                   </Text>
                   <Text className="text-gray-900 font-bold">
-                    {course.totalQuestions}
+                    {course?.totalQuestions ?? 0}
                   </Text>
                 </View>
 
@@ -298,7 +313,7 @@ const CourseAnalytics = () => {
                     Estimated Hours
                   </Text>
                   <Text className="text-gray-900 font-bold">
-                    {course.estimatedHours}h
+                    {course?.estimatedHours ?? 0}h
                   </Text>
                 </View>
 
@@ -307,7 +322,7 @@ const CourseAnalytics = () => {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700 font-medium">Price</Text>
                   <Text className="text-gray-900 font-bold">
-                    {formatCurrency(course.price)}
+                    {formatCurrency(course?.price ?? 0)}
                   </Text>
                 </View>
               </View>

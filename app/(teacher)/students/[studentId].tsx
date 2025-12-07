@@ -1,11 +1,10 @@
 import ScreenHeader from "@/components/teacher/screen-header";
-import {
-  MOCK_STUDENT_ENROLLMENTS,
-  MOCK_STUDENT_TEST_ATTEMPTS,
-  MOCK_STUDENTS,
-} from "@/lib/mockdata";
+import { useAttemptsByStudent } from "@/hooks/use-attempts";
+import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { formatTimeAgo } from "@/lib/utils";
 import { useAppwrite } from "@/providers/appwrite";
+import type { UserProfile } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -18,7 +17,7 @@ import {
   Target,
   XCircle,
 } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -34,33 +33,97 @@ const StudentDetail = () => {
 
   const isTeacher = userProfile?.role === "teacher";
 
+  // Fetch student profile from database
   const { data: student, isLoading: studentLoading } = useQuery({
     queryKey: ["student", studentId],
     queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return MOCK_STUDENTS.find((s) => s.id === studentId);
+      if (!studentId) return null;
+      const response = await databases.getRow<UserProfile>({
+        databaseId: APPWRITE_CONFIG.databaseId!,
+        tableId: APPWRITE_CONFIG.tables.users!,
+        rowId: studentId,
+      });
+      return response as UserProfile;
     },
+    enabled: !!studentId,
   });
 
-  const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ["student-enrollments", studentId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return MOCK_STUDENT_ENROLLMENTS.filter((e) => e.studentId === studentId);
-    },
-  });
+  // Fetch enrollments from database
+  const { data: enrollmentsData, isLoading: enrollmentsLoading } =
+    useEnrollmentsByStudent(studentId);
 
-  const { data: testAttempts, isLoading: attemptsLoading } = useQuery({
-    queryKey: ["student-test-attempts", studentId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return MOCK_STUDENT_TEST_ATTEMPTS.filter(
-        (a) => a.studentId === studentId
-      ).slice(0, 5);
-    },
-  });
+  // Fetch test attempts from database
+  const { data: attemptsData, isLoading: attemptsLoading } =
+    useAttemptsByStudent(studentId);
+
+  // Transform enrollments for display
+  const enrollments = useMemo(() => {
+    if (!enrollmentsData?.documents) return [];
+
+    return enrollmentsData.documents.map((e) => ({
+      id: e.$id,
+      studentId: e.studentId,
+      courseId: e.courseId,
+      courseTitle: e.courseId.substring(0, 20) + "...", // Would need course lookup
+      enrolledAt: e.enrolledAt,
+      progress: e.progress,
+      status: e.status as "active" | "completed",
+    }));
+  }, [enrollmentsData]);
+
+  // Transform and filter recent test attempts
+  const testAttempts = useMemo(() => {
+    if (!attemptsData?.documents) return [];
+
+    return attemptsData.documents
+      .filter((a) => a.status === "completed")
+      .slice(0, 5)
+      .map((a) => ({
+        id: a.$id,
+        studentId: a.studentId,
+        testId: a.testId,
+        testTitle: a.testId.substring(0, 20) + "...", // Would need test lookup
+        score: a.score || 0,
+        percentage: a.percentage || 0,
+        completedAt: a.completedAt || a.startedAt,
+        passed: a.passed || false,
+      }));
+  }, [attemptsData]);
+
+  // Compute student stats
+  const studentStats = useMemo(() => {
+    const enrolledCourses = enrollmentsData?.total || 0;
+    const completedTests =
+      attemptsData?.documents.filter((a) => a.status === "completed").length ||
+      0;
+    const averageScore =
+      completedTests > 0
+        ? Math.round(
+            testAttempts.reduce((sum, a) => sum + a.percentage, 0) /
+              completedTests
+          )
+        : 0;
+
+    return {
+      enrolledCourses,
+      completedTests,
+      averageScore,
+      totalSpent: 0, // Would come from purchases
+    };
+  }, [enrollmentsData, attemptsData, testAttempts]);
 
   const isLoading = studentLoading || enrollmentsLoading || attemptsLoading;
+
+  // Transform student for display
+  const studentDisplay = student
+    ? {
+        name: `${student.firstName} ${student.lastName}`,
+        email: student.email,
+        status: "active" as const,
+        lastActive: student.createdAt || new Date().toISOString(),
+        ...studentStats,
+      }
+    : null;
 
   if (isLoading) {
     return (
@@ -73,7 +136,7 @@ const StudentDetail = () => {
     );
   }
 
-  if (!student) {
+  if (!studentDisplay) {
     return (
       <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
         <ScreenHeader title="Student Details" />
@@ -106,31 +169,33 @@ const StudentDetail = () => {
             <View className="items-center mb-6">
               <View className="bg-violet-100 rounded-full w-24 h-24 items-center justify-center mb-4">
                 <Text className="text-violet-700 font-bold text-3xl">
-                  {student.name.charAt(0)}
+                  {studentDisplay.name.charAt(0)}
                 </Text>
               </View>
               <Text className="text-2xl font-bold text-gray-900 mb-1">
-                {student.name}
+                {studentDisplay.name}
               </Text>
               <View className="flex-row items-center mb-2">
                 <Mail size={16} color="#6b7280" />
                 <Text className="text-sm text-gray-600 ml-2">
-                  {student.email}
+                  {studentDisplay.email}
                 </Text>
               </View>
               <View
                 className={`px-3 py-1 rounded-full ${
-                  student.status === "active" ? "bg-green-100" : "bg-gray-100"
+                  studentDisplay.status === "active"
+                    ? "bg-green-100"
+                    : "bg-gray-100"
                 }`}
               >
                 <Text
                   className={`text-xs font-semibold ${
-                    student.status === "active"
+                    studentDisplay.status === "active"
                       ? "text-green-700"
                       : "text-gray-600"
                   }`}
                 >
-                  {student.status.toUpperCase()}
+                  {studentDisplay.status.toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -140,26 +205,26 @@ const StudentDetail = () => {
               <View className="flex-row items-center justify-around">
                 <StatItem
                   icon={<BookOpen size={24} color="#7c3aed" />}
-                  value={student.enrolledCourses}
+                  value={studentDisplay.enrolledCourses}
                   label="Courses"
                   bgColor="bg-violet-50"
                 />
                 <StatItem
                   icon={<Award size={24} color="#10b981" />}
-                  value={student.completedTests}
+                  value={studentDisplay.completedTests}
                   label="Tests Done"
                   bgColor="bg-green-50"
                 />
                 <StatItem
                   icon={<Target size={24} color="#f59e0b" />}
-                  value={`${student.averageScore}%`}
+                  value={`${studentDisplay.averageScore}%`}
                   label="Avg Score"
                   bgColor="bg-amber-50"
                 />
                 {isTeacher && (
                   <StatItem
                     icon={<DollarSign size={24} color="#3b82f6" />}
-                    value={`$${student.totalSpent}`}
+                    value={`$${studentDisplay.totalSpent}`}
                     label="Spent"
                     bgColor="bg-blue-50"
                   />
@@ -171,7 +236,7 @@ const StudentDetail = () => {
               <View className="flex-row items-center">
                 <Calendar size={16} color="#6b7280" />
                 <Text className="text-sm text-gray-600 ml-2">
-                  Last active {formatTimeAgo(student.lastActive)}
+                  Last active {formatTimeAgo(studentDisplay.lastActive)}
                 </Text>
               </View>
             </View>

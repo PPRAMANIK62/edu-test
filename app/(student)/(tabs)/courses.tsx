@@ -2,7 +2,9 @@ import StudentCourseCard from "@/components/student/course-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useEnrolledCourses } from "@/hooks/use-courses";
 import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
+import { getUserNamesByIds } from "@/lib/user-management";
 import type { Course } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { BookOpen } from "lucide-react-native";
 import React, { useMemo } from "react";
@@ -28,6 +30,22 @@ const CoursesTab = () => {
   // Fetch enrollments to get progress info
   const { data: enrollmentsData } = useEnrollmentsByStudent(studentId);
 
+  // Get unique teacher IDs
+  const teacherIds = useMemo(
+    () => [
+      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
+    ],
+    [enrolledCoursesData]
+  );
+
+  // Fetch teacher names
+  const { data: teacherNamesMap } = useQuery({
+    queryKey: ["teacher-names", teacherIds],
+    queryFn: () => getUserNamesByIds(teacherIds),
+    enabled: teacherIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Map courses with progress from enrollments
   const courses = useMemo(() => {
     if (!enrolledCoursesData?.documents) return [];
@@ -46,8 +64,9 @@ const CoursesTab = () => {
         price: course.price,
         currency: course.currency,
         teacherId: course.teacherId,
-        teacherName: "Instructor", // TODO: Fetch teacher name
-        totalTests: 0, // Will be computed on course detail page
+        teacherName:
+          teacherNamesMap?.get(course.teacherId) || "Course Instructor",
+        totalTests: 0, // Computed on course detail page
         totalQuestions: 0,
         estimatedHours: course.estimatedHours,
         subjects: course.subjects,
@@ -56,7 +75,7 @@ const CoursesTab = () => {
         enrollmentCount: 0,
       };
     });
-  }, [enrolledCoursesData, enrollmentsData]);
+  }, [enrolledCoursesData, enrollmentsData, teacherNamesMap]);
 
   return (
     <View className="flex-1 bg-gray-50">

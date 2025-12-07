@@ -1,10 +1,10 @@
 import FormInput from "@/components/teacher/form-input";
 import FormSection from "@/components/teacher/form-section";
 import ScreenHeader from "@/components/teacher/screen-header";
-import { MOCK_COURSES } from "@/lib/mockdata";
+import { useCourse } from "@/hooks/use-courses";
+import { useCreateTest, useCreateTestSubject } from "@/hooks/use-tests";
 import { TestFormData, testFormSchema, validateForm } from "@/lib/schemas";
 import { Subject } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Plus, Trash2 } from "lucide-react-native";
 import React, { useState } from "react";
@@ -21,7 +21,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateTestScreen() {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<TestFormData>({
     title: "",
@@ -33,14 +32,12 @@ export default function CreateTestScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newSubjectName, setNewSubjectName] = useState("");
 
-  // Fetch course details
-  const { data: course, isLoading } = useQuery({
-    queryKey: ["course", courseId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_COURSES.find((c) => c.id === courseId);
-    },
-  });
+  // Fetch course details from database
+  const { data: course, isLoading } = useCourse(courseId);
+
+  // Use mutation hooks for creating test and subjects
+  const createTestMutation = useCreateTest();
+  const createSubjectMutation = useCreateTestSubject();
 
   const isDirty =
     formData.title ||
@@ -58,48 +55,51 @@ export default function CreateTestScreen() {
     return isValid;
   };
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  const handleCreate = async () => {
+    if (!validate() || !courseId) return;
 
-      return {
-        id: `test-${Date.now()}`,
+    createTestMutation.mutate(
+      {
         courseId,
         title: formData.title.trim(),
         description: formData.description.trim(),
         durationMinutes: parseInt(formData.durationMinutes),
-        totalQuestions: 0,
-        subjects: formData.subjects,
         passingScore: parseInt(formData.passingScore),
-        attemptCount: 0,
-        isAvailable: false,
-      };
-    },
-    onSuccess: (newTest) => {
-      queryClient.invalidateQueries({ queryKey: ["course-tests", courseId] });
-      queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
-      Alert.alert("Success", "Test created successfully!", [
-        {
-          text: "Add Questions",
-          onPress: () => {
-            router.replace(`/(teacher)/tests/${newTest.id}/questions` as any);
-          },
-        },
-        {
-          text: "Done",
-          onPress: () => router.back(),
-        },
-      ]);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to create test. Please try again.");
-    },
-  });
+        isPublished: false,
+      },
+      {
+        onSuccess: async (newTest) => {
+          // Create subjects for the test
+          for (let i = 0; i < formData.subjects.length; i++) {
+            const subject = formData.subjects[i];
+            await createSubjectMutation.mutateAsync({
+              testId: newTest.$id,
+              name: subject.name,
+              questionCount: subject.questionCount,
+              order: i + 1,
+            });
+          }
 
-  const handleCreate = () => {
-    if (validate()) {
-      createMutation.mutate();
-    }
+          Alert.alert("Success", "Test created successfully!", [
+            {
+              text: "Add Questions",
+              onPress: () => {
+                router.replace(
+                  `/(teacher)/tests/${newTest.$id}/questions` as any
+                );
+              },
+            },
+            {
+              text: "Done",
+              onPress: () => router.back(),
+            },
+          ]);
+        },
+        onError: () => {
+          Alert.alert("Error", "Failed to create test. Please try again.");
+        },
+      }
+    );
   };
 
   const handleCancel = () => {
@@ -120,7 +120,6 @@ export default function CreateTestScreen() {
       router.back();
     }
   };
-
   const handleAddSubject = () => {
     if (!newSubjectName.trim()) return;
 
@@ -292,11 +291,11 @@ export default function CreateTestScreen() {
           <View className="gap-3 mb-8">
             <TouchableOpacity
               onPress={handleCreate}
-              disabled={createMutation.isPending}
+              disabled={createTestMutation.isPending}
               className="bg-violet-600 rounded-xl py-4 items-center"
               activeOpacity={0.8}
             >
-              {createMutation.isPending ? (
+              {createTestMutation.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text className="text-white font-bold text-base">
@@ -306,7 +305,7 @@ export default function CreateTestScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleCancel}
-              disabled={createMutation.isPending}
+              disabled={createTestMutation.isPending}
               className="border border-gray-300 rounded-xl py-4 items-center"
               activeOpacity={0.8}
             >

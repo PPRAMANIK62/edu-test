@@ -1,11 +1,11 @@
 import QuestionForm from "@/components/teacher/question-form";
 import ScreenHeader from "@/components/teacher/screen-header";
-import { MOCK_QUESTIONS, MOCK_TESTS } from "@/lib/mockdata";
+import { useCreateQuestion, useQuestionsByTest } from "@/hooks/use-questions";
+import { useTestWithSubjects } from "@/hooks/use-tests";
 import { mcqFormSchema, validateForm } from "@/lib/schemas";
 import { MCQFormData, QuestionOption } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +25,6 @@ const createDefaultOptions = (): QuestionOption[] => [
 
 export default function CreateQuestionScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
-  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<MCQFormData>({
     text: "",
@@ -36,23 +35,32 @@ export default function CreateQuestionScreen() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch test details to get subjects
-  const { data: test, isLoading: isTestLoading } = useQuery({
-    queryKey: ["test", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_TESTS.find((t) => t.id === testId);
-    },
-  });
+  // Fetch test details with subjects from database
+  const { data: testData, isLoading: isTestLoading } =
+    useTestWithSubjects(testId);
 
-  // Get next order number
-  const { data: existingQuestions } = useQuery({
-    queryKey: ["questions", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_QUESTIONS.filter((q) => q.testId === testId);
-    },
-  });
+  // Transform test data for display
+  const test = useMemo(() => {
+    if (!testData) return null;
+    return {
+      id: testData.test.$id,
+      title: testData.test.title,
+      subjects: testData.subjects.map((s) => ({
+        id: s.$id,
+        name: s.name,
+        questionCount: s.questionCount || 0,
+      })),
+    };
+  }, [testData]);
+
+  // Get existing questions to determine next order number
+  const { data: existingQuestionsData } = useQuestionsByTest(testId);
+  const existingQuestions = useMemo(() => {
+    return existingQuestionsData?.documents || [];
+  }, [existingQuestionsData]);
+
+  // Use create mutation hook
+  const createMutation = useCreateQuestion();
 
   const isDirty =
     formData.text ||
@@ -69,47 +77,41 @@ export default function CreateQuestionScreen() {
     return isValid;
   };
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  const handleCreate = () => {
+    if (!validate() || !test) return;
 
-      const subject = test?.subjects.find((s) => s.id === formData.subjectId);
-      const nextOrder = (existingQuestions?.length || 0) + 1;
+    const subject = test.subjects.find((s) => s.id === formData.subjectId);
+    const nextOrder = (existingQuestions?.length || 0) + 1;
 
-      // Filter out empty options
-      const validOptions = formData.options.filter((o) => o.text.trim());
+    // Filter out empty options
+    const validOptions = formData.options.filter((o) => o.text.trim());
 
-      return {
-        id: `q-${Date.now()}`,
-        testId,
+    createMutation.mutate(
+      {
+        testId: testId,
         subjectId: formData.subjectId,
         subjectName: subject?.name || "",
-        type: "mcq" as const,
+        type: "mcq",
         text: formData.text.trim(),
-        options: validOptions,
+        options: JSON.stringify(validOptions),
         correctOptionId: formData.correctOptionId,
         explanation: formData.explanation.trim(),
         order: nextOrder,
-      };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-      Alert.alert("Success", "Question created successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
+      },
+      {
+        onSuccess: () => {
+          Alert.alert("Success", "Question created successfully!", [
+            {
+              text: "OK",
+              onPress: () => router.back(),
+            },
+          ]);
         },
-      ]);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to create question. Please try again.");
-    },
-  });
-
-  const handleCreate = () => {
-    if (validate()) {
-      createMutation.mutate();
-    }
+        onError: () => {
+          Alert.alert("Error", "Failed to create question. Please try again.");
+        },
+      }
+    );
   };
 
   const handleCancel = () => {

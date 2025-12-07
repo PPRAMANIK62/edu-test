@@ -1,13 +1,13 @@
 import StatCard from "@/components/teacher/stat-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { useCoursesByTeacher } from "@/hooks/use-courses";
 import {
-  MOCK_COURSES,
-  MOCK_RECENT_ENROLLMENTS,
-  MOCK_TEACHER_STATS,
-} from "@/lib/mockdata";
+  getCoursePerformanceData,
+  getEnrichedRecentEnrollments,
+  getTeacherDashboardStats,
+} from "@/lib/services/analytics";
 import { isTeacher } from "@/lib/permissions";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils";
-import { RecentEnrollment } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -22,7 +22,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -39,43 +39,76 @@ const TeacherDashboard = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userProfile } = useAppwrite();
+  const teacherId = userProfile?.$id;
 
   // Check permissions
   const canCreate = userProfile ? isTeacher(userProfile.role) : false;
 
-  const { data: stats } = useQuery({
-    queryKey: ["teacher-stats"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_TEACHER_STATS;
-    },
+  // Fetch teacher's courses from database
+  const { data: coursesData } = useCoursesByTeacher(teacherId);
+
+  // Fetch teacher dashboard stats from analytics service
+  const { data: dashboardStats } = useQuery({
+    queryKey: ["teacher-dashboard-stats", teacherId],
+    queryFn: () => getTeacherDashboardStats(teacherId!),
+    enabled: !!teacherId,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: coursePerformance } = useQuery({
-    queryKey: ["course-performance"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const teacherCourses = MOCK_COURSES.filter(
-        (c) => c.teacherId === "teacher-1"
-      );
-      return teacherCourses.map((course) => ({
-        courseId: course.id,
+  // Fetch enriched recent enrollments
+  const { data: recentEnrollmentsData } = useQuery({
+    queryKey: ["enriched-recent-enrollments"],
+    queryFn: () => getEnrichedRecentEnrollments(10),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Fetch course performance data
+  const courseIds = useMemo(
+    () => coursesData?.documents.map((c) => c.$id) || [],
+    [coursesData]
+  );
+
+  const { data: coursePerformanceData } = useQuery({
+    queryKey: ["course-performance-data", courseIds],
+    queryFn: () => getCoursePerformanceData(courseIds),
+    enabled: courseIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Use real stats from analytics service
+  const stats = useMemo(() => {
+    if (!dashboardStats || !coursesData) return null;
+
+    return {
+      coursesCreated: dashboardStats.totalCourses,
+      totalStudents: dashboardStats.totalStudents,
+      totalRevenue: dashboardStats.totalRevenue,
+      averageRating: 4.5, // Rating would come from reviews/ratings collection
+    };
+  }, [dashboardStats, coursesData]);
+
+  // Compute course performance from real data
+  const coursePerformance = useMemo(() => {
+    if (!coursesData || !coursePerformanceData) return [];
+
+    return coursesData.documents.map((course) => {
+      const perfData = coursePerformanceData.get(course.$id);
+      return {
+        courseId: course.$id,
         title: course.title,
-        enrollmentCount: course.enrollmentCount,
-        revenue: course.price * course.enrollmentCount,
-        rating: course.rating || 0,
-        recentEnrollments: Math.floor(Math.random() * 50) + 10,
-      })) as CoursePerformance[];
-    },
-  });
+        enrollmentCount: perfData?.enrollmentCount || 0,
+        revenue: perfData?.revenue || 0,
+        rating: 4.5, // Rating would come from reviews collection
+        recentEnrollments: perfData?.recentEnrollments || 0,
+      };
+    }) as CoursePerformance[];
+  }, [coursesData, coursePerformanceData]);
 
-  const { data: recentEnrollments } = useQuery({
-    queryKey: ["recent-enrollments"],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return MOCK_RECENT_ENROLLMENTS;
-    },
-  });
+  // Transform recent enrollments for display
+  const recentEnrollments = useMemo(() => {
+    if (!recentEnrollmentsData) return [];
+    return recentEnrollmentsData;
+  }, [recentEnrollmentsData]);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -327,8 +360,16 @@ function QuickActionButton({
   );
 }
 
+interface RecentEnrollmentDisplay {
+  id: string;
+  studentName: string;
+  courseTitle: string;
+  enrolledAt: string;
+  status: "active" | "completed";
+}
+
 interface EnrollmentItemProps {
-  enrollment: RecentEnrollment;
+  enrollment: RecentEnrollmentDisplay;
   isLast: boolean;
   formatTimeAgo: (timestamp: string) => string;
 }

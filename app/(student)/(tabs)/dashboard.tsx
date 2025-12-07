@@ -7,6 +7,8 @@ import { useAppwrite } from "@/hooks/use-appwrite";
 import { useAttemptsByStudent } from "@/hooks/use-attempts";
 import { useEnrolledCourses } from "@/hooks/use-courses";
 import { useActiveEnrollmentsByStudent } from "@/hooks/use-enrollments";
+import { getUserNamesByIds } from "@/lib/user-management";
+import { useQuery } from "@tanstack/react-query";
 import { Award, BookOpen, Clock, TrendingUp } from "lucide-react-native";
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -28,6 +30,22 @@ const StudentDashboard = () => {
 
   // Fetch completed attempts to compute stats
   const { data: attemptsData } = useAttemptsByStudent(studentId);
+
+  // Get unique teacher IDs
+  const teacherIds = useMemo(
+    () => [
+      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
+    ],
+    [enrolledCoursesData]
+  );
+
+  // Fetch teacher names
+  const { data: teacherNamesMap } = useQuery({
+    queryKey: ["teacher-names", teacherIds],
+    queryFn: () => getUserNamesByIds(teacherIds),
+    enabled: teacherIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
 
   // Compute student stats from real data
   const stats = useMemo(() => {
@@ -84,8 +102,9 @@ const StudentDashboard = () => {
       price: course.price,
       currency: course.currency,
       teacherId: course.teacherId,
-      teacherName: "Instructor", // TODO: Fetch teacher name if needed
-      totalTests: 0, // Will be computed when navigating to course detail
+      teacherName:
+        teacherNamesMap?.get(course.teacherId) || "Course Instructor",
+      totalTests: 0, // Computed when navigating to course detail
       totalQuestions: 0,
       estimatedHours: course.estimatedHours,
       subjects: course.subjects,
@@ -93,7 +112,7 @@ const StudentDashboard = () => {
       progress: inProgressEnrollment.progress,
       enrollmentCount: 0,
     };
-  }, [enrollmentsData, enrolledCoursesData]);
+  }, [enrollmentsData, enrolledCoursesData, teacherNamesMap]);
 
   return (
     <View className="flex-1 bg-gray-50">

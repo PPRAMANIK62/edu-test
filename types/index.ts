@@ -279,40 +279,11 @@ export interface RevenueMetrics {
     courseId: string;
     courseTitle: string;
     revenue: number;
+    enrollmentCount: number;
+    testCount: number;
   }[];
   trends: {
     percentageChange: number;
     comparisonPeriod: string;
   };
-}
-
-/**
- * Mock data types for analytics calculations
- */
-export interface MockEnrollment {
-  id: string;
-  courseId: string;
-  studentId: string;
-  enrolledAt: string;
-  status: "active" | "completed";
-  progress: number;
-}
-
-export interface MockTestAttempt {
-  id: string;
-  testId: string;
-  courseId: string;
-  studentId: string;
-  score: number;
-  percentage: number;
-  completedAt: string;
-  passed: boolean;
-}
-
-export interface MockPurchase {
-  id: string;
-  courseId: string;
-  studentId: string;
-  amount: number;
-  purchasedAt: string;
 }

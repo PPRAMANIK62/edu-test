@@ -188,3 +188,35 @@ export const getUserById = async (
     return null;
   }
 };
+
+/**
+ * Get multiple users by IDs (batch fetch)
+ * @param userIds - Array of user IDs to fetch
+ * @returns Map of user ID to user name
+ */
+export const getUserNamesByIds = async (
+  userIds: string[]
+): Promise<Map<string, string>> => {
+  const result = new Map<string, string>();
+
+  if (userIds.length === 0) {
+    return result;
+  }
+
+  try {
+    const response = await databases.listRows({
+      databaseId: APPWRITE_CONFIG.databaseId!,
+      tableId: APPWRITE_CONFIG.tables.users!,
+      queries: [Query.equal("$id", userIds), Query.limit(100)],
+    });
+
+    (response.rows as unknown as UserProfile[]).forEach((user) => {
+      result.set(user.$id, `${user.firstName} ${user.lastName}`);
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching users by IDs:", error);
+    return result;
+  }
+};

@@ -9,7 +9,7 @@ import {
   getCoursePerformanceMetrics,
   getRevenueAnalytics,
   getStudentEngagementMetrics,
-} from "@/lib/analytics-queries";
+} from "@/lib/services/analytics";
 import type { TimeRangeFilter } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 

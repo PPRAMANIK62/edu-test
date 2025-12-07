@@ -1,11 +1,11 @@
 import QuestionForm from "@/components/teacher/question-form";
 import ScreenHeader from "@/components/teacher/screen-header";
-import { MOCK_QUESTIONS, MOCK_TESTS } from "@/lib/mockdata";
+import { useQuestion, useUpdateQuestion } from "@/hooks/use-questions";
+import { useTestWithSubjects } from "@/hooks/use-tests";
 import { mcqFormSchema, validateForm } from "@/lib/schemas";
-import { MCQFormData, MCQQuestion } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MCQFormData, MCQQuestion, QuestionOption } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,7 +21,6 @@ export default function EditQuestionScreen() {
     testId: string;
     questionId: string;
   }>();
-  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<MCQFormData>({
     text: "",
@@ -33,25 +32,47 @@ export default function EditQuestionScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Fetch test details
-  const { data: test, isLoading: isTestLoading } = useQuery({
-    queryKey: ["test", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_TESTS.find((t) => t.id === testId);
-    },
-  });
+  // Fetch test details from database
+  const { data: testData, isLoading: isTestLoading } =
+    useTestWithSubjects(testId);
 
-  // Fetch question details
-  const { data: question, isLoading: isQuestionLoading } = useQuery({
-    queryKey: ["question", questionId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_QUESTIONS.find((q) => q.id === questionId) as
-        | MCQQuestion
-        | undefined;
-    },
-  });
+  // Transform test data for display
+  const test = useMemo(() => {
+    if (!testData) return null;
+    return {
+      id: testData.test.$id,
+      title: testData.test.title,
+      subjects: testData.subjects.map((s) => ({
+        id: s.$id,
+        name: s.name,
+        questionCount: s.questionCount || 0,
+      })),
+    };
+  }, [testData]);
+
+  // Fetch question details from database
+  const { data: questionData, isLoading: isQuestionLoading } =
+    useQuestion(questionId);
+
+  // Transform question data for display
+  const question = useMemo(() => {
+    if (!questionData) return null;
+    return {
+      id: questionData.$id,
+      testId: questionData.testId,
+      subjectId: questionData.subjectId,
+      subjectName: questionData.subjectName,
+      type: questionData.type as "mcq",
+      text: questionData.text,
+      options: JSON.parse(questionData.options || "[]") as QuestionOption[],
+      correctOptionId: questionData.correctOptionId,
+      explanation: questionData.explanation,
+      order: questionData.order,
+    } as MCQQuestion;
+  }, [questionData]);
+
+  // Use update mutation hook
+  const updateMutation = useUpdateQuestion();
 
   // Initialize form with existing data
   useEffect(() => {
@@ -87,42 +108,39 @@ export default function EditQuestionScreen() {
     return isValid;
   };
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const subject = test?.subjects.find((s) => s.id === formData.subjectId);
-      const validOptions = formData.options.filter((o) => o.text.trim());
-
-      return {
-        ...question,
-        subjectId: formData.subjectId,
-        subjectName: subject?.name || question?.subjectName || "",
-        text: formData.text.trim(),
-        options: validOptions,
-        correctOptionId: formData.correctOptionId,
-        explanation: formData.explanation.trim(),
-      };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-      queryClient.invalidateQueries({ queryKey: ["question", questionId] });
-      Alert.alert("Success", "Question updated successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to update question. Please try again.");
-    },
-  });
-
   const handleUpdate = () => {
-    if (validate()) {
-      updateMutation.mutate();
-    }
+    if (!validate() || !question || !test) return;
+
+    const subject = test.subjects.find((s) => s.id === formData.subjectId);
+    const validOptions = formData.options.filter((o) => o.text.trim());
+
+    updateMutation.mutate(
+      {
+        questionId: questionId,
+        testId: testId,
+        data: {
+          subjectId: formData.subjectId,
+          subjectName: subject?.name || question.subjectName || "",
+          text: formData.text.trim(),
+          options: JSON.stringify(validOptions),
+          correctOptionId: formData.correctOptionId,
+          explanation: formData.explanation.trim(),
+        },
+      },
+      {
+        onSuccess: () => {
+          Alert.alert("Success", "Question updated successfully!", [
+            {
+              text: "OK",
+              onPress: () => router.back(),
+            },
+          ]);
+        },
+        onError: () => {
+          Alert.alert("Error", "Failed to update question. Please try again.");
+        },
+      }
+    );
   };
 
   const handleCancel = () => {

@@ -176,3 +176,21 @@ export {
   logCourseStarted,
   logTestCompleted,
 } from "./activities";
+
+// ============================================================================
+// Analytics Service
+// ============================================================================
+
+export {
+  getAverageCompletionRate,
+  getCourseAnalyticsSummary,
+  getCoursePerformanceData,
+  getCoursePerformanceMetrics,
+  getEnrichedRecentEnrollments,
+  getRevenueAnalytics,
+  getStudentEngagementMetrics,
+  getStudentStats,
+  getStudentsWithStats,
+  getTeacherDashboardStats,
+  getTestAttemptCount,
+} from "./analytics";

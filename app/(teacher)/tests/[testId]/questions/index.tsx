@@ -1,10 +1,14 @@
 import ScreenHeader from "@/components/teacher/screen-header";
-import { MOCK_QUESTIONS, MOCK_TESTS } from "@/lib/mockdata";
+import {
+  useDeleteQuestion,
+  useQuestionsByTest,
+  useReorderQuestions,
+} from "@/hooks/use-questions";
+import { useTest } from "@/hooks/use-tests";
 import { Question } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowDown, ArrowUp, Edit2, Plus, Trash2 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,65 +21,37 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function QuestionListScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
-  const queryClient = useQueryClient();
   const [reorderingId, setReorderingId] = useState<string | null>(null);
 
-  // Fetch test details
-  const { data: test } = useQuery({
-    queryKey: ["test", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_TESTS.find((t) => t.id === testId);
-    },
-  });
+  // Fetch test details from database
+  const { data: test } = useTest(testId);
 
-  // Fetch questions for this test
-  const { data: questions, isLoading } = useQuery({
-    queryKey: ["questions", testId],
-    queryFn: async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return MOCK_QUESTIONS.filter((q) => q.testId === testId).sort(
-        (a, b) => a.order - b.order
-      );
-    },
-  });
+  // Fetch questions from database
+  const { data: questionsData, isLoading } = useQuestionsByTest(testId);
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (questionId: string) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return questionId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-      Alert.alert("Success", "Question deleted successfully");
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to delete question");
-    },
-  });
+  // Transform questions for display
+  const questions = useMemo(() => {
+    if (!questionsData?.documents) return [];
 
-  // Reorder mutation
-  const reorderMutation = useMutation({
-    mutationFn: async ({
-      questionId,
-      direction,
-    }: {
-      questionId: string;
-      direction: "up" | "down";
-    }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return { questionId, direction };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions", testId] });
-      setReorderingId(null);
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to reorder question");
-      setReorderingId(null);
-    },
-  });
+    return questionsData.documents
+      .map((q) => ({
+        id: q.$id,
+        testId: q.testId,
+        subjectId: q.subjectId,
+        subjectName: q.subjectName,
+        type: q.type as "mcq",
+        text: q.text,
+        options: JSON.parse(q.options || "[]"),
+        correctOptionId: q.correctOptionId,
+        explanation: q.explanation,
+        order: q.order,
+      }))
+      .sort((a, b) => a.order - b.order);
+  }, [questionsData]);
+
+  // Use mutation hooks
+  const deleteQuestionMutation = useDeleteQuestion();
+  const reorderMutation = useReorderQuestions();
 
   const handleDeleteQuestion = (question: Question) => {
     Alert.alert(
@@ -86,7 +62,16 @@ export default function QuestionListScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteMutation.mutate(question.id),
+          onPress: () =>
+            deleteQuestionMutation.mutate(
+              { questionId: question.id, testId: testId },
+              {
+                onSuccess: () =>
+                  Alert.alert("Success", "Question deleted successfully"),
+                onError: () =>
+                  Alert.alert("Error", "Failed to delete question"),
+              }
+            ),
         },
       ]
     );
@@ -94,7 +79,36 @@ export default function QuestionListScreen() {
 
   const handleMoveQuestion = (questionId: string, direction: "up" | "down") => {
     setReorderingId(questionId);
-    reorderMutation.mutate({ questionId, direction });
+
+    // Find current and target questions
+    const currentIndex = questions.findIndex((q) => q.id === questionId);
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (targetIndex < 0 || targetIndex >= questions.length) {
+      setReorderingId(null);
+      return;
+    }
+
+    // Create new order by swapping
+    const newOrder = [...questions];
+    [newOrder[currentIndex], newOrder[targetIndex]] = [
+      newOrder[targetIndex],
+      newOrder[currentIndex],
+    ];
+    const questionIds = newOrder.map((q) => q.id);
+
+    // Reorder questions
+    reorderMutation.mutate(
+      { testId, questionIds },
+      {
+        onSuccess: () => setReorderingId(null),
+        onError: () => {
+          Alert.alert("Error", "Failed to reorder question");
+          setReorderingId(null);
+        },
+      }
+    );
   };
 
   const handleEditQuestion = (questionId: string) => {

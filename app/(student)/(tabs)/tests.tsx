@@ -1,6 +1,7 @@
 import TestCard from "@/components/student/test-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useEnrolledCourses } from "@/hooks/use-courses";
+import { getTestAttemptCount } from "@/lib/services/analytics";
 import { getPublishedTestsByCourse } from "@/lib/services/tests";
 import type { Test } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -30,12 +31,14 @@ const TestsTab = () => {
   const { data: availableTests, isLoading: testsLoading } = useQuery({
     queryKey: [
       "available-tests",
+      studentId,
       enrolledCoursesData?.documents?.map((c) => c.$id),
     ],
     queryFn: async () => {
       if (
         !enrolledCoursesData?.documents ||
-        enrolledCoursesData.documents.length === 0
+        enrolledCoursesData.documents.length === 0 ||
+        !studentId
       ) {
         return [];
       }
@@ -44,21 +47,26 @@ const TestsTab = () => {
       const testsPromises = enrolledCoursesData.documents.map(
         async (course) => {
           const testsResult = await getPublishedTestsByCourse(course.$id);
-          return testsResult.documents.map(
-            (test): Test & { courseName: string } => ({
-              id: test.$id,
-              courseId: test.courseId,
-              title: test.title,
-              description: test.description,
-              durationMinutes: test.durationMinutes,
-              totalQuestions: 0, // Will be fetched in test intro
-              subjects: [],
-              passingScore: test.passingScore,
-              attemptCount: 0, // TODO: Fetch from attempts
-              isAvailable: test.isPublished,
-              courseName: course.title,
+          // Fetch attempt count for each test
+          const testsWithAttempts = await Promise.all(
+            testsResult.documents.map(async (test) => {
+              const attemptCount = await getTestAttemptCount(studentId, test.$id);
+              return {
+                id: test.$id,
+                courseId: test.courseId,
+                title: test.title,
+                description: test.description,
+                durationMinutes: test.durationMinutes,
+                totalQuestions: 0, // Will be fetched in test intro
+                subjects: [],
+                passingScore: test.passingScore,
+                attemptCount,
+                isAvailable: test.isPublished,
+                courseName: course.title,
+              } as Test & { courseName: string };
             })
           );
+          return testsWithAttempts;
         }
       );
 
@@ -66,6 +74,7 @@ const TestsTab = () => {
       return testsArrays.flat();
     },
     enabled:
+      !!studentId &&
       !!enrolledCoursesData?.documents &&
       enrolledCoursesData.documents.length > 0,
   });

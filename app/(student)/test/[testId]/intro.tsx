@@ -2,7 +2,9 @@ import TestInfoCard from "@/components/student/tests/test-info-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useStartAttempt } from "@/hooks/use-attempts";
 import { useTestWithSubjects } from "@/hooks/use-tests";
+import { getTestAttemptCount } from "@/lib/services/analytics";
 import { Subject, Test } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { AlertCircle, Play } from "lucide-react-native";
 import React, { useMemo } from "react";
@@ -24,6 +26,13 @@ const TestIntro = () => {
 
   // Fetch test with subjects
   const { data: testData, isLoading } = useTestWithSubjects(testId);
+
+  // Fetch attempt count for this test
+  const { data: attemptCount = 0 } = useQuery({
+    queryKey: ["test-attempt-count", studentId, testId],
+    queryFn: () => getTestAttemptCount(studentId!, testId!),
+    enabled: !!studentId && !!testId,
+  });
 
   // Start attempt mutation
   const startMutation = useStartAttempt();
@@ -52,10 +61,10 @@ const TestIntro = () => {
       totalQuestions,
       subjects,
       passingScore: testData.passingScore,
-      attemptCount: 0, // TODO: Fetch from attempts
+      attemptCount,
       isAvailable: testData.isPublished,
     };
-  }, [testData]);
+  }, [testData, attemptCount]);
 
   const handleStartTest = () => {
     console.log("Starting test with:", {

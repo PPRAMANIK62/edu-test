@@ -2,7 +2,6 @@ import StatCard from "@/components/teacher/stat-card";
 import TimeRangeSelector from "@/components/teacher/time-range-selector";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useRevenueAnalytics } from "@/hooks/use-teacher-analytics";
-import { MOCK_COURSES } from "@/lib/mockdata";
 import { isTeacher } from "@/lib/permissions";
 import { formatCurrency } from "@/lib/utils";
 import { TimeRangeFilter } from "@/types";
@@ -33,12 +32,14 @@ const TeacherAnalytics = () => {
   // Check if user can view revenue
   const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
 
+  // Courses are fetched as part of revenue analytics
+
   // Fetch analytics data
   const {
     data: revenueData,
     isLoading,
     error,
-  } = useRevenueAnalytics("teacher-1", timeRange);
+  } = useRevenueAnalytics(userProfile?.$id || "", timeRange);
 
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
@@ -196,9 +197,6 @@ const TeacherAnalytics = () => {
 
                 <View className="gap-3">
                   {revenueData.topCourses.map((course, index) => {
-                    const courseDetails = MOCK_COURSES.find(
-                      (c) => c.id === course.courseId
-                    );
                     return (
                       <TouchableOpacity
                         key={course.courseId}
@@ -223,22 +221,20 @@ const TeacherAnalytics = () => {
                             >
                               {course.courseTitle}
                             </Text>
-                            {courseDetails && (
-                              <View className="flex-row items-center gap-3">
-                                <View className="flex-row items-center gap-1">
-                                  <Users size={14} color="#6b7280" />
-                                  <Text className="text-gray-600 text-xs">
-                                    {courseDetails.enrollmentCount}
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center gap-1">
-                                  <BookOpen size={14} color="#6b7280" />
-                                  <Text className="text-gray-600 text-xs">
-                                    {courseDetails.totalTests} tests
-                                  </Text>
-                                </View>
+                            <View className="flex-row items-center gap-3">
+                              <View className="flex-row items-center gap-1">
+                                <Users size={14} color="#6b7280" />
+                                <Text className="text-gray-600 text-xs">
+                                  {course.enrollmentCount} students
+                                </Text>
                               </View>
-                            )}
+                              <View className="flex-row items-center gap-1">
+                                <BookOpen size={14} color="#6b7280" />
+                                <Text className="text-gray-600 text-xs">
+                                  {course.testCount} tests
+                                </Text>
+                              </View>
+                            </View>
                           </View>
                         </View>
 
