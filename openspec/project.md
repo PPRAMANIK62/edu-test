@@ -208,6 +208,219 @@ pnpm web
 - **Navigation**: React Navigation ecosystem for cross-platform routing
 - **Safe Area Context**: Manages device-specific safe areas (notches, status bars, home indicators)
 
+## Database Architecture
+
+### Overview
+
+The application uses **Appwrite TablesDB** as the backend database. Data is organized into 9 tables with relationships managed through foreign key references.
+
+### Entity Relationship Diagram
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Users    │     │   Courses   │     │    Tests    │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ $id (PK)    │◄────│ teacherId   │◄────│ courseId    │
+│ email       │     │ $id (PK)    │     │ $id (PK)    │
+│ firstName   │     │ title       │     │ title       │
+│ lastName    │     │ description │     │ description │
+│ role        │     │ imageUrl    │     │ durationMin │
+│ isPrimary   │     │ price       │     │ passingScore│
+└──────┬──────┘     │ currency    │     │ isPublished │
+       │            │ subjects[]  │     └──────┬──────┘
+       │            │ estimatedHrs│            │
+       │            │ isPublished │            │
+       │            └──────┬──────┘            │
+       │                   │                   │
+       ▼                   ▼                   ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Enrollments │     │  Purchases  │     │TestSubjects │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ studentId   │     │ studentId   │     │ testId      │
+│ courseId    │     │ courseId    │     │ $id (PK)    │
+│ status      │     │ amount      │     │ name        │
+│ progress    │     │ currency    │     │ questionCnt │
+│ enrolledAt  │     │ purchasedAt │     │ order       │
+│ completedAt │     └─────────────┘     └──────┬──────┘
+└─────────────┘                                │
+                                               ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Activities  │     │TestAttempts │     │  Questions  │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ userId      │     │ studentId   │     │ testId      │
+│ type        │     │ testId      │     │ subjectId   │
+│ title       │     │ courseId    │     │ subjectName │
+│ subtitle    │     │ startedAt   │     │ type (mcq)  │
+│ metadata    │     │ completedAt │     │ text        │
+│ $createdAt  │     │ status      │     │ options[]   │
+└─────────────┘     │ answers[]   │     │ correctIdx  │
+                    │ score       │     │ explanation │
+                    │ percentage  │     │ order       │
+                    │ passed      │     └─────────────┘
+                    └─────────────┘
+```
+
+### Tables Schema
+
+#### Users Table
+
+Stores user profile information linked to Appwrite Auth accounts.
+
+| Field              | Type    | Description                                    |
+| ------------------ | ------- | ---------------------------------------------- |
+| `$id`              | string  | Primary key (matches Auth user ID)             |
+| `email`            | string  | User email address                             |
+| `firstName`        | string  | User's first name                              |
+| `lastName`         | string  | User's last name                               |
+| `role`             | enum    | `teacher`, `teaching_assistant`, `student`     |
+| `isPrimaryTeacher` | boolean | Whether user is the primary teacher (optional) |
+
+#### Courses Table
+
+Stores course information created by teachers.
+
+| Field            | Type     | Description                 |
+| ---------------- | -------- | --------------------------- |
+| `$id`            | string   | Primary key                 |
+| `teacherId`      | string   | Foreign key to Users        |
+| `title`          | string   | Course title                |
+| `description`    | string   | Course description          |
+| `imageUrl`       | string   | Course thumbnail URL        |
+| `price`          | number   | Course price                |
+| `currency`       | string   | Currency code (e.g., "INR") |
+| `subjects`       | string[] | List of subject tags        |
+| `estimatedHours` | number   | Estimated completion time   |
+| `isPublished`    | boolean  | Whether course is visible   |
+
+#### Tests Table
+
+Stores test/exam information within courses.
+
+| Field             | Type    | Description                |
+| ----------------- | ------- | -------------------------- |
+| `$id`             | string  | Primary key                |
+| `courseId`        | string  | Foreign key to Courses     |
+| `title`           | string  | Test title                 |
+| `description`     | string  | Test description           |
+| `durationMinutes` | number  | Time limit in minutes      |
+| `passingScore`    | number  | Minimum passing percentage |
+| `isPublished`     | boolean | Whether test is available  |
+
+#### TestSubjects Table
+
+Stores subject sections within tests.
+
+| Field           | Type   | Description          |
+| --------------- | ------ | -------------------- |
+| `$id`           | string | Primary key          |
+| `testId`        | string | Foreign key to Tests |
+| `name`          | string | Subject name         |
+| `questionCount` | number | Number of questions  |
+| `order`         | number | Display order        |
+
+#### Questions Table
+
+Stores MCQ questions for tests.
+
+| Field          | Type     | Description                   |
+| -------------- | -------- | ----------------------------- |
+| `$id`          | string   | Primary key                   |
+| `testId`       | string   | Foreign key to Tests          |
+| `subjectId`    | string   | Foreign key to TestSubjects   |
+| `subjectName`  | string   | Denormalized subject name     |
+| `type`         | enum     | Question type (`mcq`)         |
+| `text`         | string   | Question text                 |
+| `options`      | string[] | Array of option texts         |
+| `correctIndex` | number   | Index of correct option (0-3) |
+| `explanation`  | string   | Answer explanation            |
+| `order`        | number   | Display order                 |
+
+#### Enrollments Table
+
+Tracks student course enrollments.
+
+| Field         | Type   | Description                   |
+| ------------- | ------ | ----------------------------- |
+| `$id`         | string | Primary key                   |
+| `studentId`   | string | Foreign key to Users          |
+| `courseId`    | string | Foreign key to Courses        |
+| `status`      | enum   | `active`, `completed`         |
+| `progress`    | number | Completion percentage (0-100) |
+| `enrolledAt`  | string | ISO timestamp                 |
+| `completedAt` | string | ISO timestamp (nullable)      |
+
+#### Purchases Table
+
+Records course purchases for revenue tracking.
+
+| Field         | Type   | Description            |
+| ------------- | ------ | ---------------------- |
+| `$id`         | string | Primary key            |
+| `studentId`   | string | Foreign key to Users   |
+| `courseId`    | string | Foreign key to Courses |
+| `amount`      | number | Purchase amount        |
+| `currency`    | string | Currency code          |
+| `purchasedAt` | string | ISO timestamp          |
+
+#### TestAttempts Table
+
+Stores student test attempts and results.
+
+| Field         | Type     | Description                           |
+| ------------- | -------- | ------------------------------------- |
+| `$id`         | string   | Primary key                           |
+| `studentId`   | string   | Foreign key to Users                  |
+| `testId`      | string   | Foreign key to Tests                  |
+| `courseId`    | string   | Foreign key to Courses                |
+| `startedAt`   | string   | ISO timestamp                         |
+| `completedAt` | string   | ISO timestamp (nullable)              |
+| `status`      | enum     | `in_progress`, `completed`, `expired` |
+| `answers`     | string[] | Array of JSON answer tuples           |
+| `score`       | number   | Points scored (nullable)              |
+| `percentage`  | number   | Score percentage (nullable)           |
+| `passed`      | boolean  | Whether passed (nullable)             |
+
+**Answer Format**: Each answer is stored as JSON: `[questionIndex, selectedOptionIndex, isMarkedForReview]`
+
+#### Activities Table
+
+Stores user activity feed for dashboards.
+
+| Field        | Type   | Description                                       |
+| ------------ | ------ | ------------------------------------------------- |
+| `$id`        | string | Primary key                                       |
+| `userId`     | string | Foreign key to Users                              |
+| `type`       | enum   | `test_completed`, `course_started`, `achievement` |
+| `title`      | string | Activity title                                    |
+| `subtitle`   | string | Activity description                              |
+| `metadata`   | string | JSON metadata                                     |
+| `$createdAt` | string | Timestamp (auto-generated)                        |
+
+### Service Layer
+
+Data access is abstracted through service modules in `lib/services/`:
+
+- `courses.ts` - Course CRUD and queries
+- `tests.ts` - Test CRUD and queries
+- `questions.ts` - Question CRUD and reordering
+- `enrollments.ts` - Student enrollment management
+- `purchases.ts` - Purchase records and revenue
+- `attempts.ts` - Test attempt lifecycle
+- `activities.ts` - Activity logging and retrieval
+
+### React Query Integration
+
+Custom hooks in `hooks/` provide data fetching with caching:
+
+- `use-courses.ts` - `useCourses()`, `useCoursesByTeacher()`, etc.
+- `use-tests.ts` - `useTests()`, `useTestWithSubjects()`, etc.
+- `use-questions.ts` - `useQuestions()`, mutations for CRUD
+- `use-enrollments.ts` - `useEnrollments()`, enrollment mutations
+- `use-attempts.ts` - `useAttempts()`, attempt lifecycle
+- `use-activities.ts` - `useActivities()`
+
+Query keys are centralized in `lib/query-keys.ts` for consistent cache invalidation.
+
 ## Feature Areas
 
 ### Student Features
