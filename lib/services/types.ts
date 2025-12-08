@@ -261,3 +261,64 @@ export interface CreateActivityInput {
   subtitle: string;
   metadata?: Record<string, unknown>;
 }
+
+// ============================================================================
+// Payment Types
+// ============================================================================
+
+/**
+ * Input for creating a payment order
+ */
+export interface CreateOrderInput {
+  courseId: string;
+  studentId: string;
+  studentEmail?: string;
+  studentName?: string;
+}
+
+/**
+ * Response from create-order Appwrite Function
+ */
+export interface CreateOrderResponse {
+  success: boolean;
+  error?: string;
+  order?: {
+    id: string;
+    amount: number;
+    currency: string;
+    receipt: string;
+  };
+  course?: {
+    id: string;
+    title: string;
+    imageUrl: string;
+    price: number;
+  };
+  key?: string;
+  prefill?: {
+    email: string;
+    name: string;
+  };
+}
+
+/**
+ * Payment result from the checkout flow
+ */
+export interface PaymentResult {
+  success: boolean;
+  purchase?: PurchaseDocument;
+  error?: string;
+  cancelled?: boolean;
+}
+
+/**
+ * Options for the purchase flow
+ */
+export interface PurchaseCourseOptions {
+  courseId: string;
+  student: UserDocument;
+  onPaymentStart?: () => void;
+  onPaymentSuccess?: (purchase: PurchaseDocument) => void;
+  onPaymentFailure?: (error: string) => void;
+  onPaymentCancel?: () => void;
+}

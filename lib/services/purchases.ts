@@ -161,6 +161,13 @@ export async function createPurchase(
       amount: input.amount,
       currency: input.currency || "INR",
       purchasedAt: now,
+      paymentStatus: "pending",
+      paymentMethod: null,
+      razorpayOrderId: null,
+      razorpayPaymentId: null,
+      razorpaySignature: null,
+      webhookVerified: false,
+      webhookReceivedAt: null,
     },
   });
 

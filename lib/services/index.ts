@@ -17,11 +17,16 @@ export type {
   // Input types
   CreateCourseInput,
   CreateEnrollmentInput,
+  // Payment types
+  CreateOrderInput,
+  CreateOrderResponse,
   CreatePurchaseInput,
   CreateQuestionInput,
   CreateTestInput,
   EnrollmentDocument,
   PaginatedResponse,
+  PaymentResult,
+  PurchaseCourseOptions,
   PurchaseDocument,
   QuestionDocument,
   TestAttemptDocument,
@@ -40,11 +45,11 @@ export type { QueryOptions } from "./helpers";
 // ============================================================================
 
 export {
-  DEFAULT_LIMIT,
-  MAX_LIMIT,
   buildQueries,
   dateRangeQuery,
+  DEFAULT_LIMIT,
   getDateRangeFromFilter,
+  MAX_LIMIT,
   nowISO,
   parseJSON,
 } from "./helpers";
@@ -57,9 +62,9 @@ export {
   createCourse,
   deleteCourse,
   getCourseById,
-  getCourseWithStats,
   getCourses,
   getCoursesByTeacher,
+  getCourseWithStats,
   getEnrolledCourses,
   updateCourse,
 } from "./courses";
@@ -77,8 +82,8 @@ export {
   // Subject management
   getSubjectsByTest,
   getTestById,
-  getTestWithSubjects,
   getTestsByCourse,
+  getTestWithSubjects,
   updateTest,
   updateTestSubject,
 } from "./tests";
@@ -189,3 +194,19 @@ export {
   getTeacherDashboardStats,
   getTestAttemptCount,
 } from "./analytics";
+
+// ============================================================================
+// Payment Service
+// ============================================================================
+
+export {
+  canAccessCourse,
+  courseRequiresPayment,
+  createPaymentOrder,
+  handlePaymentFailure,
+  handlePaymentSuccess,
+  isPaymentCancelled,
+  openRazorpayCheckout,
+  purchaseCourse,
+  verifySignatureFormat,
+} from "./payments";
