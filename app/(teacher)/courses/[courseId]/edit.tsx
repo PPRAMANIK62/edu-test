@@ -270,10 +270,10 @@ const EditCourse = () => {
               multiline
             />
             <FormInput
-              label="Price (USD)"
+              label="Price (INR)"
               value={price}
               onChangeText={setPrice}
-              placeholder="49.99"
+              placeholder="499"
               error={errors.price}
               keyboardType="numeric"
             />

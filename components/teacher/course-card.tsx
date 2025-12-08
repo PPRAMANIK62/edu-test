@@ -61,7 +61,7 @@ const TeacherCourseCard = ({
             </View>
             <View className="flex-1" />
             <Text className="text-violet-600 font-bold text-base">
-              ${course.price}
+              ₹{course.price}
             </Text>
           </View>
 

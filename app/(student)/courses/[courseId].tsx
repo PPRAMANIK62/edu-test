@@ -147,8 +147,7 @@ const CourseDetail = () => {
               <View className="flex-row items-center justify-between mb-4">
                 <View>
                   <Text className="text-2xl font-bold text-gray-900 mb-1">
-                    {course.currency === "INR" ? "₹" : "$"}
-                    {course.price}
+                    ₹{course.price}
                   </Text>
                   <Text className="text-sm text-gray-600">
                     One-time purchase

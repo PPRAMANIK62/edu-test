@@ -60,7 +60,7 @@ const BrowseCard = ({ course }: { course: Course }) => {
             {!course.isPurchased && (
               <View className="bg-primary-600 rounded-lg px-3 py-1.5">
                 <Text className="text-white font-bold text-sm">
-                  ${course.price}
+                  ₹{course.price}
                 </Text>
               </View>
             )}
