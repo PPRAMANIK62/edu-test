@@ -21,7 +21,11 @@ const { databaseId, tables } = APPWRITE_CONFIG;
 export async function getTestsByCourse(
   courseId: string,
   options: QueryOptions = {}
-): Promise<PaginatedResponse<TestDocument>> {
+): Promise<
+  PaginatedResponse<
+    TestDocument & { questionCount: number; subjectCount: number }
+  >
+> {
   const queries = [
     Query.equal("courseId", courseId),
     ...buildQueries({ ...options, orderBy: options.orderBy || "$createdAt" }),
@@ -33,20 +37,65 @@ export async function getTestsByCourse(
     queries,
   });
 
+  const documents = response.rows as TestDocument[];
+
+  if (documents.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  // Get test IDs
+  const testIds = documents.map((t) => t.$id);
+
+  // Fetch question counts
+  const questionResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.questions!,
+    queries: [Query.equal("testId", testIds), Query.limit(1000)],
+  });
+
+  // Fetch subject counts
+  const subjectResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.testSubjects!,
+    queries: [Query.equal("testId", testIds), Query.limit(1000)],
+  });
+
+  // Build question count map
+  const questionCountMap = new Map<string, number>();
+  for (const question of questionResponse.rows) {
+    const testId = (question as unknown as { testId: string }).testId;
+    questionCountMap.set(testId, (questionCountMap.get(testId) || 0) + 1);
+  }
+
+  // Build subject count map
+  const subjectCountMap = new Map<string, number>();
+  for (const subject of subjectResponse.rows) {
+    const testId = (subject as unknown as { testId: string }).testId;
+    subjectCountMap.set(testId, (subjectCountMap.get(testId) || 0) + 1);
+  }
+
+  // Merge counts with tests
+  const testsWithCounts = documents.map((test) => ({
+    ...test,
+    questionCount: questionCountMap.get(test.$id) || 0,
+    subjectCount: subjectCountMap.get(test.$id) || 0,
+  }));
+
   return {
-    documents: response.rows as TestDocument[],
+    documents: testsWithCounts,
     total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    hasMore: response.total > (options.offset || 0) + documents.length,
   };
 }
 
 /**
  * Get published tests for a course (student view)
+ * Includes question count for each test
  */
 export async function getPublishedTestsByCourse(
   courseId: string,
   options: QueryOptions = {}
-): Promise<PaginatedResponse<TestDocument>> {
+): Promise<PaginatedResponse<TestDocument & { questionCount: number }>> {
   const queries = [
     Query.equal("courseId", courseId),
     Query.equal("isPublished", true),
@@ -59,10 +108,37 @@ export async function getPublishedTestsByCourse(
     queries,
   });
 
+  const documents = response.rows as TestDocument[];
+
+  if (documents.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  // Get test IDs and fetch question counts
+  const testIds = documents.map((t) => t.$id);
+  const questionResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.questions!,
+    queries: [Query.equal("testId", testIds), Query.limit(1000)],
+  });
+
+  // Build question count map
+  const questionCountMap = new Map<string, number>();
+  for (const question of questionResponse.rows) {
+    const testId = (question as unknown as { testId: string }).testId;
+    questionCountMap.set(testId, (questionCountMap.get(testId) || 0) + 1);
+  }
+
+  // Merge question counts with tests
+  const testsWithCounts = documents.map((test) => ({
+    ...test,
+    questionCount: questionCountMap.get(test.$id) || 0,
+  }));
+
   return {
-    documents: response.rows as TestDocument[],
+    documents: testsWithCounts,
     total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    hasMore: response.total > (options.offset || 0) + documents.length,
   };
 }
 

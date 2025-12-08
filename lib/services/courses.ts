@@ -185,12 +185,19 @@ export async function getCoursesByTeacher(
 
 /**
  * Get enrolled courses for a student
- * Returns courses where student has an active enrollment
+ * Returns courses where student has an active enrollment, with stats
  */
 export async function getEnrolledCourses(
   studentId: string,
   options: QueryOptions = {}
-): Promise<PaginatedResponse<CourseDocument>> {
+): Promise<
+  PaginatedResponse<
+    CourseDocument & {
+      enrollmentCount: number;
+      testCount: number;
+    }
+  >
+> {
   // First, get enrollments for this student
   const enrollmentResponse = await databases.listRows({
     databaseId: databaseId!,
@@ -220,10 +227,58 @@ export async function getEnrolledCourses(
     queries,
   });
 
+  const documents = response.rows as CourseDocument[];
+
+  if (documents.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  // Count enrollments per course
+  const allEnrollmentsResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.enrollments!,
+    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+  });
+
+  // Count tests per course (published only for students)
+  const testResponse = await databases.listRows({
+    databaseId: databaseId!,
+    tableId: tables.tests!,
+    queries: [
+      Query.equal("courseId", courseIds),
+      Query.equal("isPublished", true),
+      Query.limit(1000),
+    ],
+  });
+
+  // Build enrollment count map
+  const enrollmentCountMap = new Map<string, number>();
+  for (const enrollment of allEnrollmentsResponse.rows) {
+    const courseId = (enrollment as unknown as { courseId: string }).courseId;
+    enrollmentCountMap.set(
+      courseId,
+      (enrollmentCountMap.get(courseId) || 0) + 1
+    );
+  }
+
+  // Build test count map
+  const testCountMap = new Map<string, number>();
+  for (const test of testResponse.rows) {
+    const courseId = (test as unknown as { courseId: string }).courseId;
+    testCountMap.set(courseId, (testCountMap.get(courseId) || 0) + 1);
+  }
+
+  // Merge stats with courses
+  const coursesWithStats = documents.map((course) => ({
+    ...course,
+    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
+    testCount: testCountMap.get(course.$id) || 0,
+  }));
+
   return {
-    documents: response.rows as CourseDocument[],
+    documents: coursesWithStats,
     total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    hasMore: response.total > (options.offset || 0) + documents.length,
   };
 }
 

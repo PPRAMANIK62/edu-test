@@ -67,8 +67,8 @@ const CourseDetail = () => {
       title: test.title,
       description: test.description,
       durationMinutes: test.durationMinutes,
-      totalQuestions: 0, // Will be fetched in test intro
-      subjects: [], // Will be fetched in test intro
+      totalQuestions: test.questionCount,
+      subjects: [],
       passingScore: test.passingScore,
       attemptCount: 0, // Will be computed from attempts
       isAvailable: test.isPublished,

@@ -56,8 +56,8 @@ const EditCourse = () => {
       title: test.title,
       description: test.description,
       durationMinutes: test.durationMinutes,
-      totalQuestions: 0, // Would come from questions count
-      subjects: [], // Would come from test_subjects
+      totalQuestions: test.questionCount,
+      subjects: Array(test.subjectCount).fill(""), // Create array with correct length
       passingScore: test.passingScore,
       attemptCount: 0,
       isAvailable: test.isPublished,
@@ -137,22 +137,26 @@ const EditCourse = () => {
           style: "destructive",
           onPress: () => {
             if (!courseId) return;
-            deleteMutation.mutate(courseId, {
-              onSuccess: () => {
-                Alert.alert("Success", "Course deleted successfully!", [
-                  {
-                    text: "OK",
-                    onPress: () => router.replace("/(teacher)/(tabs)/courses"),
-                  },
-                ]);
-              },
-              onError: () => {
-                Alert.alert(
-                  "Error",
-                  "Failed to delete course. Please try again."
-                );
-              },
-            });
+            deleteMutation.mutate(
+              { courseId },
+              {
+                onSuccess: () => {
+                  Alert.alert("Success", "Course deleted successfully!", [
+                    {
+                      text: "OK",
+                      onPress: () =>
+                        router.replace("/(teacher)/(tabs)/courses"),
+                    },
+                  ]);
+                },
+                onError: () => {
+                  Alert.alert(
+                    "Error",
+                    "Failed to delete course. Please try again."
+                  );
+                },
+              }
+            );
           },
         },
       ]
@@ -365,7 +369,7 @@ const EditCourse = () => {
             <TouchableOpacity
               onPress={handleDelete}
               disabled={deleteMutation.isPending}
-              className="border border-red-300 bg-red-50 rounded-xl py-4 items-center mt-4"
+              className="border border-red-300 bg-red-50 rounded-xl py-4 items-center mb-4"
               activeOpacity={0.8}
             >
               {deleteMutation.isPending ? (

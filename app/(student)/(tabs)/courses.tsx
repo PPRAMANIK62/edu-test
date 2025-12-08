@@ -66,13 +66,13 @@ const CoursesTab = () => {
         teacherId: course.teacherId,
         teacherName:
           teacherNamesMap?.get(course.teacherId) || "Course Instructor",
-        totalTests: 0, // Computed on course detail page
+        totalTests: course.testCount,
         totalQuestions: 0,
         estimatedHours: course.estimatedHours,
         subjects: course.subjects,
         isPurchased: true, // They are enrolled so they have access
         progress: enrollment?.progress || 0,
-        enrollmentCount: 0,
+        enrollmentCount: course.enrollmentCount,
       };
     });
   }, [enrolledCoursesData, enrollmentsData, teacherNamesMap]);

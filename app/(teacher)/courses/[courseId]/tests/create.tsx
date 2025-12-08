@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -29,6 +30,7 @@ export default function CreateTestScreen() {
     passingScore: "70",
     subjects: [],
   });
+  const [isPublished, setIsPublished] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [newSubjectName, setNewSubjectName] = useState("");
 
@@ -65,7 +67,7 @@ export default function CreateTestScreen() {
         description: formData.description.trim(),
         durationMinutes: parseInt(formData.durationMinutes),
         passingScore: parseInt(formData.passingScore),
-        isPublished: false,
+        isPublished,
       },
       {
         onSuccess: async (newTest) => {
@@ -221,6 +223,24 @@ export default function CreateTestScreen() {
               error={errors.passingScore}
               keyboardType="numeric"
             />
+
+            {/* Publish Toggle */}
+            <View className="flex-row items-center justify-between py-3">
+              <View className="flex-1">
+                <Text className="text-base font-medium text-gray-900">
+                  Publish Test
+                </Text>
+                <Text className="text-sm text-gray-500 mt-1">
+                  Published tests are visible to enrolled students
+                </Text>
+              </View>
+              <Switch
+                value={isPublished}
+                onValueChange={setIsPublished}
+                trackColor={{ false: "#d1d5db", true: "#a78bfa" }}
+                thumbColor={isPublished ? "#7c3aed" : "#f4f4f5"}
+              />
+            </View>
           </FormSection>
 
           <FormSection title="Subjects">

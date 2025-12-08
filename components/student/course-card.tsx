@@ -42,7 +42,7 @@ const StudentCourseCard = ({ course }: { course: Course }) => {
           </View>
         </View>
 
-        {course.progress && (
+        {course.progress !== undefined && course.progress > 0 && (
           <View>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-sm font-semibold text-gray-700">
