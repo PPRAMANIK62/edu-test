@@ -16,6 +16,13 @@
 export const RAZORPAY_KEY_ID = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID ?? "";
 
 /**
+ * Appwrite Function ID for creating Razorpay orders
+ * This function creates orders server-side to keep the API secret secure
+ */
+export const CREATE_ORDER_FUNCTION_ID =
+  process.env.EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID ?? "";
+
+/**
  * App name displayed in Razorpay checkout
  */
 export const RAZORPAY_MERCHANT_NAME = "EduTest";

@@ -197,18 +197,20 @@ Create the following tables in your database. Each table requires specific attri
 
 For optimal query performance, create the following indexes:
 
-| Table        | Index Name      | Attributes  | Type |
-| ------------ | --------------- | ----------- | ---- |
-| Courses      | teacherId_idx   | teacherId   | Key  |
-| Courses      | isPublished_idx | isPublished | Key  |
-| Tests        | courseId_idx    | courseId    | Key  |
-| Questions    | testId_idx      | testId      | Key  |
-| Enrollments  | studentId_idx   | studentId   | Key  |
-| Enrollments  | courseId_idx    | courseId    | Key  |
-| Purchases    | studentId_idx   | studentId   | Key  |
-| TestAttempts | studentId_idx   | studentId   | Key  |
-| TestAttempts | testId_idx      | testId      | Key  |
-| Activities   | userId_idx      | userId      | Key  |
+| Table        | Index Name            | Attributes        | Type |
+| ------------ | --------------------- | ----------------- | ---- |
+| Courses      | teacherId_idx         | teacherId         | Key  |
+| Courses      | isPublished_idx       | isPublished       | Key  |
+| Tests        | courseId_idx          | courseId          | Key  |
+| Questions    | testId_idx            | testId            | Key  |
+| Enrollments  | studentId_idx         | studentId         | Key  |
+| Enrollments  | courseId_idx          | courseId          | Key  |
+| Purchases    | studentId_idx         | studentId         | Key  |
+| Purchases    | razorpayOrderId_idx   | razorpayOrderId   | Key  |
+| Purchases    | razorpayPaymentId_idx | razorpayPaymentId | Key  |
+| TestAttempts | studentId_idx         | studentId         | Key  |
+| TestAttempts | testId_idx            | testId            | Key  |
+| Activities   | userId_idx            | userId            | Key  |
 
 ## Project Structure
 
@@ -219,15 +221,132 @@ edu-test/
 │   ├── (student)/         # Student screens
 │   └── (teacher)/         # Teacher screens
 ├── components/            # Reusable UI components
+├── functions/             # Appwrite Functions
+│   ├── create-order/     # Razorpay order creation
+│   └── razorpay-webhook/ # Razorpay webhook handler
 ├── hooks/                 # React Query hooks
 ├── lib/
 │   ├── services/         # Data access layer
 │   ├── appwrite.ts       # Appwrite client
+│   ├── razorpay.ts       # Razorpay configuration
 │   └── query-keys.ts     # Query key definitions
 ├── providers/            # Context providers
 ├── types/                # TypeScript types
 └── openspec/             # Documentation
 ```
+
+## Appwrite Functions Deployment
+
+This app uses Appwrite Functions for server-side payment processing. Follow these steps to deploy them.
+
+### Prerequisites
+
+1. Install Appwrite CLI:
+
+   ```bash
+   npm install -g appwrite-cli
+   ```
+
+2. Login to Appwrite:
+   ```bash
+   appwrite login
+   ```
+
+### Deploy Create Order Function
+
+1. Navigate to the function directory:
+
+   ```bash
+   cd functions/create-order
+   ```
+
+2. Create the function in Appwrite Console or via CLI:
+
+   ```bash
+   appwrite functions create \
+     --functionId create-order \
+     --name "Create Razorpay Order" \
+     --runtime node-18.0 \
+     --entrypoint "src/main.js" \
+     --execute "users"
+   ```
+
+3. Set environment variables in Appwrite Console:
+   - `RAZORPAY_KEY_ID`: Your Razorpay API Key ID
+   - `RAZORPAY_KEY_SECRET`: Your Razorpay API Key Secret
+   - `APPWRITE_ENDPOINT`: Your Appwrite endpoint (e.g., `https://cloud.appwrite.io/v1`)
+   - `APPWRITE_PROJECT_ID`: Your project ID
+   - `APPWRITE_API_KEY`: An API key with database read permissions
+   - `APPWRITE_DATABASE_ID`: Your database ID
+   - `APPWRITE_COURSES_TABLE_ID`: Your courses table ID
+
+4. Deploy the function:
+
+   ```bash
+   appwrite functions createDeployment \
+     --functionId create-order \
+     --entrypoint "src/main.js" \
+     --code .
+   ```
+
+5. Copy the function ID and add to your `.env`:
+   ```
+   EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID=<function-id>
+   ```
+
+### Deploy Razorpay Webhook Function
+
+1. Navigate to the function directory:
+
+   ```bash
+   cd functions/razorpay-webhook
+   ```
+
+2. Create the function:
+
+   ```bash
+   appwrite functions create \
+     --functionId razorpay-webhook \
+     --name "Razorpay Webhook Handler" \
+     --runtime node-18.0 \
+     --entrypoint "src/main.js" \
+     --execute "any"
+   ```
+
+3. Set environment variables in Appwrite Console:
+   - `RAZORPAY_WEBHOOK_SECRET`: Your Razorpay Webhook Secret
+   - `APPWRITE_ENDPOINT`: Your Appwrite endpoint
+   - `APPWRITE_PROJECT_ID`: Your project ID
+   - `APPWRITE_API_KEY`: An API key with database write permissions
+   - `APPWRITE_DATABASE_ID`: Your database ID
+   - `APPWRITE_PURCHASES_TABLE_ID`: Your purchases table ID
+   - `APPWRITE_ENROLLMENTS_TABLE_ID`: Your enrollments table ID
+
+4. Deploy the function:
+
+   ```bash
+   appwrite functions createDeployment \
+     --functionId razorpay-webhook \
+     --entrypoint "src/main.js" \
+     --code .
+   ```
+
+5. Get the webhook URL from Appwrite Console:
+   ```
+   https://<appwrite-endpoint>/v1/functions/razorpay-webhook/executions
+   ```
+
+### Configure Razorpay Webhooks
+
+1. Go to [Razorpay Dashboard](https://dashboard.razorpay.com) > Webhooks
+2. Click "Add New Webhook"
+3. Enter the webhook URL from step 5 above
+4. Set a Webhook Secret and save it to your function environment variables
+5. Enable the following events:
+   - `payment.captured`
+   - `payment.failed`
+   - `refund.created`
+6. Save the webhook configuration
 
 ## Available Scripts
 

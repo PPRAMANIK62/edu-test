@@ -14,5 +14,5 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
-  ]
+, "functions/create-order/src/main.js", "functions/razorpay-webhook/src/main.js"  ]
 }
