@@ -1,25 +1,16 @@
 import ProgressBar from "@/components/student/courses/progress-bar";
 import CoursesTestCard from "@/components/student/courses/test-card";
+import { PaymentButton } from "@/components/student/payment-button";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useCourse } from "@/hooks/use-courses";
-import {
-  useEnrollStudent,
-  useIsStudentEnrolled,
-} from "@/hooks/use-enrollments";
+import { useIsStudentEnrolled } from "@/hooks/use-enrollments";
+import { usePurchaseStatus } from "@/hooks/use-payments";
 import { usePublishedTestsByCourse } from "@/hooks/use-tests";
 import type { Course, Test } from "@/types";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Clock, FileText } from "lucide-react-native";
 import React, { useMemo } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const CourseDetail = () => {
@@ -37,8 +28,12 @@ const CourseDetail = () => {
   // Check if student is enrolled
   const { data: isEnrolled } = useIsStudentEnrolled(studentId, courseId);
 
-  // Enrollment mutation
-  const enrollMutation = useEnrollStudent();
+  // Payment status
+  const { hasPurchased, isFree, canAccess } = usePurchaseStatus(
+    studentId,
+    courseId,
+    courseData?.price
+  );
 
   // Map course data to Course type
   const course = useMemo((): Course | null => {
@@ -57,10 +52,10 @@ const CourseDetail = () => {
       totalQuestions: 0, // Could compute from tests if needed
       estimatedHours: courseData.estimatedHours,
       subjects: courseData.subjects,
-      isPurchased: isEnrolled || false,
+      isPurchased: isEnrolled || hasPurchased || canAccess || false,
       enrollmentCount: 0,
     };
-  }, [courseData, testsData, isEnrolled]);
+  }, [courseData, testsData, isEnrolled, hasPurchased, canAccess]);
 
   // Map tests to Test type
   const tests = useMemo((): Test[] => {
@@ -79,22 +74,6 @@ const CourseDetail = () => {
       isAvailable: test.isPublished,
     }));
   }, [testsData]);
-
-  const handlePurchase = () => {
-    if (!studentId || !courseId) return;
-
-    enrollMutation.mutate(
-      { studentId, courseId },
-      {
-        onSuccess: () => {
-          Alert.alert("Success", "Course purchased and enrolled successfully!");
-        },
-        onError: () => {
-          Alert.alert("Error", "Failed to purchase course. Please try again.");
-        },
-      }
-    );
-  };
 
   if (courseLoading || !course) {
     return (
@@ -147,27 +126,19 @@ const CourseDetail = () => {
               <View className="flex-row items-center justify-between mb-4">
                 <View>
                   <Text className="text-2xl font-bold text-gray-900 mb-1">
-                    ₹{course.price}
+                    {isFree ? "Free" : `₹${course.price}`}
                   </Text>
                   <Text className="text-sm text-gray-600">
-                    One-time purchase
+                    {isFree ? "Free course" : "One-time purchase"}
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity
-                onPress={handlePurchase}
-                disabled={enrollMutation.isPending}
-                className="bg-primary-600 rounded-xl py-3.5 items-center"
-                activeOpacity={0.8}
-              >
-                {enrollMutation.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="text-white font-bold text-base">
-                    Purchase Course
-                  </Text>
-                )}
-              </TouchableOpacity>
+              <PaymentButton
+                courseId={course.id}
+                price={course.price}
+                showPrice={false}
+                buttonText={isFree ? "Enroll for Free" : "Purchase Course"}
+              />
             </View>
           )}
 

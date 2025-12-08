@@ -14,7 +14,7 @@ const BrowseTab = () => {
   const { userProfile } = useAppwrite();
   const studentId = userProfile?.$id;
 
-  // Fetch all published courses
+  // Fetch all published courses with stats (test count, enrollment count)
   const { data: coursesData, isLoading: coursesLoading } = useCourses();
 
   // Fetch student's enrollments to filter out enrolled courses
@@ -56,12 +56,13 @@ const BrowseTab = () => {
           teacherId: course.teacherId,
           teacherName:
             teacherNamesMap?.get(course.teacherId) || "Course Instructor",
-          totalTests: 0, // Computed on course detail page
+          totalTests: course.testCount,
           totalQuestions: 0,
           estimatedHours: course.estimatedHours,
           subjects: course.subjects,
           isPurchased: false,
-          enrollmentCount: 0,
+          enrollmentCount: course.enrollmentCount,
+          rating: course.rating,
         })
       );
   }, [coursesData, enrollmentsData, teacherNamesMap]);

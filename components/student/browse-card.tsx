@@ -1,38 +1,12 @@
-// import { usePurchases } from "@/providers/purchases-provider";
+import { PaymentButton } from "@/components/student/payment-button";
 import { Course } from "@/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Clock, FileText, Star, Users } from "lucide-react-native";
 import React from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const BrowseCard = ({ course }: { course: Course }) => {
   const router = useRouter();
-  // const { purchaseCourse } = usePurchases();
-  const queryClient = useQueryClient();
-
-  const purchaseMutation = useMutation({
-    mutationFn: async (courseId: string) => {
-      // TODO: Implement purchase logic
-      // await purchaseCourse(courseId);
-      return courseId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["browse-courses"] });
-      queryClient.invalidateQueries({ queryKey: ["my-courses"] });
-      Alert.alert("Success", "Course purchased successfully!");
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to purchase course. Please try again.");
-    },
-  });
 
   return (
     <View className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
@@ -100,28 +74,14 @@ const BrowseCard = ({ course }: { course: Course }) => {
             </View>
           </View>
 
-          {!course.isPurchased ? (
-            <TouchableOpacity
-              onPress={() => purchaseMutation.mutate(course.id)}
-              disabled={purchaseMutation.isPending}
-              className="bg-primary-600 rounded-xl py-3 items-center"
-              activeOpacity={0.8}
-            >
-              {purchaseMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white font-semibold text-base">
-                  Purchase Course
-                </Text>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <View className="bg-green-50 border border-green-200 rounded-xl py-3 items-center">
-              <Text className="text-green-700 font-semibold text-base">
-                Enrolled
-              </Text>
-            </View>
-          )}
+          <PaymentButton
+            courseId={course.id}
+            price={course.price}
+            showPrice={false}
+            onSuccess={() => {
+              router.push(`/(student)/courses/${course.id}`);
+            }}
+          />
         </View>
       </TouchableOpacity>
     </View>
