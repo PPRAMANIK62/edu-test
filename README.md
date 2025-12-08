@@ -153,13 +153,20 @@ Create the following tables in your database. Each table requires specific attri
 
 #### Purchases Table
 
-| Attribute   | Type   | Size | Required |
-| ----------- | ------ | ---- | -------- |
-| studentId   | String | 36   | Yes      |
-| courseId    | String | 36   | Yes      |
-| amount      | Float  | -    | Yes      |
-| currency    | String | 10   | Yes      |
-| purchasedAt | String | 30   | Yes      |
+| Attribute         | Type    | Size                                 | Required |
+| ----------------- | ------- | ------------------------------------ | -------- |
+| studentId         | String  | 36                                   | Yes      |
+| courseId          | String  | 36                                   | Yes      |
+| amount            | Float   | -                                    | Yes      |
+| currency          | String  | 10                                   | Yes      |
+| purchasedAt       | String  | 30                                   | Yes      |
+| razorpayOrderId   | String  | 50                                   | No       |
+| razorpayPaymentId | String  | 50                                   | No       |
+| razorpaySignature | String  | 128                                  | No       |
+| paymentStatus     | Enum    | pending, completed, failed, refunded | Yes      |
+| paymentMethod     | String  | 20                                   | No       |
+| webhookVerified   | Boolean | -                                    | No       |
+| webhookReceivedAt | String  | 30                                   | No       |
 
 #### TestAttempts Table
 

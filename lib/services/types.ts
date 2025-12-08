@@ -112,6 +112,11 @@ export interface EnrollmentDocument extends BaseDocument {
 }
 
 /**
+ * Payment status enum
+ */
+export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
+
+/**
  * Purchase document from database
  */
 export interface PurchaseDocument extends BaseDocument {
@@ -120,6 +125,15 @@ export interface PurchaseDocument extends BaseDocument {
   amount: number;
   currency: string;
   purchasedAt: string;
+  // Razorpay payment fields
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  razorpaySignature: string | null;
+  paymentStatus: PaymentStatus;
+  paymentMethod: string | null; // upi/card/wallet/netbanking
+  // Webhook verification fields
+  webhookVerified: boolean;
+  webhookReceivedAt: string | null;
 }
 
 /**
@@ -232,6 +246,12 @@ export interface CreatePurchaseInput {
   courseId: string;
   amount: number;
   currency?: string;
+  // Razorpay payment fields
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentStatus?: PaymentStatus;
+  paymentMethod?: string;
 }
 
 export interface CreateActivityInput {

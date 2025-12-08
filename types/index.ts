@@ -287,3 +287,21 @@ export interface RevenueMetrics {
     comparisonPeriod: string;
   };
 }
+
+// ============================================================================
+// Razorpay Types (re-exported from lib/razorpay.ts for convenience)
+// ============================================================================
+
+/**
+ * Options for opening Razorpay checkout modal
+ */
+export type {
+  RazorpayCheckoutOptions,
+  RazorpayErrorResponse,
+  RazorpayOrder,
+  RazorpayPaymentEntity,
+  RazorpayRefundEntity,
+  RazorpaySuccessResponse,
+  RazorpayWebhookEventType,
+  RazorpayWebhookPayload,
+} from "../lib/razorpay";
