@@ -95,7 +95,15 @@ export async function createPaymentOrder(
   input: CreateOrderInput
 ): Promise<CreateOrderResponse> {
   if (!CREATE_ORDER_FUNCTION_ID) {
-    throw new Error("Payment function not configured");
+    throw new Error(
+      "Payment function not configured. Set EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID in your environment."
+    );
+  }
+
+  if (CREATE_ORDER_FUNCTION_ID === "your_create_order_function_id") {
+    throw new Error(
+      "Payment function ID is still placeholder. Deploy the create-order function and update EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID."
+    );
   }
 
   logPaymentEvent("Creating order", { courseId: input.courseId });
@@ -113,6 +121,26 @@ export async function createPaymentOrder(
       "/", // path
       ExecutionMethod.POST // method
     );
+
+    logPaymentEvent("Execution response", {
+      status: execution.status,
+      statusCode: execution.responseStatusCode,
+      responseBody: execution.responseBody?.substring(0, 500),
+    });
+
+    // Check if execution was successful
+    if (execution.status === "failed") {
+      throw new Error(
+        `Function execution failed: ${execution.errors || "Unknown error"}`
+      );
+    }
+
+    // Check for empty response
+    if (!execution.responseBody || execution.responseBody.trim() === "") {
+      throw new Error(
+        "Function returned empty response. Check function logs in Appwrite console."
+      );
+    }
 
     // Parse the response
     const response = JSON.parse(execution.responseBody) as CreateOrderResponse;

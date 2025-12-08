@@ -187,7 +187,20 @@ export default async ({ req, res, log, error }) => {
     };
 
     log(`Creating Razorpay order: ${JSON.stringify(orderOptions)}`);
-    const order = await razorpay.orders.create(orderOptions);
+
+    let order;
+    try {
+      order = await razorpay.orders.create(orderOptions);
+    } catch (razorpayError) {
+      error("Razorpay API error:", JSON.stringify(razorpayError));
+      return res.json(
+        {
+          success: false,
+          error: `Razorpay error: ${razorpayError?.error?.description || razorpayError?.message || "Failed to create order"}`,
+        },
+        500
+      );
+    }
 
     log(`Order created successfully: ${order.id}`);
 
@@ -213,11 +226,12 @@ export default async ({ req, res, log, error }) => {
       },
     });
   } catch (e) {
-    error("Error creating order:", e.message, e.stack);
+    error("Error creating order:", JSON.stringify(e), e?.message, e?.stack);
     return res.json(
       {
         success: false,
-        error: "Failed to create payment order. Please try again.",
+        error:
+          e?.message || "Failed to create payment order. Please try again.",
       },
       500
     );
