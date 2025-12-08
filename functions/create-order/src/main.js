@@ -175,10 +175,13 @@ export default async ({ req, res, log, error }) => {
     // Amount must be in smallest currency unit (paise for INR)
     const amountInPaise = Math.round(course.price * 100);
 
+    // Receipt must be max 40 chars - use short format
+    const receipt = `crs_${courseId.slice(-8)}_${Date.now().toString(36)}`;
+
     const orderOptions = {
       amount: amountInPaise,
       currency: course.currency || "INR",
-      receipt: `course_${courseId}_${Date.now()}`,
+      receipt,
       notes: {
         courseId: courseId,
         studentId: studentId,
