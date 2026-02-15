@@ -7,7 +7,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { invalidateTest, invalidateTests, queryKeys } from "@/lib/query-keys";
+import {
+  STALE_TIMES,
+  invalidateTest,
+  invalidateTests,
+  queryKeys,
+} from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
 import { useAppwrite } from "@/providers/appwrite";
 import {
@@ -28,6 +33,7 @@ import type {
   TestDocument,
   UpdateTestInput,
 } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -53,7 +59,7 @@ export function useTestsByCourse(
     queryKey: queryKeys.tests.byCourse(courseId!),
     queryFn: () => getTestsByCourse(courseId!, options),
     enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -77,70 +83,21 @@ export function usePublishedTestsByCourse(
     queryKey: queryKeys.tests.publishedByCourse(courseId!),
     queryFn: () => getPublishedTestsByCourse(courseId!, options),
     enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
-/**
- * Fetch a single test by ID
- *
- * @param testId - The test ID
- * @returns TanStack Query result with test document
- *
- * @example
- * ```tsx
- * const { data: test } = useTest('test-123');
- * ```
- */
-export function useTest(testId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.tests.detail(testId!),
-    queryFn: () => getTestById(testId!),
-    enabled: !!testId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useTest = createQueryHook(queryKeys.tests.detail, getTestById);
 
-/**
- * Fetch a test with its subjects
- *
- * @param testId - The test ID
- * @returns TanStack Query result with test and subjects
- *
- * @example
- * ```tsx
- * const { data } = useTestWithSubjects('test-123');
- * console.log(data?.subjects);
- * ```
- */
-export function useTestWithSubjects(testId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.tests.withSubjects(testId!),
-    queryFn: () => getTestWithSubjects(testId!),
-    enabled: !!testId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useTestWithSubjects = createQueryHook(
+  queryKeys.tests.withSubjects,
+  getTestWithSubjects,
+);
 
-/**
- * Fetch subjects for a test
- *
- * @param testId - The test ID
- * @returns TanStack Query result with test subjects
- *
- * @example
- * ```tsx
- * const { data: subjects } = useTestSubjects('test-123');
- * ```
- */
-export function useTestSubjects(testId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.tests.subjects(testId!),
-    queryFn: () => getSubjectsByTest(testId!),
-    enabled: !!testId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useTestSubjects = createQueryHook(
+  queryKeys.tests.subjects,
+  getSubjectsByTest,
+);
 
 // ============================================================================
 // Mutation Hooks

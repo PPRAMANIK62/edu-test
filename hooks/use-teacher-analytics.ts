@@ -5,6 +5,7 @@
  * Provides automatic loading states, error handling, and cache management.
  */
 
+import { STALE_TIMES, queryKeys } from "@/lib/query-keys";
 import {
   getCoursePerformanceMetrics,
   getRevenueAnalytics,
@@ -34,9 +35,9 @@ export function useCoursePerformance(
   timeRange: TimeRangeFilter = "30d",
 ) {
   return useQuery({
-    queryKey: ["course-performance", courseId, timeRange],
+    queryKey: queryKeys.analytics.coursePerformance(courseId, timeRange),
     queryFn: () => getCoursePerformanceMetrics(courseId, { timeRange }),
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: STALE_TIMES.STATIC,
     enabled: !!courseId, // Only run if courseId is provided
   });
 }
@@ -58,9 +59,9 @@ export function useCoursePerformance(
  */
 export function useStudentEngagement(courseId: string) {
   return useQuery({
-    queryKey: ["student-engagement", courseId],
+    queryKey: queryKeys.analytics.studentEngagement(courseId),
     queryFn: () => getStudentEngagementMetrics(courseId),
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: STALE_TIMES.STATIC,
     enabled: !!courseId,
   });
 }
@@ -86,9 +87,9 @@ export function useRevenueAnalytics(
   timeRange: TimeRangeFilter = "30d",
 ) {
   return useQuery({
-    queryKey: ["revenue-analytics", teacherId, timeRange],
+    queryKey: queryKeys.analytics.revenueAnalytics(teacherId, timeRange),
     queryFn: () => getRevenueAnalytics(teacherId, { timeRange }),
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: STALE_TIMES.STATIC,
     enabled: !!teacherId,
   });
 }

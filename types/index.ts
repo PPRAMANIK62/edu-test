@@ -100,22 +100,6 @@ export interface MCQQuestion extends BaseQuestion {
  */
 export type Question = MCQQuestion;
 
-/**
- * Legacy Question interface for backward compatibility
- * @deprecated Use Question (MCQQuestion) with type field instead
- */
-export interface LegacyQuestion {
-  id: string;
-  testId: string;
-  subjectId: string;
-  subjectName: string;
-  text: string;
-  options: QuestionOption[];
-  correctOptionId: string;
-  explanation: string;
-  order: number;
-}
-
 export interface QuestionOption {
   id: string;
   label: "A" | "B" | "C" | "D" | "E" | "F";

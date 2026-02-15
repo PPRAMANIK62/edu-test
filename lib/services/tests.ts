@@ -4,10 +4,10 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows, typedListRows } from "../appwrite-helpers";
+import { fetchAllRows } from "../appwrite-helpers";
 import { createTestInputSchema, updateTestInputSchema } from "../schemas";
 import { getCourseById } from "./courses";
-import { buildQueries, type QueryOptions } from "./helpers";
+import { buildQueries, requireOwnership, type QueryOptions } from "./helpers";
 import type {
   CreateTestInput,
   PaginatedResponse,
@@ -195,11 +195,7 @@ export async function createTest(
 ): Promise<TestDocument> {
   createTestInputSchema.parse(data);
   const course = await getCourseById(data.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only create tests for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "create tests for", "courses");
 
   const response = await databases.createRow<TestDocument>({
     databaseId: databaseId!,
@@ -229,11 +225,7 @@ export async function updateTest(
   updateTestInputSchema.parse(data);
   const test = await getTestById(id);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only update tests for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "update tests for", "courses");
 
   const response = await databases.updateRow<TestDocument>({
     databaseId: databaseId!,
@@ -254,11 +246,7 @@ export async function deleteTest(
 ): Promise<void> {
   const test = await getTestById(id);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only delete tests for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "delete tests for", "courses");
 
   // Delete associated subjects
   const subjectsResponse = await databases.listRows({
@@ -312,11 +300,7 @@ export async function createTestSubject(
 ): Promise<TestSubjectDocument> {
   const test = await getTestById(data.testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only create subjects for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "create subjects for", "courses");
 
   const response = await databases.createRow<TestSubjectDocument>({
     databaseId: databaseId!,
@@ -339,11 +323,7 @@ export async function updateTestSubject(
 ): Promise<TestSubjectDocument> {
   const test = await getTestById(testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only update subjects for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "update subjects for", "courses");
 
   const response = await databases.updateRow<TestSubjectDocument>({
     databaseId: databaseId!,
@@ -365,11 +345,7 @@ export async function deleteTestSubject(
 ): Promise<void> {
   const test = await getTestById(testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only delete subjects for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "delete subjects for", "courses");
 
   await databases.deleteRow({
     databaseId: databaseId!,

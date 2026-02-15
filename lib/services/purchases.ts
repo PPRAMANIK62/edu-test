@@ -5,9 +5,9 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows } from "../appwrite-helpers";
+import { fetchAllRows, getRowSafe, paginatedQuery } from "../appwrite-helpers";
 import { createPurchaseInputSchema } from "../schemas";
-import { buildQueries, nowISO, type QueryOptions } from "./helpers";
+import { nowISO, type QueryOptions } from "./helpers";
 import type {
   CreatePurchaseInput,
   PaginatedResponse,
@@ -27,23 +27,11 @@ export async function getPurchasesByStudent(
   studentId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<PurchaseDocument>> {
-  const queries = [
-    Query.equal("studentId", studentId),
-    Query.orderDesc("purchasedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as PurchaseDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<PurchaseDocument>(
+    tables.purchases!,
+    [Query.equal("studentId", studentId), Query.orderDesc("purchasedAt")],
+    options,
+  );
 }
 
 /**
@@ -53,23 +41,11 @@ export async function getPurchasesByCourse(
   courseId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<PurchaseDocument>> {
-  const queries = [
-    Query.equal("courseId", courseId),
-    Query.orderDesc("purchasedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as PurchaseDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<PurchaseDocument>(
+    tables.purchases!,
+    [Query.equal("courseId", courseId), Query.orderDesc("purchasedAt")],
+    options,
+  );
 }
 
 /**
@@ -78,16 +54,7 @@ export async function getPurchasesByCourse(
 export async function getPurchaseById(
   purchaseId: string,
 ): Promise<PurchaseDocument | null> {
-  try {
-    const response = await databases.getRow<PurchaseDocument>({
-      databaseId: databaseId!,
-      tableId: tables.purchases!,
-      rowId: purchaseId,
-    });
-    return response as PurchaseDocument;
-  } catch {
-    return null;
-  }
+  return getRowSafe<PurchaseDocument>(tables.purchases!, purchaseId);
 }
 
 /**

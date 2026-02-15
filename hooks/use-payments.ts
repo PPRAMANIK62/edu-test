@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "react-native";
 
 import {
+  STALE_TIMES,
   invalidateAfterEnrollment,
   invalidateAfterPurchase,
   queryKeys,
@@ -56,7 +57,7 @@ export function usePurchasesByStudent(
     queryKey: queryKeys.purchases.byStudent(studentId!),
     queryFn: () => getPurchasesByStudent(studentId!, options),
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -80,7 +81,7 @@ export function useHasStudentPurchased(
     queryKey: queryKeys.purchases.check(studentId!, courseId!),
     queryFn: () => hasStudentPurchased(studentId!, courseId!),
     enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -104,7 +105,7 @@ export function useStudentCoursePurchase(
     queryKey: queryKeys.purchases.purchase(studentId!, courseId!),
     queryFn: () => getPurchase(studentId!, courseId!),
     enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -130,7 +131,7 @@ export function useCanAccessCourse(
     queryKey: [...queryKeys.purchases.check(studentId!, courseId!), "access"],
     queryFn: () => canAccessCourse(studentId!, courseId!, coursePrice!),
     enabled: !!studentId && !!courseId && coursePrice !== undefined,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 

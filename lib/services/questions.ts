@@ -9,7 +9,7 @@ import {
   updateQuestionInputSchema,
 } from "../schemas";
 import { getCourseById } from "./courses";
-import { buildQueries, type QueryOptions } from "./helpers";
+import { buildQueries, requireOwnership, type QueryOptions } from "./helpers";
 import { getTestById } from "./tests";
 import type {
   CreateQuestionInput,
@@ -95,11 +95,7 @@ export async function createQuestion(
   createQuestionInputSchema.parse(data);
   const test = await getTestById(data.testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only create questions for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "create questions for", "courses");
 
   const response = await databases.createRow<QuestionDocument>({
     databaseId: databaseId!,
@@ -133,11 +129,7 @@ export async function updateQuestion(
   const question = await getQuestionById(id);
   const test = await getTestById(question.testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only update questions for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "update questions for", "courses");
 
   const response = await databases.updateRow<QuestionDocument>({
     databaseId: databaseId!,
@@ -159,11 +151,7 @@ export async function deleteQuestion(
   const question = await getQuestionById(id);
   const test = await getTestById(question.testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only delete questions for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "delete questions for", "courses");
 
   await databases.deleteRow({
     databaseId: databaseId!,
@@ -184,11 +172,7 @@ export async function reorderQuestions(
 ): Promise<void> {
   const test = await getTestById(testId);
   const course = await getCourseById(test.courseId);
-  if (course.teacherId !== callingUserId) {
-    throw new Error(
-      "Forbidden: You can only reorder questions for your own courses",
-    );
-  }
+  requireOwnership(course, callingUserId, "reorder questions for", "courses");
 
   // Update each question with its new order
   const updates = questionIds.map((questionId, index) =>
@@ -226,11 +210,7 @@ export async function bulkCreateQuestions(
   if (questions.length > 0) {
     const test = await getTestById(questions[0].testId);
     const course = await getCourseById(test.courseId);
-    if (course.teacherId !== callingUserId) {
-      throw new Error(
-        "Forbidden: You can only create questions for your own courses",
-      );
-    }
+    requireOwnership(course, callingUserId, "create questions for", "courses");
   }
 
   const created = await Promise.all(

@@ -118,3 +118,28 @@ export function parseJSON<T>(json: string | null | undefined, fallback: T): T {
 export function nowISO(): string {
   return new Date().toISOString();
 }
+
+export function buildCountMap<T extends Record<string, unknown>>(
+  items: T[],
+  keyField: keyof T & string,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const key = String(item[keyField]);
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+  return map;
+}
+
+export function requireOwnership(
+  resource: { teacherId: string },
+  callingUserId: string,
+  action: string,
+  resourceType: string,
+): void {
+  if (resource.teacherId !== callingUserId) {
+    throw new Error(
+      `Forbidden: You can only ${action} your own ${resourceType}`,
+    );
+  }
+}

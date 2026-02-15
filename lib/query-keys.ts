@@ -15,6 +15,19 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { QueryOptions } from "./services/helpers";
 
 // ============================================================================
+// Stale Time Constants
+// ============================================================================
+
+export const STALE_TIMES = {
+  /** For relatively static data: courses, tests, questions (5 minutes) */
+  STATIC: 5 * 60 * 1000,
+  /** For frequently changing data: activities, attempts (2 minutes) */
+  DYNAMIC: 2 * 60 * 1000,
+  /** For real-time data: in-progress attempts (30 seconds) */
+  REALTIME: 30 * 1000,
+} as const;
+
+// ============================================================================
 // Query Key Factory
 // ============================================================================
 
@@ -173,6 +186,28 @@ export const queryKeys = {
       [...queryKeys.activities.all, "by-type", userId, type] as const,
     countByType: (userId: string) =>
       [...queryKeys.activities.all, "count-by-type", userId] as const,
+  },
+  // -------------------------------------------------------------------------
+  // Analytics
+  // -------------------------------------------------------------------------
+  analytics: {
+    all: ["analytics"] as const,
+    coursePerformance: (courseId: string, timeRange?: string) =>
+      [
+        ...queryKeys.analytics.all,
+        "course-performance",
+        courseId,
+        timeRange,
+      ] as const,
+    studentEngagement: (courseId: string) =>
+      [...queryKeys.analytics.all, "student-engagement", courseId] as const,
+    revenueAnalytics: (teacherId: string, timeRange?: string) =>
+      [
+        ...queryKeys.analytics.all,
+        "revenue-analytics",
+        teacherId,
+        timeRange,
+      ] as const,
   },
 } as const;
 

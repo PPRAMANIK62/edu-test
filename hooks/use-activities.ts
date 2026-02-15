@@ -7,7 +7,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { invalidateUserActivities, queryKeys } from "@/lib/query-keys";
+import {
+  STALE_TIMES,
+  invalidateUserActivities,
+  queryKeys,
+} from "@/lib/query-keys";
 import {
   getActivitiesByType,
   getActivitiesByUser,
@@ -21,6 +25,7 @@ import {
 } from "@/lib/services/activities";
 import type { QueryOptions } from "@/lib/services/helpers";
 import type { CreateActivityInput } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -46,7 +51,7 @@ export function useActivitiesByUser(
     queryKey: queryKeys.activities.byUser(userId!),
     queryFn: () => getActivitiesByUser(userId!, options),
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000, // Shorter cache for activities
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 
@@ -70,29 +75,14 @@ export function useRecentActivities(
     queryKey: queryKeys.activities.recent(userId!, limit),
     queryFn: () => getRecentActivitiesByUser(userId!, limit),
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 
-/**
- * Fetch a single activity by ID
- *
- * @param activityId - The activity ID
- * @returns TanStack Query result with activity document
- *
- * @example
- * ```tsx
- * const { data: activity } = useActivity('activity-123');
- * ```
- */
-export function useActivity(activityId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.activities.detail(activityId!),
-    queryFn: () => getActivityById(activityId!),
-    enabled: !!activityId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useActivity = createQueryHook(
+  queryKeys.activities.detail,
+  getActivityById,
+);
 
 /**
  * Fetch activities by type for a user
@@ -116,7 +106,7 @@ export function useActivitiesByType(
     queryKey: queryKeys.activities.byType(userId!, type!),
     queryFn: () => getActivitiesByType(userId!, type!, options),
     enabled: !!userId && !!type,
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 

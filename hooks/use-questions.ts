@@ -7,7 +7,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { invalidateTestQuestions, queryKeys } from "@/lib/query-keys";
+import {
+  STALE_TIMES,
+  invalidateTestQuestions,
+  queryKeys,
+} from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
 import { useAppwrite } from "@/providers/appwrite";
 import {
@@ -25,6 +29,7 @@ import type {
   QuestionDocument,
   UpdateQuestionInput,
 } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -50,7 +55,7 @@ export function useQuestionsByTest(
     queryKey: queryKeys.questions.byTest(testId!),
     queryFn: () => getQuestionsByTest(testId!, options),
     enabled: !!testId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -76,29 +81,14 @@ export function useQuestionsBySubject(
     queryKey: queryKeys.questions.bySubject(testId!, subjectId!),
     queryFn: () => getQuestionsBySubject(testId!, subjectId!, options),
     enabled: !!testId && !!subjectId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
-/**
- * Fetch a single question by ID
- *
- * @param questionId - The question ID
- * @returns TanStack Query result with question document
- *
- * @example
- * ```tsx
- * const { data: question } = useQuestion('question-123');
- * ```
- */
-export function useQuestion(questionId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.questions.detail(questionId!),
-    queryFn: () => getQuestionById(questionId!),
-    enabled: !!questionId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useQuestion = createQueryHook(
+  queryKeys.questions.detail,
+  getQuestionById,
+);
 
 // ============================================================================
 // Mutation Hooks

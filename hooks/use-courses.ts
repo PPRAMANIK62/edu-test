@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  STALE_TIMES,
   invalidateCourse,
   invalidateCourses,
   queryKeys,
@@ -29,6 +30,7 @@ import type {
   CreateCourseInput,
   UpdateCourseInput,
 } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -49,50 +51,19 @@ export function useCourses(options?: QueryOptions) {
   return useQuery({
     queryKey: queryKeys.courses.list(options),
     queryFn: () => getCourses(options),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
-/**
- * Fetch a single course by ID
- *
- * @param courseId - The course ID
- * @returns TanStack Query result with course document
- *
- * @example
- * ```tsx
- * const { data: course, isLoading } = useCourse('course-123');
- * ```
- */
-export function useCourse(courseId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.courses.detail(courseId!),
-    queryFn: () => getCourseById(courseId!),
-    enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useCourse = createQueryHook(
+  queryKeys.courses.detail,
+  getCourseById,
+);
 
-/**
- * Fetch a course with computed stats (enrollment count, test count, etc.)
- *
- * @param courseId - The course ID
- * @returns TanStack Query result with course and stats
- *
- * @example
- * ```tsx
- * const { data } = useCourseWithStats('course-123');
- * console.log(data?.enrollmentCount);
- * ```
- */
-export function useCourseWithStats(courseId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.courses.withStats(courseId!),
-    queryFn: () => getCourseWithStats(courseId!),
-    enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useCourseWithStats = createQueryHook(
+  queryKeys.courses.withStats,
+  getCourseWithStats,
+);
 
 /**
  * Fetch courses by teacher ID
@@ -114,7 +85,7 @@ export function useCoursesByTeacher(
     queryKey: queryKeys.courses.byTeacher(teacherId!),
     queryFn: () => getCoursesByTeacher(teacherId!, options),
     enabled: !!teacherId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -138,7 +109,7 @@ export function useEnrolledCourses(
     queryKey: queryKeys.courses.enrolled(studentId!),
     queryFn: () => getEnrolledCourses(studentId!, options),
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 

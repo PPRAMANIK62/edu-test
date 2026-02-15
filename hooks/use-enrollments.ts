@@ -7,7 +7,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { invalidateAfterEnrollment, queryKeys } from "@/lib/query-keys";
+import {
+  STALE_TIMES,
+  invalidateAfterEnrollment,
+  queryKeys,
+} from "@/lib/query-keys";
 import {
   completeEnrollment,
   enrollStudent,
@@ -25,6 +29,7 @@ import type {
   CreateEnrollmentInput,
   EnrollmentDocument,
 } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -50,7 +55,7 @@ export function useEnrollmentsByStudent(
     queryKey: queryKeys.enrollments.byStudent(studentId!),
     queryFn: () => getEnrollmentsByStudent(studentId!, options),
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -74,7 +79,7 @@ export function useActiveEnrollmentsByStudent(
     queryKey: queryKeys.enrollments.activeByStudent(studentId!),
     queryFn: () => getActiveEnrollmentsByStudent(studentId!, options),
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
@@ -98,77 +103,24 @@ export function useEnrollmentsByCourse(
     queryKey: queryKeys.enrollments.byCourse(courseId!),
     queryFn: () => getEnrollmentsByCourse(courseId!, options),
     enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 
-/**
- * Fetch a single enrollment by ID
- *
- * @param enrollmentId - The enrollment ID
- * @returns TanStack Query result with enrollment document
- *
- * @example
- * ```tsx
- * const { data: enrollment } = useEnrollment('enrollment-123');
- * ```
- */
-export function useEnrollment(enrollmentId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.enrollments.detail(enrollmentId!),
-    queryFn: () => getEnrollmentById(enrollmentId!),
-    enabled: !!enrollmentId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useEnrollment = createQueryHook(
+  queryKeys.enrollments.detail,
+  getEnrollmentById,
+);
 
-/**
- * Check if a student is enrolled in a course
- *
- * @param studentId - The student's user ID
- * @param courseId - The course ID
- * @returns TanStack Query result with boolean
- *
- * @example
- * ```tsx
- * const { data: isEnrolled } = useIsStudentEnrolled('student-123', 'course-456');
- * ```
- */
-export function useIsStudentEnrolled(
-  studentId: string | undefined,
-  courseId: string | undefined,
-) {
-  return useQuery({
-    queryKey: queryKeys.enrollments.check(studentId!, courseId!),
-    queryFn: () => isStudentEnrolled(studentId!, courseId!),
-    enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useIsStudentEnrolled = createQueryHook(
+  queryKeys.enrollments.check,
+  isStudentEnrolled,
+);
 
-/**
- * Get enrollment for a specific student-course pair
- *
- * @param studentId - The student's user ID
- * @param courseId - The course ID
- * @returns TanStack Query result with enrollment or null
- *
- * @example
- * ```tsx
- * const { data: enrollment } = useStudentCourseEnrollment('student-123', 'course-456');
- * ```
- */
-export function useStudentCourseEnrollment(
-  studentId: string | undefined,
-  courseId: string | undefined,
-) {
-  return useQuery({
-    queryKey: queryKeys.enrollments.enrollment(studentId!, courseId!),
-    queryFn: () => getEnrollment(studentId!, courseId!),
-    enabled: !!studentId && !!courseId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
+export const useStudentCourseEnrollment = createQueryHook(
+  queryKeys.enrollments.enrollment,
+  getEnrollment,
+);
 
 /**
  * Fetch recent enrollments (for teacher dashboard)
@@ -185,7 +137,7 @@ export function useRecentEnrollments(limit: number = 10) {
   return useQuery({
     queryKey: queryKeys.enrollments.recent(limit),
     queryFn: () => getRecentEnrollments(limit),
-    staleTime: 2 * 60 * 1000, // Shorter cache for recent items
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 

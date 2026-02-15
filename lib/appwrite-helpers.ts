@@ -9,6 +9,9 @@
 
 import { Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "./appwrite";
+import { buildQueries } from "./services/helpers";
+import type { QueryOptions } from "./services/helpers";
+import type { PaginatedResponse } from "./services/types";
 
 const { databaseId, tables } = APPWRITE_CONFIG;
 
@@ -101,4 +104,46 @@ export async function typedUpdateRow<T>(
     data,
   });
   return response as unknown as T;
+}
+
+/**
+ * Generic paginated query — eliminates boilerplate in service files
+ */
+export async function paginatedQuery<T>(
+  tableId: string,
+  baseQueries: string[],
+  options: QueryOptions = {},
+): Promise<PaginatedResponse<T>> {
+  const queries = [...baseQueries, ...buildQueries(options)];
+  const response = await databases.listRows({
+    databaseId: databaseId!,
+    tableId,
+    queries,
+  });
+  return {
+    documents: response.rows as unknown as T[],
+    total: response.total,
+    hasMore:
+      response.total >
+      (options.offset || 0) + (response.rows as unknown as T[]).length,
+  };
+}
+
+/**
+ * Safe row fetch — returns null instead of throwing on not-found
+ */
+export async function getRowSafe<T>(
+  tableId: string,
+  rowId: string,
+): Promise<T | null> {
+  try {
+    const response = await databases.getRow({
+      databaseId: databaseId!,
+      tableId,
+      rowId,
+    });
+    return response as unknown as T;
+  } catch {
+    return null;
+  }
 }

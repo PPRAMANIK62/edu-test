@@ -8,9 +8,9 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows } from "../appwrite-helpers";
+import { fetchAllRows, getRowSafe, paginatedQuery } from "../appwrite-helpers";
 import { startAttemptInputSchema } from "../schemas";
-import { buildQueries, nowISO, parseJSON, type QueryOptions } from "./helpers";
+import { nowISO, parseJSON, type QueryOptions } from "./helpers";
 import { getTestById } from "./tests";
 import type {
   Answer,
@@ -32,23 +32,11 @@ export async function getAttemptsByStudent(
   studentId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
-  const queries = [
-    Query.equal("studentId", studentId),
-    Query.orderDesc("startedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as TestAttemptDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<TestAttemptDocument>(
+    tables.testAttempts!,
+    [Query.equal("studentId", studentId), Query.orderDesc("startedAt")],
+    options,
+  );
 }
 
 /**
@@ -58,23 +46,11 @@ export async function getAttemptsByTest(
   testId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
-  const queries = [
-    Query.equal("testId", testId),
-    Query.orderDesc("startedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as TestAttemptDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<TestAttemptDocument>(
+    tables.testAttempts!,
+    [Query.equal("testId", testId), Query.orderDesc("startedAt")],
+    options,
+  );
 }
 
 /**
@@ -84,24 +60,15 @@ export async function getCompletedAttemptsByTest(
   testId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
-  const queries = [
-    Query.equal("testId", testId),
-    Query.equal("status", "completed"),
-    Query.orderDesc("completedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as TestAttemptDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<TestAttemptDocument>(
+    tables.testAttempts!,
+    [
+      Query.equal("testId", testId),
+      Query.equal("status", "completed"),
+      Query.orderDesc("completedAt"),
+    ],
+    options,
+  );
 }
 
 /**
@@ -110,16 +77,7 @@ export async function getCompletedAttemptsByTest(
 export async function getAttemptById(
   attemptId: string,
 ): Promise<TestAttemptDocument | null> {
-  try {
-    const response = await databases.getRow<TestAttemptDocument>({
-      databaseId: databaseId!,
-      tableId: tables.testAttempts!,
-      rowId: attemptId,
-    });
-    return response as TestAttemptDocument;
-  } catch {
-    return null;
-  }
+  return getRowSafe<TestAttemptDocument>(tables.testAttempts!, attemptId);
 }
 
 /**
@@ -485,22 +443,13 @@ export async function getStudentTestHistory(
   testId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
-  const queries = [
-    Query.equal("studentId", studentId),
-    Query.equal("testId", testId),
-    Query.orderDesc("startedAt"),
-    ...buildQueries(options),
-  ];
-
-  const response = await databases.listRows<TestAttemptDocument>(
-    databaseId!,
+  return paginatedQuery<TestAttemptDocument>(
     tables.testAttempts!,
-    queries,
+    [
+      Query.equal("studentId", studentId),
+      Query.equal("testId", testId),
+      Query.orderDesc("startedAt"),
+    ],
+    options,
   );
-
-  return {
-    documents: response.rows as TestAttemptDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
 }

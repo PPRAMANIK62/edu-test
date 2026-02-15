@@ -6,7 +6,12 @@ import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
 import { fetchAllRows, typedListRows } from "../appwrite-helpers";
 import { createCourseInputSchema, updateCourseInputSchema } from "../schemas";
-import { buildQueries, type QueryOptions } from "./helpers";
+import {
+  buildCountMap,
+  buildQueries,
+  requireOwnership,
+  type QueryOptions,
+} from "./helpers";
 import type {
   CourseDocument,
   CreateCourseInput,
@@ -45,18 +50,14 @@ async function enrichCoursesWithStats(
     ]),
   ]);
 
-  const enrollmentCountMap = new Map<string, number>();
-  for (const enrollment of enrollmentResponse.rows) {
-    enrollmentCountMap.set(
-      enrollment.courseId,
-      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
-    );
-  }
-
-  const testCountMap = new Map<string, number>();
-  for (const test of testResponse.rows) {
-    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
-  }
+  const enrollmentCountMap = buildCountMap(
+    enrollmentResponse.rows as unknown as Record<string, unknown>[],
+    "courseId",
+  );
+  const testCountMap = buildCountMap(
+    testResponse.rows as unknown as Record<string, unknown>[],
+    "courseId",
+  );
 
   return courses.map((course) => ({
     ...course,
@@ -215,9 +216,12 @@ export async function createCourse(
   callingUserId: string,
 ): Promise<CourseDocument> {
   createCourseInputSchema.parse(data);
-  if (data.teacherId !== callingUserId) {
-    throw new Error("Forbidden: You can only create courses as yourself");
-  }
+  requireOwnership(
+    { teacherId: data.teacherId },
+    callingUserId,
+    "create",
+    "courses",
+  );
 
   const response = await databases.createRow<CourseDocument>({
     databaseId: databaseId!,
@@ -249,9 +253,7 @@ export async function updateCourse(
 ): Promise<CourseDocument> {
   updateCourseInputSchema.parse(data);
   const course = await getCourseById(id);
-  if (course.teacherId !== callingUserId) {
-    throw new Error("Forbidden: You can only update your own courses");
-  }
+  requireOwnership(course, callingUserId, "update", "courses");
 
   const response = await databases.updateRow<CourseDocument>({
     databaseId: databaseId!,
@@ -271,9 +273,7 @@ export async function deleteCourse(
   callingUserId: string,
 ): Promise<void> {
   const course = await getCourseById(id);
-  if (course.teacherId !== callingUserId) {
-    throw new Error("Forbidden: You can only delete your own courses");
-  }
+  requireOwnership(course, callingUserId, "delete", "courses");
 
   await databases.deleteRow({
     databaseId: databaseId!,

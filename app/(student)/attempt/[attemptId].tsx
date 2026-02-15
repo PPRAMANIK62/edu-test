@@ -6,6 +6,7 @@ import {
   useSubmitAnswer,
 } from "@/hooks/use-attempts";
 import { useQuestionsByTest } from "@/hooks/use-questions";
+import { useTest } from "@/hooks/use-tests";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   AlertCircle,
@@ -57,6 +58,8 @@ export default function AttemptScreen() {
   // Fetch attempt data
   const { data: attemptData, isLoading: attemptLoading } =
     useAttempt(attemptId);
+
+  const { data: testData } = useTest(attemptData?.testId);
 
   // Fetch questions for the test
   const { data: questionsData, isLoading: questionsLoading } =
@@ -136,14 +139,12 @@ export default function AttemptScreen() {
     handleSubmitTest,
   ]);
 
-  // Timer setup
   useEffect(() => {
     if (!attemptData) return;
 
-    // Calculate end time based on test duration
     const startTime = new Date(attemptData.startedAt);
-    // Assume 80 minutes duration - in production, get this from test data
-    const endTime = new Date(startTime.getTime() + 80 * 60 * 1000);
+    const durationMinutes = testData?.durationMinutes ?? 60;
+    const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
     endTimeRef.current = endTime;
 
     const calculateTimeRemaining = () => {
@@ -169,7 +170,7 @@ export default function AttemptScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [attemptData, handleAutoSubmit]);
+  }, [attemptData, testData, handleAutoSubmit]);
 
   // App state handling for background/foreground
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function AttemptScreen() {
     return () => {
       subscription.remove();
     };
-  });
+  }, [handleAutoSubmit]);
 
   const handleSubmit = () => {
     const unanswered =

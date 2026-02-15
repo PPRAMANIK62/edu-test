@@ -7,7 +7,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { invalidateAfterAttempt, queryKeys } from "@/lib/query-keys";
+import {
+  STALE_TIMES,
+  invalidateAfterAttempt,
+  queryKeys,
+} from "@/lib/query-keys";
 import {
   completeAttempt,
   getAnswersFromAttempt,
@@ -23,6 +27,7 @@ import {
 } from "@/lib/services/attempts";
 import type { QueryOptions } from "@/lib/services/helpers";
 import type { Answer, TestAttemptDocument } from "@/lib/services/types";
+import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
 // Query Hooks
@@ -48,7 +53,7 @@ export function useAttemptsByStudent(
     queryKey: queryKeys.attempts.byStudent(studentId!),
     queryFn: () => getAttemptsByStudent(studentId!, options),
     enabled: !!studentId,
-    staleTime: 2 * 60 * 1000, // Shorter cache for attempts
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 
@@ -72,7 +77,7 @@ export function useAttemptsByTest(
     queryKey: queryKeys.attempts.byTest(testId!),
     queryFn: () => getAttemptsByTest(testId!, options),
     enabled: !!testId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 
@@ -96,53 +101,21 @@ export function useCompletedAttemptsByTest(
     queryKey: queryKeys.attempts.completedByTest(testId!),
     queryFn: () => getCompletedAttemptsByTest(testId!, options),
     enabled: !!testId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DYNAMIC,
   });
 }
 
-/**
- * Fetch a single attempt by ID
- *
- * @param attemptId - The attempt ID
- * @returns TanStack Query result with attempt document
- *
- * @example
- * ```tsx
- * const { data: attempt } = useAttempt('attempt-123');
- * ```
- */
-export function useAttempt(attemptId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.attempts.detail(attemptId!),
-    queryFn: () => getAttemptById(attemptId!),
-    enabled: !!attemptId,
-    staleTime: 30 * 1000, // Short cache for active attempts
-  });
-}
+export const useAttempt = createQueryHook(
+  queryKeys.attempts.detail,
+  getAttemptById,
+  { staleTime: STALE_TIMES.REALTIME },
+);
 
-/**
- * Fetch in-progress attempt for student and test
- *
- * @param studentId - The student's user ID
- * @param testId - The test ID
- * @returns TanStack Query result with in-progress attempt or null
- *
- * @example
- * ```tsx
- * const { data: inProgressAttempt } = useInProgressAttempt('student-123', 'test-456');
- * ```
- */
-export function useInProgressAttempt(
-  studentId: string | undefined,
-  testId: string | undefined,
-) {
-  return useQuery({
-    queryKey: queryKeys.attempts.inProgress(studentId!, testId!),
-    queryFn: () => getInProgressAttempt(studentId!, testId!),
-    enabled: !!studentId && !!testId,
-    staleTime: 30 * 1000,
-  });
-}
+export const useInProgressAttempt = createQueryHook(
+  queryKeys.attempts.inProgress,
+  getInProgressAttempt,
+  { staleTime: STALE_TIMES.REALTIME },
+);
 
 /**
  * Fetch student's test history for a specific test
@@ -166,7 +139,7 @@ export function useStudentTestHistory(
     queryKey: queryKeys.attempts.history(studentId!, testId!),
     queryFn: () => getStudentTestHistory(studentId!, testId!, options),
     enabled: !!studentId && !!testId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 

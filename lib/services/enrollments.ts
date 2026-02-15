@@ -4,8 +4,9 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { paginatedQuery } from "../appwrite-helpers";
 import { createEnrollmentInputSchema } from "../schemas";
-import { buildQueries, nowISO, type QueryOptions } from "./helpers";
+import { nowISO, type QueryOptions } from "./helpers";
 import type {
   CreateEnrollmentInput,
   EnrollmentDocument,
@@ -21,26 +22,11 @@ export async function getEnrollmentsByStudent(
   studentId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
-  const queries = [
-    Query.equal("studentId", studentId),
-    ...buildQueries({
-      ...options,
-      orderBy: options.orderBy || "enrolledAt",
-      orderType: "desc",
-    }),
-  ];
-
-  const response = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as EnrollmentDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<EnrollmentDocument>(
+    tables.enrollments!,
+    [Query.equal("studentId", studentId)],
+    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
+  );
 }
 
 /**
@@ -50,27 +36,11 @@ export async function getActiveEnrollmentsByStudent(
   studentId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
-  const queries = [
-    Query.equal("studentId", studentId),
-    Query.equal("status", "active"),
-    ...buildQueries({
-      ...options,
-      orderBy: options.orderBy || "enrolledAt",
-      orderType: "desc",
-    }),
-  ];
-
-  const response = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as EnrollmentDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<EnrollmentDocument>(
+    tables.enrollments!,
+    [Query.equal("studentId", studentId), Query.equal("status", "active")],
+    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
+  );
 }
 
 /**
@@ -80,26 +50,11 @@ export async function getEnrollmentsByCourse(
   courseId: string,
   options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
-  const queries = [
-    Query.equal("courseId", courseId),
-    ...buildQueries({
-      ...options,
-      orderBy: options.orderBy || "enrolledAt",
-      orderType: "desc",
-    }),
-  ];
-
-  const response = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries,
-  });
-
-  return {
-    documents: response.rows as EnrollmentDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
-  };
+  return paginatedQuery<EnrollmentDocument>(
+    tables.enrollments!,
+    [Query.equal("courseId", courseId)],
+    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
+  );
 }
 
 /**
