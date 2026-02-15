@@ -2,11 +2,14 @@ import { account, APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import type { AppwriteUser, UserProfile, UserRole } from "@/types";
 import { Query } from "appwrite";
 import * as SecureStore from "expo-secure-store";
+import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -41,6 +44,7 @@ const AppwriteContext = createContext<AppwriteContextType | undefined>(
 );
 
 export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient();
   const [currentUser, setCurrentUser] = useState<AppwriteUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +101,7 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Refresh current user and profile
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const user = await account.get();
       setCurrentUser(user as unknown as AppwriteUser);
@@ -109,10 +113,10 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
       setCurrentUser(null);
       setUserProfile(null);
     }
-  };
+  }, []);
 
   // Sign up function
-  const signUp = async (
+  const signUp = useCallback(async (
     email: string,
     password: string,
     firstName: string,
@@ -167,10 +171,10 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
 
       throw new Error(error.message || "Sign up failed. Please try again.");
     }
-  };
+  }, []);
 
   // Sign in function
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
       // Delete any existing session first
       try {
@@ -206,10 +210,10 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
 
       throw new Error(error.message || "Sign in failed. Please try again.");
     }
-  };
+  }, []);
 
   // Sign out function
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await account.deleteSession("current");
     } catch (error) {
@@ -219,8 +223,9 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
       await clearSession();
       setCurrentUser(null);
       setUserProfile(null);
+      queryClient.clear();
     }
-  };
+  }, [queryClient]);
 
   // Restore session on app startup
   useEffect(() => {
@@ -251,15 +256,18 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
     restoreSession();
   }, []);
 
-  const value: AppwriteContextType = {
-    currentUser,
-    userProfile,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-    refreshUser,
-  };
+  const value: AppwriteContextType = useMemo(
+    () => ({
+      currentUser,
+      userProfile,
+      loading,
+      signUp,
+      signIn,
+      signOut,
+      refreshUser,
+    }),
+    [currentUser, userProfile, loading, signUp, signIn, signOut, refreshUser]
+  );
 
   return (
     <AppwriteContext.Provider value={value}>

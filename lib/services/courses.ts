@@ -43,19 +43,19 @@ export async function getCourses(options: QueryOptions = {}): Promise<
   // Get course IDs
   const courseIds = documents.map((c) => c.$id);
 
-  // Count enrollments per course
-  const enrollmentResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
-
-  // Count tests per course
-  const testResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
+  // Count enrollments and tests per course (independent queries — parallel)
+  const [enrollmentResponse, testResponse] = await Promise.all([
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.enrollments!,
+      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+    }),
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.tests!,
+      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+    }),
+  ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
@@ -137,19 +137,19 @@ export async function getCoursesByTeacher(
   // Get course IDs
   const courseIds = documents.map((c) => c.$id);
 
-  // Count enrollments per course
-  const enrollmentResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
-
-  // Count tests per course
-  const testResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
+  // Count enrollments and tests per course (independent queries — parallel)
+  const [enrollmentResponse, testResponse] = await Promise.all([
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.enrollments!,
+      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+    }),
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.tests!,
+      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+    }),
+  ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
@@ -233,23 +233,23 @@ export async function getEnrolledCourses(
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Count enrollments per course
-  const allEnrollmentsResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
-
-  // Count tests per course (published only for students)
-  const testResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries: [
-      Query.equal("courseId", courseIds),
-      Query.equal("isPublished", true),
-      Query.limit(1000),
-    ],
-  });
+  // Count enrollments and tests per course (independent queries — parallel)
+  const [allEnrollmentsResponse, testResponse] = await Promise.all([
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.enrollments!,
+      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
+    }),
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.tests!,
+      queries: [
+        Query.equal("courseId", courseIds),
+        Query.equal("isPublished", true),
+        Query.limit(1000),
+      ],
+    }),
+  ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
@@ -349,19 +349,19 @@ export async function getCourseWithStats(id: string): Promise<
   // Fetch course
   const course = await getCourseById(id);
 
-  // Count enrollments
-  const enrollmentResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", id), Query.limit(1)],
-  });
-
-  // Count tests
-  const testResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries: [Query.equal("courseId", id), Query.limit(100)],
-  });
+  // Count enrollments and tests (independent queries — parallel)
+  const [enrollmentResponse, testResponse] = await Promise.all([
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.enrollments!,
+      queries: [Query.equal("courseId", id), Query.limit(1)],
+    }),
+    databases.listRows({
+      databaseId: databaseId!,
+      tableId: tables.tests!,
+      queries: [Query.equal("courseId", id), Query.limit(100)],
+    }),
+  ]);
 
   // Count questions for all tests
   let questionCount = 0;
