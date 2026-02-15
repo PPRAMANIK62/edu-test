@@ -43,8 +43,8 @@ export default function CreateQuestionScreen() {
   const test = useMemo(() => {
     if (!testData) return null;
     return {
-      id: testData.test.$id,
-      title: testData.test.title,
+      id: testData.$id,
+      title: testData.title,
       subjects: testData.subjects.map((s) => ({
         id: s.$id,
         name: s.name,
@@ -93,8 +93,10 @@ export default function CreateQuestionScreen() {
         subjectName: subject?.name || "",
         type: "mcq",
         text: formData.text.trim(),
-        options: JSON.stringify(validOptions),
-        correctOptionId: formData.correctOptionId,
+        options: validOptions.map((o) => o.text),
+        correctIndex: validOptions.findIndex(
+          (o) => o.id === formData.correctOptionId,
+        ),
         explanation: formData.explanation.trim(),
         order: nextOrder,
       },

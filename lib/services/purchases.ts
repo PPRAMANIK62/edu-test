@@ -5,6 +5,8 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { fetchAllRows } from "../appwrite-helpers";
+import { createPurchaseInputSchema } from "../schemas";
 import { buildQueries, nowISO, type QueryOptions } from "./helpers";
 import type {
   CreatePurchaseInput,
@@ -143,7 +145,7 @@ export async function getPurchase(
 export async function createPurchase(
   input: CreatePurchaseInput,
 ): Promise<PurchaseDocument> {
-  // Check if already purchased
+  createPurchaseInputSchema.parse(input);
   const existingPurchase = await getPurchase(input.studentId, input.courseId);
   if (existingPurchase) {
     throw new Error("Student has already purchased this course");
@@ -182,8 +184,10 @@ export async function createPurchase(
  * Get total revenue for a course
  */
 export async function getCourseRevenue(courseId: string): Promise<number> {
-  const result = await getPurchasesByCourse(courseId, { limit: 1000 });
-  return result.documents.reduce((sum, purchase) => sum + purchase.amount, 0);
+  const result = await fetchAllRows<PurchaseDocument>(tables.purchases!, [
+    Query.equal("courseId", courseId),
+  ]);
+  return result.rows.reduce((sum, purchase) => sum + purchase.amount, 0);
 }
 
 /**

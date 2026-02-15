@@ -14,7 +14,7 @@ import type {
 } from "@/types";
 import { Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { typedListRows } from "../appwrite-helpers";
+import { fetchAllRows, typedListRows } from "../appwrite-helpers";
 import { dateRangeQuery, getDateRangeFromFilter } from "./helpers";
 import type {
   CourseDocument,
@@ -103,30 +103,20 @@ export async function getCoursePerformanceMetrics(
   const enrollmentQueries = [
     Query.equal("courseId", courseId),
     ...currentDateQueries,
-    Query.limit(1000),
   ];
 
   const purchaseQueries = [
     Query.equal("courseId", courseId),
     ...currentPurchaseDateQueries,
-    Query.limit(1000),
   ];
 
   const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    databases.listRows<EnrollmentDocument>({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: enrollmentQueries,
-    }),
-    databases.listRows<PurchaseDocument>({
-      databaseId: databaseId!,
-      tableId: tables.purchases!,
-      queries: purchaseQueries,
-    }),
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, enrollmentQueries),
+    fetchAllRows<PurchaseDocument>(tables.purchases!, purchaseQueries),
   ]);
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
-  const purchases = purchaseResponse.rows as PurchaseDocument[];
+  const enrollments = enrollmentResponse.rows;
+  const purchases = purchaseResponse.rows;
 
   // Calculate current period metrics
   const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
@@ -144,32 +134,29 @@ export async function getCoursePerformanceMetrics(
   const previousEnrollmentQueries = [
     Query.equal("courseId", courseId),
     ...dateRangeQuery("enrolledAt", previousRange.start, previousRange.end),
-    Query.limit(1000),
   ];
 
   const previousPurchaseQueries = [
     Query.equal("courseId", courseId),
     ...dateRangeQuery("purchasedAt", previousRange.start, previousRange.end),
-    Query.limit(1000),
   ];
 
   const [previousEnrollmentResponse, previousPurchaseResponse] =
     await Promise.all([
-      databases.listRows<EnrollmentDocument>({
-        databaseId: databaseId!,
-        tableId: tables.enrollments!,
-        queries: previousEnrollmentQueries,
-      }),
-      databases.listRows<PurchaseDocument>({
-        databaseId: databaseId!,
-        tableId: tables.purchases!,
-        queries: previousPurchaseQueries,
-      }),
+      fetchAllRows<EnrollmentDocument>(
+        tables.enrollments!,
+        previousEnrollmentQueries,
+      ),
+      fetchAllRows<PurchaseDocument>(
+        tables.purchases!,
+        previousPurchaseQueries,
+      ),
     ]);
 
-  const previousRevenue = (
-    previousPurchaseResponse.rows as PurchaseDocument[]
-  ).reduce((sum, p) => sum + p.amount, 0);
+  const previousRevenue = previousPurchaseResponse.rows.reduce(
+    (sum, p) => sum + p.amount,
+    0,
+  );
   const previousEnrollmentCount = previousEnrollmentResponse.total;
 
   // Calculate trends
@@ -208,25 +195,18 @@ export async function getStudentEngagementMetrics(
   courseId: string,
 ): Promise<StudentEngagementMetrics> {
   const [enrollmentResponse, attemptResponse] = await Promise.all([
-    databases.listRows<EnrollmentDocument>({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseId), Query.limit(1000)],
-    }),
-    databases.listRows<TestAttemptDocument>({
-      databaseId: databaseId!,
-      tableId: tables.testAttempts!,
-      queries: [
-        Query.equal("courseId", courseId),
-        Query.equal("status", "completed"),
-        Query.limit(1000),
-      ],
-    }),
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseId),
+    ]),
+    fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
+      Query.equal("courseId", courseId),
+      Query.equal("status", "completed"),
+    ]),
   ]);
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
+  const enrollments = enrollmentResponse.rows;
   const totalStudents = enrollments.length;
-  const testAttempts = attemptResponse.rows as TestAttemptDocument[];
+  const testAttempts = attemptResponse.rows;
 
   // Calculate active students (those with at least one test attempt)
   const studentsWithAttempts = new Set(testAttempts.map((t) => t.studentId));
@@ -301,16 +281,14 @@ export async function getRevenueAnalytics(
   const purchaseQueries = [
     Query.equal("courseId", courseIds),
     ...currentDateQueries,
-    Query.limit(1000),
   ];
 
-  const purchaseResponse = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: purchaseQueries,
-  });
+  const purchaseResponse = await fetchAllRows<PurchaseDocument>(
+    tables.purchases!,
+    purchaseQueries,
+  );
 
-  const purchases = purchaseResponse.rows as PurchaseDocument[];
+  const purchases = purchaseResponse.rows;
 
   // Calculate total revenue
   const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
@@ -360,26 +338,22 @@ export async function getRevenueAnalytics(
   const testCountsMap = new Map<string, number>();
   if (topCourseIds.length > 0) {
     const [enrollmentResponse, testResponse] = await Promise.all([
-      databases.listRows<EnrollmentDocument>({
-        databaseId: databaseId!,
-        tableId: tables.enrollments!,
-        queries: [Query.equal("courseId", topCourseIds), Query.limit(1000)],
-      }),
-      databases.listRows<TestDocument>({
-        databaseId: databaseId!,
-        tableId: tables.tests!,
-        queries: [Query.equal("courseId", topCourseIds), Query.limit(1000)],
-      }),
+      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+        Query.equal("courseId", topCourseIds),
+      ]),
+      fetchAllRows<TestDocument>(tables.tests!, [
+        Query.equal("courseId", topCourseIds),
+      ]),
     ]);
 
-    (enrollmentResponse.rows as EnrollmentDocument[]).forEach((enrollment) => {
+    enrollmentResponse.rows.forEach((enrollment) => {
       enrollmentCountsMap.set(
         enrollment.courseId,
         (enrollmentCountsMap.get(enrollment.courseId) || 0) + 1,
       );
     });
 
-    (testResponse.rows as TestDocument[]).forEach((test) => {
+    testResponse.rows.forEach((test) => {
       testCountsMap.set(
         test.courseId,
         (testCountsMap.get(test.courseId) || 0) + 1,
@@ -405,18 +379,17 @@ export async function getRevenueAnalytics(
   const previousPurchaseQueries = [
     Query.equal("courseId", courseIds),
     ...dateRangeQuery("purchasedAt", previousRange.start, previousRange.end),
-    Query.limit(1000),
   ];
 
-  const previousPurchaseResponse = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: previousPurchaseQueries,
-  });
+  const previousPurchaseResponse = await fetchAllRows<PurchaseDocument>(
+    tables.purchases!,
+    previousPurchaseQueries,
+  );
 
-  const previousRevenue = (
-    previousPurchaseResponse.rows as PurchaseDocument[]
-  ).reduce((sum, p) => sum + p.amount, 0);
+  const previousRevenue = previousPurchaseResponse.rows.reduce(
+    (sum, p) => sum + p.amount,
+    0,
+  );
   const percentageChange = calculatePercentageChange(
     totalRevenue,
     previousRevenue,
@@ -467,19 +440,15 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
   }
 
   const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    databases.listRows<EnrollmentDocument>({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
-    databases.listRows<PurchaseDocument>({
-      databaseId: databaseId!,
-      tableId: tables.purchases!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+    ]),
+    fetchAllRows<PurchaseDocument>(tables.purchases!, [
+      Query.equal("courseId", courseIds),
+    ]),
   ]);
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
+  const enrollments = enrollmentResponse.rows;
 
   const uniqueStudents = new Set(enrollments.map((e) => e.studentId));
   const totalStudents = uniqueStudents.size;
@@ -492,7 +461,7 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
       ? (completedEnrollments.length / enrollments.length) * 100
       : 0;
 
-  const totalRevenue = (purchaseResponse.rows as PurchaseDocument[]).reduce(
+  const totalRevenue = purchaseResponse.rows.reduce(
     (sum, p) => sum + p.amount,
     0,
   );
@@ -521,39 +490,30 @@ export async function getCourseAnalyticsSummary(courseId: string): Promise<{
 }> {
   const [enrollmentResponse, purchaseResponse, attemptResponse] =
     await Promise.all([
-      databases.listRows<EnrollmentDocument>({
-        databaseId: databaseId!,
-        tableId: tables.enrollments!,
-        queries: [Query.equal("courseId", courseId), Query.limit(1000)],
-      }),
-      databases.listRows<PurchaseDocument>({
-        databaseId: databaseId!,
-        tableId: tables.purchases!,
-        queries: [Query.equal("courseId", courseId), Query.limit(1000)],
-      }),
-      databases.listRows<TestAttemptDocument>({
-        databaseId: databaseId!,
-        tableId: tables.testAttempts!,
-        queries: [
-          Query.equal("courseId", courseId),
-          Query.equal("status", "completed"),
-          Query.limit(1000),
-        ],
-      }),
+      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+        Query.equal("courseId", courseId),
+      ]),
+      fetchAllRows<PurchaseDocument>(tables.purchases!, [
+        Query.equal("courseId", courseId),
+      ]),
+      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
+        Query.equal("courseId", courseId),
+        Query.equal("status", "completed"),
+      ]),
     ]);
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
+  const enrollments = enrollmentResponse.rows;
   const enrollmentCount = enrollments.length;
   const completedCount = enrollments.filter(
     (e) => e.status === "completed",
   ).length;
 
-  const totalRevenue = (purchaseResponse.rows as PurchaseDocument[]).reduce(
+  const totalRevenue = purchaseResponse.rows.reduce(
     (sum, p) => sum + p.amount,
     0,
   );
 
-  const attempts = attemptResponse.rows as TestAttemptDocument[];
+  const attempts = attemptResponse.rows;
   const totalAttempts = attempts.length;
   const averageTestScore =
     attempts.length > 0
@@ -585,30 +545,21 @@ export async function getStudentStats(studentId: string): Promise<{
 }> {
   const [enrollmentResponse, attemptResponse, purchaseResponse] =
     await Promise.all([
-      databases.listRows<EnrollmentDocument>({
-        databaseId: databaseId!,
-        tableId: tables.enrollments!,
-        queries: [Query.equal("studentId", studentId), Query.limit(1000)],
-      }),
-      databases.listRows<TestAttemptDocument>({
-        databaseId: databaseId!,
-        tableId: tables.testAttempts!,
-        queries: [
-          Query.equal("studentId", studentId),
-          Query.equal("status", "completed"),
-          Query.limit(1000),
-        ],
-      }),
-      databases.listRows<PurchaseDocument>({
-        databaseId: databaseId!,
-        tableId: tables.purchases!,
-        queries: [Query.equal("studentId", studentId), Query.limit(1000)],
-      }),
+      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+        Query.equal("studentId", studentId),
+      ]),
+      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
+        Query.equal("studentId", studentId),
+        Query.equal("status", "completed"),
+      ]),
+      fetchAllRows<PurchaseDocument>(tables.purchases!, [
+        Query.equal("studentId", studentId),
+      ]),
     ]);
 
   const enrolledCourses = enrollmentResponse.total;
 
-  const attempts = attemptResponse.rows as TestAttemptDocument[];
+  const attempts = attemptResponse.rows;
   const completedTests = attempts.length;
   const averageScore =
     attempts.length > 0
@@ -616,7 +567,7 @@ export async function getStudentStats(studentId: string): Promise<{
         attempts.length
       : 0;
 
-  const totalSpent = (purchaseResponse.rows as PurchaseDocument[]).reduce(
+  const totalSpent = purchaseResponse.rows.reduce(
     (sum, p) => sum + p.amount,
     0,
   );
@@ -647,30 +598,19 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
     return new Map();
   }
 
-  // Get all enrollments for these students
-  const enrollmentResponse = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("studentId", studentIds), Query.limit(1000)],
-  });
-
-  // Get all completed attempts for these students
-  const attemptResponse = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries: [
-      Query.equal("studentId", studentIds),
-      Query.equal("status", "completed"),
-      Query.limit(1000),
-    ],
-  });
-
-  // Get all purchases for these students
-  const purchaseResponse = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: [Query.equal("studentId", studentIds), Query.limit(1000)],
-  });
+  const [enrollmentResponse, attemptResponse, purchaseResponse] =
+    await Promise.all([
+      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+        Query.equal("studentId", studentIds),
+      ]),
+      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
+        Query.equal("studentId", studentIds),
+        Query.equal("status", "completed"),
+      ]),
+      fetchAllRows<PurchaseDocument>(tables.purchases!, [
+        Query.equal("studentId", studentIds),
+      ]),
+    ]);
 
   // Aggregate data per student
   const statsMap = new Map<
@@ -696,7 +636,7 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
   });
 
   // Count enrollments
-  (enrollmentResponse.rows as EnrollmentDocument[]).forEach((enrollment) => {
+  enrollmentResponse.rows.forEach((enrollment) => {
     const stats = statsMap.get(enrollment.studentId);
     if (stats) {
       stats.enrolledCourses += 1;
@@ -704,7 +644,7 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
   });
 
   // Count attempts and scores
-  (attemptResponse.rows as TestAttemptDocument[]).forEach((attempt) => {
+  attemptResponse.rows.forEach((attempt) => {
     const stats = statsMap.get(attempt.studentId);
     if (stats) {
       stats.completedTests += 1;
@@ -714,7 +654,7 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
   });
 
   // Sum purchases
-  (purchaseResponse.rows as PurchaseDocument[]).forEach((purchase) => {
+  purchaseResponse.rows.forEach((purchase) => {
     const stats = statsMap.get(purchase.studentId);
     if (stats) {
       stats.totalSpent += purchase.amount;
@@ -753,13 +693,12 @@ export async function getAverageCompletionRate(
 ): Promise<number> {
   if (courseIds.length === 0) return 0;
 
-  const enrollmentResponse = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-  });
+  const enrollmentResponse = await fetchAllRows<EnrollmentDocument>(
+    tables.enrollments!,
+    [Query.equal("courseId", courseIds)],
+  );
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
+  const enrollments = enrollmentResponse.rows;
   if (enrollments.length === 0) return 0;
 
   const completedCount = enrollments.filter(
@@ -786,16 +725,12 @@ export async function getCoursePerformanceData(courseIds: string[]): Promise<
   }
 
   const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    databases.listRows<EnrollmentDocument>({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
-    databases.listRows<PurchaseDocument>({
-      databaseId: databaseId!,
-      tableId: tables.purchases!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+    ]),
+    fetchAllRows<PurchaseDocument>(tables.purchases!, [
+      Query.equal("courseId", courseIds),
+    ]),
   ]);
 
   // Calculate recent enrollments (last 30 days)
@@ -821,7 +756,7 @@ export async function getCoursePerformanceData(courseIds: string[]): Promise<
   });
 
   // Count enrollments
-  (enrollmentResponse.rows as EnrollmentDocument[]).forEach((enrollment) => {
+  enrollmentResponse.rows.forEach((enrollment) => {
     const stats = result.get(enrollment.courseId);
     if (stats) {
       stats.enrollmentCount += 1;
@@ -832,7 +767,7 @@ export async function getCoursePerformanceData(courseIds: string[]): Promise<
   });
 
   // Sum revenue
-  (purchaseResponse.rows as PurchaseDocument[]).forEach((purchase) => {
+  purchaseResponse.rows.forEach((purchase) => {
     const stats = result.get(purchase.courseId);
     if (stats) {
       stats.revenue += purchase.amount;

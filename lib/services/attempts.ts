@@ -8,8 +8,9 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { fetchAllRows } from "../appwrite-helpers";
+import { startAttemptInputSchema } from "../schemas";
 import { buildQueries, nowISO, parseJSON, type QueryOptions } from "./helpers";
-import { getQuestionsByTest } from "./questions";
 import { getTestById } from "./tests";
 import type {
   Answer,
@@ -194,7 +195,7 @@ export async function startAttempt(
   testId: string,
   courseId: string,
 ): Promise<TestAttemptDocument> {
-  // Check for existing in-progress attempt
+  startAttemptInputSchema.parse({ studentId, testId, courseId });
   const existingAttempt = await getInProgressAttempt(studentId, testId);
   if (existingAttempt) {
     return existingAttempt; // Resume existing attempt
@@ -345,10 +346,11 @@ export async function completeAttempt(
   }
 
   // Get all questions for this test
-  const questionsResult = await getQuestionsByTest(attempt.testId, {
-    limit: 1000,
-  });
-  const questions = questionsResult.documents;
+  const questionsResult = await fetchAllRows<QuestionDocument>(
+    tables.questions!,
+    [Query.equal("testId", attempt.testId), Query.orderAsc("order")],
+  );
+  const questions = questionsResult.rows;
 
   // Calculate score
   const answers = getAnswersFromAttempt(attempt);
@@ -443,10 +445,11 @@ export async function getTestAttemptStats(testId: string): Promise<{
   averageScore: number;
   passRate: number;
 }> {
-  const completedResult = await getCompletedAttemptsByTest(testId, {
-    limit: 1000,
-  });
-  const completedAttempts = completedResult.documents;
+  const completedResult = await fetchAllRows<TestAttemptDocument>(
+    tables.testAttempts!,
+    [Query.equal("testId", testId), Query.equal("status", "completed")],
+  );
+  const completedAttempts = completedResult.rows;
 
   // Get total attempts count
   const allResult = await getAttemptsByTest(testId, { limit: 1 });

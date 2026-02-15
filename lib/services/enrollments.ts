@@ -4,6 +4,7 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { createEnrollmentInputSchema } from "../schemas";
 import { buildQueries, nowISO, type QueryOptions } from "./helpers";
 import type {
   CreateEnrollmentInput,
@@ -164,7 +165,7 @@ export async function getEnrollment(
 export async function enrollStudent(
   data: CreateEnrollmentInput,
 ): Promise<EnrollmentDocument> {
-  // Check if already enrolled
+  createEnrollmentInputSchema.parse(data);
   const existing = await getEnrollment(data.studentId, data.courseId);
   if (existing) {
     return existing;

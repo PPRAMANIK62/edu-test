@@ -5,7 +5,7 @@ import {
   useReorderQuestions,
 } from "@/hooks/use-questions";
 import { useTest } from "@/hooks/use-tests";
-import { Question } from "@/types";
+import { Question, QuestionOption } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
 import type { Href } from "expo-router";
 import { ArrowDown, ArrowUp, Edit2, Plus, Trash2 } from "lucide-react-native";
@@ -34,6 +34,7 @@ export default function QuestionListScreen() {
   const questions = useMemo(() => {
     if (!questionsData?.documents) return [];
 
+    const labels = ["A", "B", "C", "D", "E", "F"] as const;
     return questionsData.documents
       .map((q) => ({
         id: q.$id,
@@ -42,8 +43,12 @@ export default function QuestionListScreen() {
         subjectName: q.subjectName,
         type: q.type as "mcq",
         text: q.text,
-        options: JSON.parse(q.options || "[]"),
-        correctOptionId: q.correctOptionId,
+        options: q.options.map((text, i) => ({
+          id: `opt-${i}`,
+          label: labels[i] || "A",
+          text,
+        })) as QuestionOption[],
+        correctOptionId: `opt-${q.correctIndex}`,
         explanation: q.explanation,
         order: q.order,
       }))
@@ -261,7 +266,7 @@ export default function QuestionListScreen() {
                 {/* Options preview */}
                 {question.type === "mcq" && (
                   <View className="mt-3 flex-row flex-wrap gap-2">
-                    {question.options.map((option) => (
+                    {question.options.map((option: QuestionOption) => (
                       <View
                         key={option.id}
                         className={`px-3 py-1 rounded-full ${

@@ -4,7 +4,8 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { typedListRows } from "../appwrite-helpers";
+import { fetchAllRows, typedListRows } from "../appwrite-helpers";
+import { createCourseInputSchema, updateCourseInputSchema } from "../schemas";
 import { buildQueries, type QueryOptions } from "./helpers";
 import type {
   CourseDocument,
@@ -47,13 +48,11 @@ export async function getCourses(options: QueryOptions = {}): Promise<
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [enrollmentResponse, testResponse] = await Promise.all([
-    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
       Query.equal("courseId", courseIds),
-      Query.limit(1000),
     ]),
-    typedListRows<TestDocument>(tables.tests!, [
+    fetchAllRows<TestDocument>(tables.tests!, [
       Query.equal("courseId", courseIds),
-      Query.limit(1000),
     ]),
   ]);
 
@@ -136,13 +135,11 @@ export async function getCoursesByTeacher(
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [enrollmentResponse, testResponse] = await Promise.all([
-    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
       Query.equal("courseId", courseIds),
-      Query.limit(1000),
     ]),
-    typedListRows<TestDocument>(tables.tests!, [
+    fetchAllRows<TestDocument>(tables.tests!, [
       Query.equal("courseId", courseIds),
-      Query.limit(1000),
     ]),
   ]);
 
@@ -224,14 +221,12 @@ export async function getEnrolledCourses(
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [allEnrollmentsResponse, testResponse] = await Promise.all([
-    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
       Query.equal("courseId", courseIds),
-      Query.limit(1000),
     ]),
-    typedListRows<TestDocument>(tables.tests!, [
+    fetchAllRows<TestDocument>(tables.tests!, [
       Query.equal("courseId", courseIds),
       Query.equal("isPublished", true),
-      Query.limit(1000),
     ]),
   ]);
 
@@ -271,6 +266,7 @@ export async function createCourse(
   data: CreateCourseInput,
   callingUserId: string,
 ): Promise<CourseDocument> {
+  createCourseInputSchema.parse(data);
   if (data.teacherId !== callingUserId) {
     throw new Error("Forbidden: You can only create courses as yourself");
   }
@@ -303,6 +299,7 @@ export async function updateCourse(
   data: UpdateCourseInput,
   callingUserId: string,
 ): Promise<CourseDocument> {
+  updateCourseInputSchema.parse(data);
   const course = await getCourseById(id);
   if (course.teacherId !== callingUserId) {
     throw new Error("Forbidden: You can only update your own courses");

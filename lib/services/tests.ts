@@ -4,7 +4,8 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { typedListRows } from "../appwrite-helpers";
+import { fetchAllRows, typedListRows } from "../appwrite-helpers";
+import { createTestInputSchema, updateTestInputSchema } from "../schemas";
 import { getCourseById } from "./courses";
 import { buildQueries, type QueryOptions } from "./helpers";
 import type {
@@ -50,15 +51,15 @@ export async function getTestsByCourse(
   const testIds = documents.map((t) => t.$id);
 
   // Fetch question counts
-  const questionResponse = await typedListRows<QuestionDocument>(
+  const questionResponse = await fetchAllRows<QuestionDocument>(
     tables.questions!,
-    [Query.equal("testId", testIds), Query.limit(1000)],
+    [Query.equal("testId", testIds)],
   );
 
   // Fetch subject counts
-  const subjectResponse = await typedListRows<TestSubjectDocument>(
+  const subjectResponse = await fetchAllRows<TestSubjectDocument>(
     tables.testSubjects!,
-    [Query.equal("testId", testIds), Query.limit(1000)],
+    [Query.equal("testId", testIds)],
   );
 
   // Build question count map
@@ -121,9 +122,9 @@ export async function getPublishedTestsByCourse(
 
   // Get test IDs and fetch question counts
   const testIds = documents.map((t) => t.$id);
-  const questionResponse = await typedListRows<QuestionDocument>(
+  const questionResponse = await fetchAllRows<QuestionDocument>(
     tables.questions!,
-    [Query.equal("testId", testIds), Query.limit(1000)],
+    [Query.equal("testId", testIds)],
   );
 
   // Build question count map
@@ -192,6 +193,7 @@ export async function createTest(
   data: CreateTestInput,
   callingUserId: string,
 ): Promise<TestDocument> {
+  createTestInputSchema.parse(data);
   const course = await getCourseById(data.courseId);
   if (course.teacherId !== callingUserId) {
     throw new Error(
@@ -224,6 +226,7 @@ export async function updateTest(
   data: UpdateTestInput,
   callingUserId: string,
 ): Promise<TestDocument> {
+  updateTestInputSchema.parse(data);
   const test = await getTestById(id);
   const course = await getCourseById(test.courseId);
   if (course.teacherId !== callingUserId) {

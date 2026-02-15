@@ -1,5 +1,9 @@
 import { APPWRITE_CONFIG } from "@/lib/appwrite";
-import { typedListRows, typedUpdateRow } from "@/lib/appwrite-helpers";
+import {
+  fetchAllRows,
+  typedListRows,
+  typedUpdateRow,
+} from "@/lib/appwrite-helpers";
 import type { UserProfile, UserRole } from "@/types";
 import { Query } from "appwrite";
 
@@ -13,9 +17,8 @@ import { Query } from "appwrite";
  */
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
-    const response = await typedListRows<UserProfile>(
+    const response = await fetchAllRows<UserProfile>(
       APPWRITE_CONFIG.tables.users!,
-      [Query.limit(1000)],
     );
 
     return response.rows || [];
@@ -34,9 +37,9 @@ export const getUsersByRole = async (
   role: UserRole,
 ): Promise<UserProfile[]> => {
   try {
-    const response = await typedListRows<UserProfile>(
+    const response = await fetchAllRows<UserProfile>(
       APPWRITE_CONFIG.tables.users!,
-      [Query.equal("role", role), Query.limit(1000)],
+      [Query.equal("role", role)],
     );
 
     return response.rows || [];
@@ -59,9 +62,8 @@ export const searchUsers = async (
       return await getAllUsers();
     }
 
-    const response = await typedListRows<UserProfile>(
+    const response = await fetchAllRows<UserProfile>(
       APPWRITE_CONFIG.tables.users!,
-      [Query.limit(1000)],
     );
 
     const allUsers = response.rows || [];

@@ -40,8 +40,8 @@ export default function EditQuestionScreen() {
   const test = useMemo(() => {
     if (!testData) return null;
     return {
-      id: testData.test.$id,
-      title: testData.test.title,
+      id: testData.$id,
+      title: testData.title,
       subjects: testData.subjects.map((s) => ({
         id: s.$id,
         name: s.name,
@@ -57,6 +57,7 @@ export default function EditQuestionScreen() {
   // Transform question data for display
   const question = useMemo(() => {
     if (!questionData) return null;
+    const labels = ["A", "B", "C", "D", "E", "F"] as const;
     return {
       id: questionData.$id,
       testId: questionData.testId,
@@ -64,8 +65,12 @@ export default function EditQuestionScreen() {
       subjectName: questionData.subjectName,
       type: questionData.type as "mcq",
       text: questionData.text,
-      options: JSON.parse(questionData.options || "[]") as QuestionOption[],
-      correctOptionId: questionData.correctOptionId,
+      options: questionData.options.map((text, i) => ({
+        id: `opt-${i}`,
+        label: labels[i] || "A",
+        text,
+      })) as QuestionOption[],
+      correctOptionId: `opt-${questionData.correctIndex}`,
       explanation: questionData.explanation,
       order: questionData.order,
     } as MCQQuestion;
@@ -122,8 +127,10 @@ export default function EditQuestionScreen() {
           subjectId: formData.subjectId,
           subjectName: subject?.name || question.subjectName || "",
           text: formData.text.trim(),
-          options: JSON.stringify(validOptions),
-          correctOptionId: formData.correctOptionId,
+          options: validOptions.map((o) => o.text),
+          correctIndex: validOptions.findIndex(
+            (o) => o.id === formData.correctOptionId,
+          ),
           explanation: formData.explanation.trim(),
         },
       },

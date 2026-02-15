@@ -7,6 +7,7 @@
  * belong here, not scattered across every service file.
  */
 
+import { Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "./appwrite";
 
 const { databaseId, tables } = APPWRITE_CONFIG;
@@ -45,6 +46,44 @@ export async function typedGetRow<T>(
     rowId,
   });
   return response as unknown as T;
+}
+
+/**
+ * Fetch ALL rows matching a query by auto-paginating.
+ * Use for aggregation queries that need complete datasets.
+ * For simple counts, use typedListRows with Query.limit(1) and read .total instead.
+ */
+export async function fetchAllRows<T>(
+  tableId: string,
+  queries: string[] = [],
+  batchSize: number = 100,
+): Promise<{ rows: T[]; total: number }> {
+  // First batch
+  const firstBatch = await typedListRows<T>(tableId, [
+    ...queries,
+    Query.limit(batchSize),
+  ]);
+
+  const allRows: T[] = [...firstBatch.rows];
+  const total = firstBatch.total;
+
+  // If we got everything in the first batch, return early
+  if (allRows.length >= total) {
+    return { rows: allRows, total };
+  }
+
+  // Fetch remaining pages
+  while (allRows.length < total) {
+    const batch = await typedListRows<T>(tableId, [
+      ...queries,
+      Query.limit(batchSize),
+      Query.offset(allRows.length),
+    ]);
+    allRows.push(...batch.rows);
+    if (batch.rows.length < batchSize) break; // safety valve
+  }
+
+  return { rows: allRows, total };
 }
 
 /**

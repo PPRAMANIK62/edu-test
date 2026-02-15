@@ -4,7 +4,7 @@ import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
 import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { formatTimeAgo } from "@/lib/utils";
 import { useAppwrite } from "@/providers/appwrite";
-import type { UserProfile } from "@/types";
+import type { UserDocument } from "@/lib/services/types";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -38,12 +38,12 @@ const StudentDetail = () => {
     queryKey: ["student", studentId],
     queryFn: async () => {
       if (!studentId) return null;
-      const response = await databases.getRow<UserProfile>({
+      const response = await databases.getRow<UserDocument>({
         databaseId: APPWRITE_CONFIG.databaseId!,
         tableId: APPWRITE_CONFIG.tables.users!,
         rowId: studentId,
       });
-      return response as UserProfile;
+      return response as UserDocument;
     },
     enabled: !!studentId,
   });
@@ -120,7 +120,7 @@ const StudentDetail = () => {
         name: `${student.firstName} ${student.lastName}`,
         email: student.email,
         status: "active" as const,
-        lastActive: student.createdAt || new Date().toISOString(),
+        lastActive: student.$createdAt || new Date().toISOString(),
         ...studentStats,
       }
     : null;

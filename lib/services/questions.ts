@@ -4,6 +4,10 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import {
+  createQuestionInputSchema,
+  updateQuestionInputSchema,
+} from "../schemas";
 import { getCourseById } from "./courses";
 import { buildQueries, type QueryOptions } from "./helpers";
 import { getTestById } from "./tests";
@@ -88,6 +92,7 @@ export async function createQuestion(
   data: CreateQuestionInput,
   callingUserId: string,
 ): Promise<QuestionDocument> {
+  createQuestionInputSchema.parse(data);
   const test = await getTestById(data.testId);
   const course = await getCourseById(test.courseId);
   if (course.teacherId !== callingUserId) {
@@ -124,6 +129,7 @@ export async function updateQuestion(
   data: UpdateQuestionInput,
   callingUserId: string,
 ): Promise<QuestionDocument> {
+  updateQuestionInputSchema.parse(data);
   const question = await getQuestionById(id);
   const test = await getTestById(question.testId);
   const course = await getCourseById(test.courseId);
