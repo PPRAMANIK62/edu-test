@@ -48,7 +48,7 @@ export const APPWRITE_CONFIG = {
 // Validate required environment variables
 if (!APPWRITE_CONFIG.endpoint || !APPWRITE_CONFIG.projectId) {
   throw new Error(
-    `Missing required Appwrite environment variables: endpoint, projectId. Please check your .env file.`
+    `Missing required Appwrite environment variables: endpoint, projectId. Please check your .env file.`,
   );
 }
 

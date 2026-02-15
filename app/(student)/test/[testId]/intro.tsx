@@ -49,7 +49,7 @@ const TestIntro = () => {
 
     const totalQuestions = subjects.reduce(
       (sum, s) => sum + s.questionCount,
-      0
+      0,
     );
 
     return {
@@ -92,7 +92,7 @@ const TestIntro = () => {
           console.error("Failed to start test:", error);
           Alert.alert("Error", "Failed to start the test. Please try again.");
         },
-      }
+      },
     );
   };
 

@@ -17,7 +17,7 @@ declare module "react-native-razorpay" {
    * @returns Promise that resolves with payment details on success, or rejects with error
    */
   function open(
-    options: RazorpayCheckoutOptions
+    options: RazorpayCheckoutOptions,
   ): Promise<RazorpaySuccessResponse>;
 
   export default {

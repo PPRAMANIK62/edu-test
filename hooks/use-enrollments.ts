@@ -44,7 +44,7 @@ import type {
  */
 export function useEnrollmentsByStudent(
   studentId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.enrollments.byStudent(studentId!),
@@ -68,7 +68,7 @@ export function useEnrollmentsByStudent(
  */
 export function useActiveEnrollmentsByStudent(
   studentId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.enrollments.activeByStudent(studentId!),
@@ -92,7 +92,7 @@ export function useActiveEnrollmentsByStudent(
  */
 export function useEnrollmentsByCourse(
   courseId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.enrollments.byCourse(courseId!),
@@ -136,7 +136,7 @@ export function useEnrollment(enrollmentId: string | undefined) {
  */
 export function useIsStudentEnrolled(
   studentId: string | undefined,
-  courseId: string | undefined
+  courseId: string | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.enrollments.check(studentId!, courseId!),
@@ -160,7 +160,7 @@ export function useIsStudentEnrolled(
  */
 export function useStudentCourseEnrollment(
   studentId: string | undefined,
-  courseId: string | undefined
+  courseId: string | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.enrollments.enrollment(studentId!, courseId!),
@@ -244,7 +244,7 @@ export function useUpdateEnrollmentProgress() {
       // Update the cache directly
       queryClient.setQueryData<EnrollmentDocument>(
         queryKeys.enrollments.detail(enrollmentId),
-        updatedEnrollment
+        updatedEnrollment,
       );
 
       // Invalidate related queries

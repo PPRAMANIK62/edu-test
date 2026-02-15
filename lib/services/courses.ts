@@ -4,11 +4,14 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { typedListRows } from "../appwrite-helpers";
 import { buildQueries, type QueryOptions } from "./helpers";
 import type {
   CourseDocument,
   CreateCourseInput,
+  EnrollmentDocument,
   PaginatedResponse,
+  TestDocument,
   UpdateCourseInput,
 } from "./types";
 
@@ -28,13 +31,12 @@ export async function getCourses(options: QueryOptions = {}): Promise<
 > {
   const queries = [Query.equal("isPublished", true), ...buildQueries(options)];
 
-  const response = await databases.listRows<CourseDocument>(
-    databaseId!,
+  const response = await typedListRows<CourseDocument>(
     tables.courses!,
-    queries
+    queries,
   );
 
-  const documents = response.rows as CourseDocument[];
+  const documents = response.rows;
 
   if (documents.length === 0) {
     return { documents: [], total: 0, hasMore: false };
@@ -45,33 +47,29 @@ export async function getCourses(options: QueryOptions = {}): Promise<
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [enrollmentResponse, testResponse] = await Promise.all([
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.tests!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
+    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+      Query.limit(1000),
+    ]),
+    typedListRows<TestDocument>(tables.tests!, [
+      Query.equal("courseId", courseIds),
+      Query.limit(1000),
+    ]),
   ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
   for (const enrollment of enrollmentResponse.rows) {
-    const courseId = (enrollment as unknown as { courseId: string }).courseId;
     enrollmentCountMap.set(
-      courseId,
-      (enrollmentCountMap.get(courseId) || 0) + 1
+      enrollment.courseId,
+      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
     );
   }
 
   // Build test count map
   const testCountMap = new Map<string, number>();
   for (const test of testResponse.rows) {
-    const courseId = (test as unknown as { courseId: string }).courseId;
-    testCountMap.set(courseId, (testCountMap.get(courseId) || 0) + 1);
+    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
   }
 
   // Merge stats with courses
@@ -107,7 +105,7 @@ export async function getCourseById(id: string): Promise<CourseDocument> {
  */
 export async function getCoursesByTeacher(
   teacherId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<
   PaginatedResponse<
     CourseDocument & {
@@ -122,13 +120,12 @@ export async function getCoursesByTeacher(
     ...buildQueries(options),
   ];
 
-  const response = await databases.listRows<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
+  const response = await typedListRows<CourseDocument>(
+    tables.courses!,
     queries,
-  });
+  );
 
-  const documents = response.rows as CourseDocument[];
+  const documents = response.rows;
 
   if (documents.length === 0) {
     return { documents: [], total: 0, hasMore: false };
@@ -139,33 +136,29 @@ export async function getCoursesByTeacher(
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [enrollmentResponse, testResponse] = await Promise.all([
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.tests!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
+    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+      Query.limit(1000),
+    ]),
+    typedListRows<TestDocument>(tables.tests!, [
+      Query.equal("courseId", courseIds),
+      Query.limit(1000),
+    ]),
   ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
   for (const enrollment of enrollmentResponse.rows) {
-    const courseId = (enrollment as unknown as { courseId: string }).courseId;
     enrollmentCountMap.set(
-      courseId,
-      (enrollmentCountMap.get(courseId) || 0) + 1
+      enrollment.courseId,
+      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
     );
   }
 
   // Build test count map
   const testCountMap = new Map<string, number>();
   for (const test of testResponse.rows) {
-    const courseId = (test as unknown as { courseId: string }).courseId;
-    testCountMap.set(courseId, (testCountMap.get(courseId) || 0) + 1);
+    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
   }
 
   // Merge stats with courses
@@ -189,7 +182,7 @@ export async function getCoursesByTeacher(
  */
 export async function getEnrolledCourses(
   studentId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<
   PaginatedResponse<
     CourseDocument & {
@@ -199,35 +192,31 @@ export async function getEnrolledCourses(
   >
 > {
   // First, get enrollments for this student
-  const enrollmentResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [
+  const enrollmentResponse = await typedListRows<EnrollmentDocument>(
+    tables.enrollments!,
+    [
       Query.equal("studentId", studentId),
       Query.equal("status", "active"),
-      Query.limit(100), // Get all enrollments
+      Query.limit(100),
     ],
-  });
+  );
 
   if (enrollmentResponse.rows.length === 0) {
     return { documents: [], total: 0, hasMore: false };
   }
 
   // Get course IDs from enrollments
-  const courseIds = enrollmentResponse.rows.map(
-    (e) => (e as unknown as { courseId: string }).courseId
-  );
+  const courseIds = enrollmentResponse.rows.map((e) => e.courseId);
 
   // Fetch courses by IDs
   const queries = [Query.equal("$id", courseIds), ...buildQueries(options)];
 
-  const response = await databases.listRows<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
+  const response = await typedListRows<CourseDocument>(
+    tables.courses!,
     queries,
-  });
+  );
 
-  const documents = response.rows as CourseDocument[];
+  const documents = response.rows;
 
   if (documents.length === 0) {
     return { documents: [], total: 0, hasMore: false };
@@ -235,37 +224,30 @@ export async function getEnrolledCourses(
 
   // Count enrollments and tests per course (independent queries — parallel)
   const [allEnrollmentsResponse, testResponse] = await Promise.all([
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", courseIds), Query.limit(1000)],
-    }),
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.tests!,
-      queries: [
-        Query.equal("courseId", courseIds),
-        Query.equal("isPublished", true),
-        Query.limit(1000),
-      ],
-    }),
+    typedListRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+      Query.limit(1000),
+    ]),
+    typedListRows<TestDocument>(tables.tests!, [
+      Query.equal("courseId", courseIds),
+      Query.equal("isPublished", true),
+      Query.limit(1000),
+    ]),
   ]);
 
   // Build enrollment count map
   const enrollmentCountMap = new Map<string, number>();
   for (const enrollment of allEnrollmentsResponse.rows) {
-    const courseId = (enrollment as unknown as { courseId: string }).courseId;
     enrollmentCountMap.set(
-      courseId,
-      (enrollmentCountMap.get(courseId) || 0) + 1
+      enrollment.courseId,
+      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
     );
   }
 
   // Build test count map
   const testCountMap = new Map<string, number>();
   for (const test of testResponse.rows) {
-    const courseId = (test as unknown as { courseId: string }).courseId;
-    testCountMap.set(courseId, (testCountMap.get(courseId) || 0) + 1);
+    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
   }
 
   // Merge stats with courses
@@ -286,8 +268,13 @@ export async function getEnrolledCourses(
  * Create a new course
  */
 export async function createCourse(
-  data: CreateCourseInput
+  data: CreateCourseInput,
+  callingUserId: string,
 ): Promise<CourseDocument> {
+  if (data.teacherId !== callingUserId) {
+    throw new Error("Forbidden: You can only create courses as yourself");
+  }
+
   const response = await databases.createRow<CourseDocument>({
     databaseId: databaseId!,
     tableId: tables.courses!,
@@ -313,8 +300,14 @@ export async function createCourse(
  */
 export async function updateCourse(
   id: string,
-  data: UpdateCourseInput
+  data: UpdateCourseInput,
+  callingUserId: string,
 ): Promise<CourseDocument> {
+  const course = await getCourseById(id);
+  if (course.teacherId !== callingUserId) {
+    throw new Error("Forbidden: You can only update your own courses");
+  }
+
   const response = await databases.updateRow<CourseDocument>({
     databaseId: databaseId!,
     tableId: tables.courses!,
@@ -328,7 +321,15 @@ export async function updateCourse(
 /**
  * Delete a course
  */
-export async function deleteCourse(id: string): Promise<void> {
+export async function deleteCourse(
+  id: string,
+  callingUserId: string,
+): Promise<void> {
+  const course = await getCourseById(id);
+  if (course.teacherId !== callingUserId) {
+    throw new Error("Forbidden: You can only delete your own courses");
+  }
+
   await databases.deleteRow({
     databaseId: databaseId!,
     tableId: tables.courses!,

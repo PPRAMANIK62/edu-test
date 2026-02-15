@@ -23,7 +23,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getActivitiesByUser(
   userId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<ActivityDocument>> {
   const queries = [
     Query.equal("userId", userId),
@@ -49,7 +49,7 @@ export async function getActivitiesByUser(
  */
 export async function getRecentActivitiesByUser(
   userId: string,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<ActivityDocument[]> {
   const result = await getActivitiesByUser(userId, { limit });
   return result.documents;
@@ -59,7 +59,7 @@ export async function getRecentActivitiesByUser(
  * Get activity by ID
  */
 export async function getActivityById(
-  activityId: string
+  activityId: string,
 ): Promise<ActivityDocument | null> {
   try {
     const response = await databases.getRow<ActivityDocument>({
@@ -79,7 +79,7 @@ export async function getActivityById(
 export async function getActivitiesByType(
   userId: string,
   type: "test_completed" | "course_started" | "achievement",
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<ActivityDocument>> {
   const queries = [
     Query.equal("userId", userId),
@@ -109,7 +109,7 @@ export async function getActivitiesByType(
  * Create a new activity (log activity)
  */
 export async function logActivity(
-  input: CreateActivityInput
+  input: CreateActivityInput,
 ): Promise<ActivityDocument> {
   const response = await databases.createRow<ActivityDocument>({
     databaseId: databaseId!,
@@ -136,7 +136,7 @@ export async function logTestCompleted(
   score: number,
   passed: boolean,
   testId?: string,
-  attemptId?: string
+  attemptId?: string,
 ): Promise<ActivityDocument> {
   return logActivity({
     userId,
@@ -158,7 +158,7 @@ export async function logTestCompleted(
 export async function logCourseStarted(
   userId: string,
   courseTitle: string,
-  courseId?: string
+  courseId?: string,
 ): Promise<ActivityDocument> {
   return logActivity({
     userId,
@@ -178,7 +178,7 @@ export async function logAchievement(
   userId: string,
   title: string,
   description: string,
-  achievementType?: string
+  achievementType?: string,
 ): Promise<ActivityDocument> {
   return logActivity({
     userId,
@@ -199,7 +199,7 @@ export async function logAchievement(
  * Parse metadata from activity
  */
 export function getActivityMetadata<T = Record<string, unknown>>(
-  activity: ActivityDocument
+  activity: ActivityDocument,
 ): T {
   return parseJSON<T>(activity.metadata, {} as T);
 }
@@ -245,7 +245,7 @@ export async function deleteActivitiesByUser(userId: string): Promise<number> {
  * Get activity count by type for a user
  */
 export async function getActivityCountByType(
-  userId: string
+  userId: string,
 ): Promise<Record<string, number>> {
   const types = ["test_completed", "course_started", "achievement"] as const;
   const counts: Record<string, number> = {};

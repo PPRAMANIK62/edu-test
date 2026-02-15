@@ -4,10 +4,13 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { typedListRows } from "../appwrite-helpers";
+import { getCourseById } from "./courses";
 import { buildQueries, type QueryOptions } from "./helpers";
 import type {
   CreateTestInput,
   PaginatedResponse,
+  QuestionDocument,
   TestDocument,
   TestSubjectDocument,
   UpdateTestInput,
@@ -20,7 +23,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getTestsByCourse(
   courseId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<
   PaginatedResponse<
     TestDocument & { questionCount: number; subjectCount: number }
@@ -47,31 +50,33 @@ export async function getTestsByCourse(
   const testIds = documents.map((t) => t.$id);
 
   // Fetch question counts
-  const questionResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries: [Query.equal("testId", testIds), Query.limit(1000)],
-  });
+  const questionResponse = await typedListRows<QuestionDocument>(
+    tables.questions!,
+    [Query.equal("testId", testIds), Query.limit(1000)],
+  );
 
   // Fetch subject counts
-  const subjectResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    queries: [Query.equal("testId", testIds), Query.limit(1000)],
-  });
+  const subjectResponse = await typedListRows<TestSubjectDocument>(
+    tables.testSubjects!,
+    [Query.equal("testId", testIds), Query.limit(1000)],
+  );
 
   // Build question count map
   const questionCountMap = new Map<string, number>();
   for (const question of questionResponse.rows) {
-    const testId = (question as unknown as { testId: string }).testId;
-    questionCountMap.set(testId, (questionCountMap.get(testId) || 0) + 1);
+    questionCountMap.set(
+      question.testId,
+      (questionCountMap.get(question.testId) || 0) + 1,
+    );
   }
 
   // Build subject count map
   const subjectCountMap = new Map<string, number>();
   for (const subject of subjectResponse.rows) {
-    const testId = (subject as unknown as { testId: string }).testId;
-    subjectCountMap.set(testId, (subjectCountMap.get(testId) || 0) + 1);
+    subjectCountMap.set(
+      subject.testId,
+      (subjectCountMap.get(subject.testId) || 0) + 1,
+    );
   }
 
   // Merge counts with tests
@@ -94,7 +99,7 @@ export async function getTestsByCourse(
  */
 export async function getPublishedTestsByCourse(
   courseId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestDocument & { questionCount: number }>> {
   const queries = [
     Query.equal("courseId", courseId),
@@ -116,17 +121,18 @@ export async function getPublishedTestsByCourse(
 
   // Get test IDs and fetch question counts
   const testIds = documents.map((t) => t.$id);
-  const questionResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries: [Query.equal("testId", testIds), Query.limit(1000)],
-  });
+  const questionResponse = await typedListRows<QuestionDocument>(
+    tables.questions!,
+    [Query.equal("testId", testIds), Query.limit(1000)],
+  );
 
   // Build question count map
   const questionCountMap = new Map<string, number>();
   for (const question of questionResponse.rows) {
-    const testId = (question as unknown as { testId: string }).testId;
-    questionCountMap.set(testId, (questionCountMap.get(testId) || 0) + 1);
+    questionCountMap.set(
+      question.testId,
+      (questionCountMap.get(question.testId) || 0) + 1,
+    );
   }
 
   // Merge question counts with tests
@@ -159,7 +165,7 @@ export async function getTestById(id: string): Promise<TestDocument> {
  * Get test with subjects
  */
 export async function getTestWithSubjects(
-  id: string
+  id: string,
 ): Promise<TestDocument & { subjects: TestSubjectDocument[] }> {
   const test = await getTestById(id);
 
@@ -182,7 +188,17 @@ export async function getTestWithSubjects(
 /**
  * Create a new test
  */
-export async function createTest(data: CreateTestInput): Promise<TestDocument> {
+export async function createTest(
+  data: CreateTestInput,
+  callingUserId: string,
+): Promise<TestDocument> {
+  const course = await getCourseById(data.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only create tests for your own courses",
+    );
+  }
+
   const response = await databases.createRow<TestDocument>({
     databaseId: databaseId!,
     tableId: tables.tests!,
@@ -205,8 +221,17 @@ export async function createTest(data: CreateTestInput): Promise<TestDocument> {
  */
 export async function updateTest(
   id: string,
-  data: UpdateTestInput
+  data: UpdateTestInput,
+  callingUserId: string,
 ): Promise<TestDocument> {
+  const test = await getTestById(id);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only update tests for your own courses",
+    );
+  }
+
   const response = await databases.updateRow<TestDocument>({
     databaseId: databaseId!,
     tableId: tables.tests!,
@@ -220,7 +245,18 @@ export async function updateTest(
 /**
  * Delete a test (and its subjects and questions)
  */
-export async function deleteTest(id: string): Promise<void> {
+export async function deleteTest(
+  id: string,
+  callingUserId: string,
+): Promise<void> {
+  const test = await getTestById(id);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only delete tests for your own courses",
+    );
+  }
+
   // Delete associated subjects
   const subjectsResponse = await databases.listRows({
     databaseId: databaseId!,
@@ -262,12 +298,23 @@ export async function deleteTest(id: string): Promise<void> {
 /**
  * Create a test subject
  */
-export async function createTestSubject(data: {
-  testId: string;
-  name: string;
-  questionCount: number;
-  order: number;
-}): Promise<TestSubjectDocument> {
+export async function createTestSubject(
+  data: {
+    testId: string;
+    name: string;
+    questionCount: number;
+    order: number;
+  },
+  callingUserId: string,
+): Promise<TestSubjectDocument> {
+  const test = await getTestById(data.testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only create subjects for your own courses",
+    );
+  }
+
   const response = await databases.createRow<TestSubjectDocument>({
     databaseId: databaseId!,
     tableId: tables.testSubjects!,
@@ -283,8 +330,18 @@ export async function createTestSubject(data: {
  */
 export async function updateTestSubject(
   id: string,
-  data: Partial<{ name: string; questionCount: number; order: number }>
+  data: Partial<{ name: string; questionCount: number; order: number }>,
+  testId: string,
+  callingUserId: string,
 ): Promise<TestSubjectDocument> {
+  const test = await getTestById(testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only update subjects for your own courses",
+    );
+  }
+
   const response = await databases.updateRow<TestSubjectDocument>({
     databaseId: databaseId!,
     tableId: tables.testSubjects!,
@@ -298,7 +355,19 @@ export async function updateTestSubject(
 /**
  * Delete a test subject
  */
-export async function deleteTestSubject(id: string): Promise<void> {
+export async function deleteTestSubject(
+  id: string,
+  testId: string,
+  callingUserId: string,
+): Promise<void> {
+  const test = await getTestById(testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only delete subjects for your own courses",
+    );
+  }
+
   await databases.deleteRow({
     databaseId: databaseId!,
     tableId: tables.testSubjects!,
@@ -310,7 +379,7 @@ export async function deleteTestSubject(id: string): Promise<void> {
  * Get subjects for a test
  */
 export async function getSubjectsByTest(
-  testId: string
+  testId: string,
 ): Promise<TestSubjectDocument[]> {
   const response = await databases.listRows<TestSubjectDocument>({
     databaseId: databaseId!,

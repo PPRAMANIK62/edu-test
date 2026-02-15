@@ -1,4 +1,5 @@
-import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG } from "@/lib/appwrite";
+import { typedListRows, typedUpdateRow } from "@/lib/appwrite-helpers";
 import type { UserProfile, UserRole } from "@/types";
 import { Query } from "appwrite";
 
@@ -12,13 +13,12 @@ import { Query } from "appwrite";
  */
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.limit(1000)], // Increase limit if needed
-    });
+    const response = await typedListRows<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      [Query.limit(1000)],
+    );
 
-    return (response.rows as unknown as UserProfile[]) || [];
+    return response.rows || [];
   } catch (error) {
     console.error("Error fetching all users:", error);
     throw new Error("Failed to fetch users");
@@ -31,16 +31,15 @@ export const getAllUsers = async (): Promise<UserProfile[]> => {
  * @returns Array of user profiles matching the role
  */
 export const getUsersByRole = async (
-  role: UserRole
+  role: UserRole,
 ): Promise<UserProfile[]> => {
   try {
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.equal("role", role), Query.limit(1000)],
-    });
+    const response = await typedListRows<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      [Query.equal("role", role), Query.limit(1000)],
+    );
 
-    return (response.rows as unknown as UserProfile[]) || [];
+    return response.rows || [];
   } catch (error) {
     console.error(`Error fetching users with role ${role}:`, error);
     throw new Error(`Failed to fetch users with role ${role}`);
@@ -53,20 +52,19 @@ export const getUsersByRole = async (
  * @returns Array of user profiles matching the search term
  */
 export const searchUsers = async (
-  searchTerm: string
+  searchTerm: string,
 ): Promise<UserProfile[]> => {
   try {
     if (!searchTerm.trim()) {
       return await getAllUsers();
     }
 
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.limit(1000)],
-    });
+    const response = await typedListRows<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      [Query.limit(1000)],
+    );
 
-    const allUsers = (response.rows as unknown as UserProfile[]) || [];
+    const allUsers = response.rows || [];
 
     // Client-side filtering for name and email
     const searchLower = searchTerm.toLowerCase();
@@ -91,7 +89,7 @@ export const searchUsers = async (
 export const updateUserRole = async (
   userId: string,
   newRole: UserRole,
-  currentUserProfile: UserProfile
+  currentUserProfile: UserProfile,
 ): Promise<UserProfile> => {
   try {
     // Validation: Only teachers can update roles
@@ -100,17 +98,16 @@ export const updateUserRole = async (
     }
 
     // Fetch the user being updated
-    const userResponse = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.equal("$id", userId)],
-    });
+    const userResponse = await typedListRows<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      [Query.equal("$id", userId)],
+    );
 
     if (!userResponse.rows || userResponse.rows.length === 0) {
       throw new Error("User not found");
     }
 
-    const targetUser = userResponse.rows[0] as unknown as UserProfile;
+    const targetUser = userResponse.rows[0];
 
     // Validation: Cannot demote primary teacher
     if (targetUser.isPrimaryTeacher && newRole !== "teacher") {
@@ -118,16 +115,13 @@ export const updateUserRole = async (
     }
 
     // Update the user's role
-    const updatedRow = await databases.updateRow({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      rowId: userId,
-      data: {
-        role: newRole,
-      },
-    });
+    const updatedUser = await typedUpdateRow<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      userId,
+      { role: newRole },
+    );
 
-    return updatedRow as unknown as UserProfile;
+    return updatedUser;
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error updating user role:", error.message);
@@ -144,7 +138,7 @@ export const updateUserRole = async (
  * @returns Map of user ID to user name
  */
 export const getUserNamesByIds = async (
-  userIds: string[]
+  userIds: string[],
 ): Promise<Map<string, string>> => {
   const result = new Map<string, string>();
 
@@ -153,13 +147,12 @@ export const getUserNamesByIds = async (
   }
 
   try {
-    const response = await databases.listRows({
-      databaseId: APPWRITE_CONFIG.databaseId!,
-      tableId: APPWRITE_CONFIG.tables.users!,
-      queries: [Query.equal("$id", userIds), Query.limit(100)],
-    });
+    const response = await typedListRows<UserProfile>(
+      APPWRITE_CONFIG.tables.users!,
+      [Query.equal("$id", userIds), Query.limit(100)],
+    );
 
-    (response.rows as unknown as UserProfile[]).forEach((user) => {
+    response.rows.forEach((user) => {
       result.set(user.$id, `${user.firstName} ${user.lastName}`);
     });
 

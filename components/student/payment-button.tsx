@@ -74,7 +74,7 @@ export function PaymentButton({
   const { hasPurchased, isFree, canAccess, isLoading } = usePurchaseStatus(
     userProfile?.$id,
     courseId,
-    price
+    price,
   );
 
   const handlePurchase = async () => {
@@ -175,7 +175,7 @@ export function PaymentButton({
  * ```
  */
 export function CompactPaymentButton(
-  props: Omit<PaymentButtonProps, "size" | "showPrice">
+  props: Omit<PaymentButtonProps, "size" | "showPrice">,
 ) {
   return <PaymentButton {...props} size="sm" showPrice={false} />;
 }

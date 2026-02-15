@@ -32,7 +32,7 @@ const CourseDetail = () => {
   const { hasPurchased, isFree, canAccess } = usePurchaseStatus(
     studentId,
     courseId,
-    courseData?.price
+    courseData?.price,
   );
 
   // Map course data to Course type

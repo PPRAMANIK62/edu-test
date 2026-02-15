@@ -14,6 +14,7 @@ import type {
 } from "@/types";
 import { Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { typedListRows } from "../appwrite-helpers";
 import { dateRangeQuery, getDateRangeFromFilter } from "./helpers";
 import type {
   CourseDocument,
@@ -21,6 +22,7 @@ import type {
   PurchaseDocument,
   TestAttemptDocument,
   TestDocument,
+  UserDocument,
 } from "./types";
 
 const { databaseId, tables } = APPWRITE_CONFIG;
@@ -73,7 +75,7 @@ function calculatePercentageChange(current: number, previous: number): number {
  */
 export async function getCoursePerformanceMetrics(
   courseId: string,
-  options: AnalyticsQueryOptions = {}
+  options: AnalyticsQueryOptions = {},
 ): Promise<CoursePerformanceMetrics> {
   const { timeRange = "30d" } = options;
 
@@ -173,11 +175,11 @@ export async function getCoursePerformanceMetrics(
   // Calculate trends
   const revenueChange = calculatePercentageChange(
     totalRevenue,
-    previousRevenue
+    previousRevenue,
   );
   const enrollmentChange = calculatePercentageChange(
     totalEnrollments,
-    previousEnrollmentCount
+    previousEnrollmentCount,
   );
 
   return {
@@ -203,7 +205,7 @@ export async function getCoursePerformanceMetrics(
  * Calculate student engagement metrics for a course
  */
 export async function getStudentEngagementMetrics(
-  courseId: string
+  courseId: string,
 ): Promise<StudentEngagementMetrics> {
   const [enrollmentResponse, attemptResponse] = await Promise.all([
     databases.listRows<EnrollmentDocument>({
@@ -239,7 +241,7 @@ export async function getStudentEngagementMetrics(
 
   // Calculate completion rate
   const completedEnrollments = enrollments.filter(
-    (e) => e.status === "completed"
+    (e) => e.status === "completed",
   );
   const completionRate =
     totalStudents > 0 ? (completedEnrollments.length / totalStudents) * 100 : 0;
@@ -262,7 +264,7 @@ export async function getStudentEngagementMetrics(
  */
 export async function getRevenueAnalytics(
   teacherId: string,
-  options: AnalyticsQueryOptions = {}
+  options: AnalyticsQueryOptions = {},
 ): Promise<RevenueMetrics> {
   const { timeRange = "30d" } = options;
 
@@ -321,20 +323,20 @@ export async function getRevenueAnalytics(
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     monthlyRevenue.set(
       monthKey,
-      (monthlyRevenue.get(monthKey) || 0) + purchase.amount
+      (monthlyRevenue.get(monthKey) || 0) + purchase.amount,
     );
   });
 
   // Sort by month and format
   const sortedMonths = Array.from(monthlyRevenue.entries()).sort(([a], [b]) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
 
   const revenueByMonth = sortedMonths.map(([month, revenue]) => {
     const [year, monthNum] = month.split("-");
     const monthName = new Date(
       parseInt(year),
-      parseInt(monthNum) - 1
+      parseInt(monthNum) - 1,
     ).toLocaleDateString("en-US", { month: "short", year: "numeric" });
     return { month: monthName, revenue };
   });
@@ -344,7 +346,7 @@ export async function getRevenueAnalytics(
   purchases.forEach((purchase) => {
     courseRevenue.set(
       purchase.courseId,
-      (courseRevenue.get(purchase.courseId) || 0) + purchase.amount
+      (courseRevenue.get(purchase.courseId) || 0) + purchase.amount,
     );
   });
 
@@ -373,14 +375,14 @@ export async function getRevenueAnalytics(
     (enrollmentResponse.rows as EnrollmentDocument[]).forEach((enrollment) => {
       enrollmentCountsMap.set(
         enrollment.courseId,
-        (enrollmentCountsMap.get(enrollment.courseId) || 0) + 1
+        (enrollmentCountsMap.get(enrollment.courseId) || 0) + 1,
       );
     });
 
     (testResponse.rows as TestDocument[]).forEach((test) => {
       testCountsMap.set(
         test.courseId,
-        (testCountsMap.get(test.courseId) || 0) + 1
+        (testCountsMap.get(test.courseId) || 0) + 1,
       );
     });
   }
@@ -417,7 +419,7 @@ export async function getRevenueAnalytics(
   ).reduce((sum, p) => sum + p.amount, 0);
   const percentageChange = calculatePercentageChange(
     totalRevenue,
-    previousRevenue
+    previousRevenue,
   );
 
   return {
@@ -483,7 +485,7 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
   const totalStudents = uniqueStudents.size;
 
   const completedEnrollments = enrollments.filter(
-    (e) => e.status === "completed"
+    (e) => e.status === "completed",
   );
   const averageCompletionRate =
     enrollments.length > 0
@@ -492,7 +494,7 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
 
   const totalRevenue = (purchaseResponse.rows as PurchaseDocument[]).reduce(
     (sum, p) => sum + p.amount,
-    0
+    0,
   );
 
   return {
@@ -543,12 +545,12 @@ export async function getCourseAnalyticsSummary(courseId: string): Promise<{
   const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
   const enrollmentCount = enrollments.length;
   const completedCount = enrollments.filter(
-    (e) => e.status === "completed"
+    (e) => e.status === "completed",
   ).length;
 
   const totalRevenue = (purchaseResponse.rows as PurchaseDocument[]).reduce(
     (sum, p) => sum + p.amount,
-    0
+    0,
   );
 
   const attempts = attemptResponse.rows as TestAttemptDocument[];
@@ -616,7 +618,7 @@ export async function getStudentStats(studentId: string): Promise<{
 
   const totalSpent = (purchaseResponse.rows as PurchaseDocument[]).reduce(
     (sum, p) => sum + p.amount,
-    0
+    0,
   );
 
   return {
@@ -747,7 +749,7 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
  * Get average completion rate across all students for a teacher's courses
  */
 export async function getAverageCompletionRate(
-  courseIds: string[]
+  courseIds: string[],
 ): Promise<number> {
   if (courseIds.length === 0) return 0;
 
@@ -761,7 +763,7 @@ export async function getAverageCompletionRate(
   if (enrollments.length === 0) return 0;
 
   const completedCount = enrollments.filter(
-    (e) => e.status === "completed"
+    (e) => e.status === "completed",
   ).length;
   return (completedCount / enrollments.length) * 100;
 }
@@ -872,31 +874,23 @@ export async function getEnrichedRecentEnrollments(limit: number = 10): Promise<
   const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
 
   const [studentResponse, courseResponse] = await Promise.all([
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.users!,
-      queries: [Query.equal("$id", studentIds), Query.limit(100)],
-    }),
-    databases.listRows<CourseDocument>({
-      databaseId: databaseId!,
-      tableId: tables.courses!,
-      queries: [Query.equal("$id", courseIds), Query.limit(100)],
-    }),
+    typedListRows<UserDocument>(tables.users!, [
+      Query.equal("$id", studentIds),
+      Query.limit(100),
+    ]),
+    typedListRows<CourseDocument>(tables.courses!, [
+      Query.equal("$id", courseIds),
+      Query.limit(100),
+    ]),
   ]);
 
   const studentMap = new Map<string, string>();
-  (
-    studentResponse.rows as unknown as {
-      $id: string;
-      firstName: string;
-      lastName: string;
-    }[]
-  ).forEach((s) => {
+  studentResponse.rows.forEach((s) => {
     studentMap.set(s.$id, `${s.firstName} ${s.lastName}`);
   });
 
   const courseMap = new Map<string, string>();
-  (courseResponse.rows as CourseDocument[]).forEach((c) => {
+  courseResponse.rows.forEach((c) => {
     courseMap.set(c.$id, c.title);
   });
 
@@ -917,7 +911,7 @@ export async function getEnrichedRecentEnrollments(limit: number = 10): Promise<
  */
 export async function getTestAttemptCount(
   studentId: string,
-  testId: string
+  testId: string,
 ): Promise<number> {
   const response = await databases.listRows<TestAttemptDocument>({
     databaseId: databaseId!,

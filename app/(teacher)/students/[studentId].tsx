@@ -100,7 +100,7 @@ const StudentDetail = () => {
       completedTests > 0
         ? Math.round(
             testAttempts.reduce((sum, a) => sum + a.percentage, 0) /
-              completedTests
+              completedTests,
           )
         : 0;
 

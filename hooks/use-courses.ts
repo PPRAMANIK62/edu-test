@@ -12,6 +12,7 @@ import {
   invalidateCourses,
   queryKeys,
 } from "@/lib/query-keys";
+import { useAppwrite } from "@/providers/appwrite";
 import {
   createCourse,
   deleteCourse,
@@ -107,7 +108,7 @@ export function useCourseWithStats(courseId: string | undefined) {
  */
 export function useCoursesByTeacher(
   teacherId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.courses.byTeacher(teacherId!),
@@ -131,7 +132,7 @@ export function useCoursesByTeacher(
  */
 export function useEnrolledCourses(
   studentId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.courses.enrolled(studentId!),
@@ -158,9 +159,11 @@ export function useEnrolledCourses(
  */
 export function useCreateCourse() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
-    mutationFn: (data: CreateCourseInput) => createCourse(data),
+    mutationFn: (data: CreateCourseInput) =>
+      createCourse(data, userProfile!.$id),
     onSuccess: (newCourse) => {
       // Invalidate course lists
       invalidateCourses(queryClient);
@@ -186,6 +189,7 @@ export function useCreateCourse() {
  */
 export function useUpdateCourse() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({
@@ -194,12 +198,12 @@ export function useUpdateCourse() {
     }: {
       courseId: string;
       data: UpdateCourseInput;
-    }) => updateCourse(courseId, data),
+    }) => updateCourse(courseId, data, userProfile!.$id),
     onSuccess: (updatedCourse, { courseId }) => {
       // Update the cache directly for the updated course
       queryClient.setQueryData<CourseDocument>(
         queryKeys.courses.detail(courseId),
-        updatedCourse
+        updatedCourse,
       );
 
       // Invalidate related queries
@@ -226,10 +230,11 @@ export function useUpdateCourse() {
  */
 export function useDeleteCourse() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({ courseId }: { courseId: string; teacherId?: string }) =>
-      deleteCourse(courseId),
+      deleteCourse(courseId, userProfile!.$id),
     onSuccess: (_, { courseId, teacherId }) => {
       // Remove from cache
       queryClient.removeQueries({

@@ -42,7 +42,7 @@ const CreateCourse = () => {
             text: "OK",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     }
   }, [userProfile]);
@@ -58,7 +58,7 @@ const CreateCourse = () => {
   const validate = () => {
     const { isValid, errors: validationErrors } = validateForm(
       courseFormSchema,
-      { title, description, price, subjects, estimatedHours, imageUri }
+      { title, description, price, subjects, estimatedHours, imageUri },
     );
     setErrors(validationErrors);
     return isValid;
@@ -112,7 +112,7 @@ const CreateCourse = () => {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();

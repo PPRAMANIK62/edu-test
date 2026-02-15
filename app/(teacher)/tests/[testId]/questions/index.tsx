@@ -7,6 +7,7 @@ import {
 import { useTest } from "@/hooks/use-tests";
 import { Question } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
+import type { Href } from "expo-router";
 import { ArrowDown, ArrowUp, Edit2, Plus, Trash2 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
@@ -70,10 +71,10 @@ export default function QuestionListScreen() {
                   Alert.alert("Success", "Question deleted successfully"),
                 onError: () =>
                   Alert.alert("Error", "Failed to delete question"),
-              }
+              },
             ),
         },
-      ]
+      ],
     );
   };
 
@@ -107,18 +108,18 @@ export default function QuestionListScreen() {
           Alert.alert("Error", "Failed to reorder question");
           setReorderingId(null);
         },
-      }
+      },
     );
   };
 
   const handleEditQuestion = (questionId: string) => {
     router.push(
-      `/(teacher)/tests/${testId}/questions/${questionId}/edit` as any
+      `/(teacher)/tests/${testId}/questions/${questionId}/edit` as Href,
     );
   };
 
   const handleCreateQuestion = () => {
-    router.push(`/(teacher)/tests/${testId}/questions/create` as any);
+    router.push(`/(teacher)/tests/${testId}/questions/create` as Href);
   };
 
   const getQuestionTypeBadge = (question: Question) => {

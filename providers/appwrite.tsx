@@ -16,7 +16,7 @@ import React, {
 // Validate environment variables
 if (!APPWRITE_CONFIG.tables.users) {
   throw new Error(
-    "Missing Appwrite database configuration. Please check your .env file."
+    "Missing Appwrite database configuration. Please check your .env file.",
   );
 }
 
@@ -32,7 +32,7 @@ interface AppwriteContextType {
     password: string,
     firstName: string,
     lastName: string,
-    role: UserRole
+    role: UserRole,
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,7 +40,7 @@ interface AppwriteContextType {
 }
 
 const AppwriteContext = createContext<AppwriteContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
@@ -79,7 +79,7 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch user profile from database
   const fetchUserProfile = async (
-    userId: string
+    userId: string,
   ): Promise<UserProfile | null> => {
     try {
       const response = await databases.listRows({
@@ -116,62 +116,74 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Sign up function
-  const signUp = useCallback(async (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string,
-    role: UserRole
-  ) => {
-    try {
-      // Create Appwrite user account
-      const user = await account.create(
-        "unique()",
-        email,
-        password,
-        `${firstName} ${lastName}`
-      );
+  const signUp = useCallback(
+    async (
+      email: string,
+      password: string,
+      firstName: string,
+      lastName: string,
+      role: UserRole,
+    ) => {
+      try {
+        // Create Appwrite user account
+        const user = await account.create(
+          "unique()",
+          email,
+          password,
+          `${firstName} ${lastName}`,
+        );
 
-      // Create user profile in database
-      await databases.createRow({
-        databaseId: APPWRITE_CONFIG.databaseId!,
-        tableId: APPWRITE_CONFIG.tables.users!,
-        rowId: user.$id,
-        data: {
+        // Create user profile in database
+        await databases.createRow({
+          databaseId: APPWRITE_CONFIG.databaseId!,
+          tableId: APPWRITE_CONFIG.tables.users!,
+          rowId: user.$id,
+          data: {
+            email,
+            firstName,
+            lastName,
+            role,
+          },
+        });
+
+        // Create session
+        const session = await account.createEmailPasswordSession(
+          email,
+          password,
+        );
+        await saveSession(session.$id);
+
+        // Set current user and profile
+        setCurrentUser(user as unknown as AppwriteUser);
+        setUserProfile({
+          $id: user.$id,
           email,
           firstName,
           lastName,
           role,
-        },
-      });
+        });
+      } catch (error: unknown) {
+        console.error("Sign up error:", error);
+        const appwriteError = error as {
+          code?: number;
+          type?: string;
+          message?: string;
+        };
+        if (appwriteError.code === 409) {
+          throw new Error("Email already registered");
+        } else if (appwriteError.code === 400) {
+          throw new Error("Invalid email or password format");
+        } else if (appwriteError.type === "user_already_exists") {
+          throw new Error("Email already registered");
+        }
 
-      // Create session
-      const session = await account.createEmailPasswordSession(email, password);
-      await saveSession(session.$id);
-
-      // Set current user and profile
-      setCurrentUser(user as unknown as AppwriteUser);
-      setUserProfile({
-        $id: user.$id,
-        email,
-        firstName,
-        lastName,
-        role,
-      });
-    } catch (error: any) {
-      console.error("Sign up error:", error);
-
-      if (error.code === 409) {
-        throw new Error("Email already registered");
-      } else if (error.code === 400) {
-        throw new Error("Invalid email or password format");
-      } else if (error.type === "user_already_exists") {
-        throw new Error("Email already registered");
+        throw new Error(
+          appwriteError.message || "Sign up failed. Please try again.",
+        );
       }
-
-      throw new Error(error.message || "Sign up failed. Please try again.");
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Sign in function
   const signIn = useCallback(async (email: string, password: string) => {
@@ -197,18 +209,24 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("User profile not found");
       }
       setUserProfile(profile);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Sign in error:", error);
-
-      if (error.code === 401) {
+      const appwriteError = error as {
+        code?: number;
+        type?: string;
+        message?: string;
+      };
+      if (appwriteError.code === 401) {
         throw new Error("Invalid email or password");
-      } else if (error.type === "user_invalid_credentials") {
+      } else if (appwriteError.type === "user_invalid_credentials") {
         throw new Error("Invalid email or password");
-      } else if (error.type === "user_not_found") {
+      } else if (appwriteError.type === "user_not_found") {
         throw new Error("Account not found");
       }
 
-      throw new Error(error.message || "Sign in failed. Please try again.");
+      throw new Error(
+        appwriteError.message || "Sign in failed. Please try again.",
+      );
     }
   }, []);
 
@@ -266,7 +284,7 @@ export const AppwriteProvider = ({ children }: { children: ReactNode }) => {
       signOut,
       refreshUser,
     }),
-    [currentUser, userProfile, loading, signUp, signIn, signOut, refreshUser]
+    [currentUser, userProfile, loading, signUp, signIn, signOut, refreshUser],
   );
 
   return (

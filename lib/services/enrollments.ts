@@ -18,7 +18,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getEnrollmentsByStudent(
   studentId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
   const queries = [
     Query.equal("studentId", studentId),
@@ -47,7 +47,7 @@ export async function getEnrollmentsByStudent(
  */
 export async function getActiveEnrollmentsByStudent(
   studentId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
   const queries = [
     Query.equal("studentId", studentId),
@@ -77,7 +77,7 @@ export async function getActiveEnrollmentsByStudent(
  */
 export async function getEnrollmentsByCourse(
   courseId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<EnrollmentDocument>> {
   const queries = [
     Query.equal("courseId", courseId),
@@ -105,7 +105,7 @@ export async function getEnrollmentsByCourse(
  * Get a specific enrollment
  */
 export async function getEnrollmentById(
-  id: string
+  id: string,
 ): Promise<EnrollmentDocument> {
   const response = await databases.getRow<EnrollmentDocument>({
     databaseId: databaseId!,
@@ -121,7 +121,7 @@ export async function getEnrollmentById(
  */
 export async function isStudentEnrolled(
   studentId: string,
-  courseId: string
+  courseId: string,
 ): Promise<boolean> {
   const response = await databases.listRows({
     databaseId: databaseId!,
@@ -141,7 +141,7 @@ export async function isStudentEnrolled(
  */
 export async function getEnrollment(
   studentId: string,
-  courseId: string
+  courseId: string,
 ): Promise<EnrollmentDocument | null> {
   const response = await databases.listRows<EnrollmentDocument>({
     databaseId: databaseId!,
@@ -162,7 +162,7 @@ export async function getEnrollment(
  * Enroll a student in a course
  */
 export async function enrollStudent(
-  data: CreateEnrollmentInput
+  data: CreateEnrollmentInput,
 ): Promise<EnrollmentDocument> {
   // Check if already enrolled
   const existing = await getEnrollment(data.studentId, data.courseId);
@@ -194,7 +194,7 @@ export async function enrollStudent(
  */
 export async function updateEnrollmentProgress(
   id: string,
-  progress: number
+  progress: number,
 ): Promise<EnrollmentDocument> {
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
@@ -212,7 +212,7 @@ export async function updateEnrollmentProgress(
  * Mark enrollment as completed
  */
 export async function completeEnrollment(
-  id: string
+  id: string,
 ): Promise<EnrollmentDocument> {
   const response = await databases.updateRow<EnrollmentDocument>({
     databaseId: databaseId!,
@@ -245,7 +245,7 @@ export async function getEnrollmentCount(courseId: string): Promise<number> {
  * Get recent enrollments (for teacher dashboard)
  */
 export async function getRecentEnrollments(
-  limit: number = 10
+  limit: number = 10,
 ): Promise<EnrollmentDocument[]> {
   const response = await databases.listRows<EnrollmentDocument>({
     databaseId: databaseId!,

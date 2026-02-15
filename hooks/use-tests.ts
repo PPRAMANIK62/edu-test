@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { invalidateTest, invalidateTests, queryKeys } from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
+import { useAppwrite } from "@/providers/appwrite";
 import {
   createTest,
   createTestSubject,
@@ -46,7 +47,7 @@ import type {
  */
 export function useTestsByCourse(
   courseId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.tests.byCourse(courseId!),
@@ -70,7 +71,7 @@ export function useTestsByCourse(
  */
 export function usePublishedTestsByCourse(
   courseId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.tests.publishedByCourse(courseId!),
@@ -158,9 +159,10 @@ export function useTestSubjects(testId: string | undefined) {
  */
 export function useCreateTest() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
-    mutationFn: (data: CreateTestInput) => createTest(data),
+    mutationFn: (data: CreateTestInput) => createTest(data, userProfile!.$id),
     onSuccess: (newTest) => {
       // Invalidate test lists for the course
       queryClient.invalidateQueries({
@@ -191,15 +193,16 @@ export function useCreateTest() {
  */
 export function useUpdateTest() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({ testId, data }: { testId: string; data: UpdateTestInput }) =>
-      updateTest(testId, data),
+      updateTest(testId, data, userProfile!.$id),
     onSuccess: (updatedTest, { testId }) => {
       // Update the cache directly
       queryClient.setQueryData<TestDocument>(
         queryKeys.tests.detail(testId),
-        updatedTest
+        updatedTest,
       );
 
       // Invalidate related queries
@@ -229,10 +232,11 @@ export function useUpdateTest() {
  */
 export function useDeleteTest() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({ testId }: { testId: string; courseId: string }) =>
-      deleteTest(testId),
+      deleteTest(testId, userProfile!.$id),
     onSuccess: (_, { testId, courseId }) => {
       // Remove from cache
       queryClient.removeQueries({
@@ -267,6 +271,7 @@ export function useDeleteTest() {
  */
 export function useCreateTestSubject() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: (data: {
@@ -274,7 +279,7 @@ export function useCreateTestSubject() {
       name: string;
       questionCount: number;
       order: number;
-    }) => createTestSubject(data),
+    }) => createTestSubject(data, userProfile!.$id),
     onSuccess: (_, { testId }) => {
       // Invalidate subject queries
       queryClient.invalidateQueries({
@@ -294,6 +299,7 @@ export function useCreateTestSubject() {
  */
 export function useUpdateTestSubject() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({
@@ -304,7 +310,7 @@ export function useUpdateTestSubject() {
       subjectId: string;
       testId: string;
       data: Partial<{ name: string; questionCount: number; order: number }>;
-    }) => updateTestSubject(subjectId, data),
+    }) => updateTestSubject(subjectId, data, testId, userProfile!.$id),
     onSuccess: (_, { testId }) => {
       // Invalidate subject queries
       queryClient.invalidateQueries({
@@ -324,10 +330,16 @@ export function useUpdateTestSubject() {
  */
 export function useDeleteTestSubject() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
-    mutationFn: ({ subjectId }: { subjectId: string; testId: string }) =>
-      deleteTestSubject(subjectId),
+    mutationFn: ({
+      subjectId,
+      testId,
+    }: {
+      subjectId: string;
+      testId: string;
+    }) => deleteTestSubject(subjectId, testId, userProfile!.$id),
     onSuccess: (_, { testId }) => {
       // Invalidate subject queries
       queryClient.invalidateQueries({

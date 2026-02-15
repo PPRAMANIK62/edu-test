@@ -2,8 +2,8 @@
   "name": "create-order",
   "version": "1.0.0",
   "description": "Appwrite Function to create Razorpay orders for course purchases",
-  "main": "src/main.js",
   "type": "module",
+  "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js"
   },

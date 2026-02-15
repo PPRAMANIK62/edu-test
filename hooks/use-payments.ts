@@ -50,7 +50,7 @@ import type {
  */
 export function usePurchasesByStudent(
   studentId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.purchases.byStudent(studentId!),
@@ -74,7 +74,7 @@ export function usePurchasesByStudent(
  */
 export function useHasStudentPurchased(
   studentId: string | undefined,
-  courseId: string | undefined
+  courseId: string | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.purchases.check(studentId!, courseId!),
@@ -98,7 +98,7 @@ export function useHasStudentPurchased(
  */
 export function useStudentCoursePurchase(
   studentId: string | undefined,
-  courseId: string | undefined
+  courseId: string | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.purchases.purchase(studentId!, courseId!),
@@ -124,7 +124,7 @@ export function useStudentCoursePurchase(
 export function useCanAccessCourse(
   studentId: string | undefined,
   courseId: string | undefined,
-  coursePrice: number | undefined
+  coursePrice: number | undefined,
 ) {
   return useQuery({
     queryKey: [...queryKeys.purchases.check(studentId!, courseId!), "access"],
@@ -207,13 +207,13 @@ export function usePurchaseCourse() {
       await queryClient.cancelQueries({
         queryKey: queryKeys.purchases.check(
           options.student.$id,
-          options.courseId
+          options.courseId,
         ),
       });
 
       // Snapshot the previous value for potential rollback
       const previousPurchased = queryClient.getQueryData(
-        queryKeys.purchases.check(options.student.$id, options.courseId)
+        queryKeys.purchases.check(options.student.$id, options.courseId),
       );
 
       return { previousPurchased };
@@ -224,26 +224,26 @@ export function usePurchaseCourse() {
         invalidateAfterPurchase(
           queryClient,
           options.student.$id,
-          options.courseId
+          options.courseId,
         );
 
         // Also invalidate enrollment queries since we auto-enroll
         invalidateAfterEnrollment(
           queryClient,
           options.student.$id,
-          options.courseId
+          options.courseId,
         );
 
         // Update the purchase check query optimistically
         queryClient.setQueryData(
           queryKeys.purchases.check(options.student.$id, options.courseId),
-          true
+          true,
         );
 
         // Update the purchase data
         queryClient.setQueryData<PurchaseDocument>(
           queryKeys.purchases.purchase(options.student.$id, options.courseId),
-          result.purchase
+          result.purchase,
         );
       }
     },
@@ -252,7 +252,7 @@ export function usePurchaseCourse() {
       if (context?.previousPurchased !== undefined) {
         queryClient.setQueryData(
           queryKeys.purchases.check(options.student.$id, options.courseId),
-          context.previousPurchased
+          context.previousPurchased,
         );
       }
 
@@ -263,7 +263,7 @@ export function usePurchaseCourse() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.purchases.check(
           options.student.$id,
-          options.courseId
+          options.courseId,
         ),
       });
     },
@@ -298,7 +298,7 @@ export function usePurchaseCourseWithAlerts() {
     options?: {
       onSuccess?: (purchase: PurchaseDocument) => void;
       onCancel?: () => void;
-    }
+    },
   ): Promise<PaymentResult> => {
     const result = await mutation.mutateAsync({
       courseId,
@@ -312,7 +312,7 @@ export function usePurchaseCourseWithAlerts() {
               text: "OK",
               onPress: () => options?.onSuccess?.(purchase),
             },
-          ]
+          ],
         );
       },
       onPaymentFailure: (error) => {
@@ -364,7 +364,7 @@ export function usePurchaseCourseWithAlerts() {
 export function usePurchaseStatus(
   studentId: string | undefined,
   courseId: string | undefined,
-  coursePrice: number | undefined
+  coursePrice: number | undefined,
 ) {
   const purchaseQuery = useStudentCoursePurchase(studentId, courseId);
 

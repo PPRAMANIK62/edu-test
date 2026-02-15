@@ -32,7 +32,7 @@ const ImagePicker = ({
     if (status !== "granted") {
       Alert.alert(
         "Permission Required",
-        "Sorry, we need camera roll permissions to upload images."
+        "Sorry, we need camera roll permissions to upload images.",
       );
       return;
     }

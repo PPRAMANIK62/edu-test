@@ -14,6 +14,7 @@ import { useTestsByCourse } from "@/hooks/use-tests";
 import { isTA, isTeacher } from "@/lib/permissions";
 import { courseFormSchema, validateForm } from "@/lib/schemas";
 import { router, useLocalSearchParams } from "expo-router";
+import type { Href } from "expo-router";
 import { Plus } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -103,7 +104,7 @@ const EditCourse = () => {
             text: "OK",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     }
   }, [userProfile]);
@@ -120,7 +121,7 @@ const EditCourse = () => {
   const validate = () => {
     const { isValid, errors: validationErrors } = validateForm(
       courseFormSchema,
-      { title, description, price, subjects, estimatedHours, imageUri }
+      { title, description, price, subjects, estimatedHours, imageUri },
     );
     setErrors(validationErrors);
     return isValid;
@@ -152,14 +153,14 @@ const EditCourse = () => {
                 onError: () => {
                   Alert.alert(
                     "Error",
-                    "Failed to delete course. Please try again."
+                    "Failed to delete course. Please try again.",
                   );
                 },
-              }
+              },
             );
           },
         },
-      ]
+      ],
     );
   };
 
@@ -191,7 +192,7 @@ const EditCourse = () => {
           onError: () => {
             Alert.alert("Error", "Failed to update course. Please try again.");
           },
-        }
+        },
       );
     }
   };
@@ -208,7 +209,7 @@ const EditCourse = () => {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();
@@ -324,7 +325,7 @@ const EditCourse = () => {
             <TouchableOpacity
               onPress={() =>
                 router.push(
-                  `/(teacher)/courses/${courseId}/tests/create` as any
+                  `/(teacher)/courses/${courseId}/tests/create` as Href,
                 )
               }
               className="mt-4 border-2 border-dashed border-violet-300 rounded-xl py-4 flex-row items-center justify-center bg-violet-50"

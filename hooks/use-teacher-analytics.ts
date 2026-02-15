@@ -31,7 +31,7 @@ import { useQuery } from "@tanstack/react-query";
  */
 export function useCoursePerformance(
   courseId: string,
-  timeRange: TimeRangeFilter = "30d"
+  timeRange: TimeRangeFilter = "30d",
 ) {
   return useQuery({
     queryKey: ["course-performance", courseId, timeRange],
@@ -83,7 +83,7 @@ export function useStudentEngagement(courseId: string) {
  */
 export function useRevenueAnalytics(
   teacherId: string,
-  timeRange: TimeRangeFilter = "30d"
+  timeRange: TimeRangeFilter = "30d",
 ) {
   return useQuery({
     queryKey: ["revenue-analytics", teacherId, timeRange],

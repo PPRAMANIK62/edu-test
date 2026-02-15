@@ -29,7 +29,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getAttemptsByStudent(
   studentId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
   const queries = [
     Query.equal("studentId", studentId),
@@ -55,7 +55,7 @@ export async function getAttemptsByStudent(
  */
 export async function getAttemptsByTest(
   testId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
   const queries = [
     Query.equal("testId", testId),
@@ -81,7 +81,7 @@ export async function getAttemptsByTest(
  */
 export async function getCompletedAttemptsByTest(
   testId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
   const queries = [
     Query.equal("testId", testId),
@@ -107,7 +107,7 @@ export async function getCompletedAttemptsByTest(
  * Get a single attempt by ID
  */
 export async function getAttemptById(
-  attemptId: string
+  attemptId: string,
 ): Promise<TestAttemptDocument | null> {
   try {
     const response = await databases.getRow<TestAttemptDocument>({
@@ -127,7 +127,7 @@ export async function getAttemptById(
 export function getAnswersFromAttempt(attempt: TestAttemptDocument): Answer[] {
   // Each element in the array is a JSON string representing an Answer tuple
   return attempt.answers.map((answerStr) =>
-    parseJSON<Answer>(answerStr, [0, -1, false])
+    parseJSON<Answer>(answerStr, [0, -1, false]),
   );
 }
 
@@ -136,7 +136,7 @@ export function getAnswersFromAttempt(attempt: TestAttemptDocument): Answer[] {
  */
 export async function getInProgressAttempt(
   studentId: string,
-  testId: string
+  testId: string,
 ): Promise<TestAttemptDocument | null> {
   const response = await databases.listRows<TestAttemptDocument>({
     databaseId: databaseId!,
@@ -161,7 +161,7 @@ export async function getInProgressAttempt(
  */
 export async function getBestAttempt(
   studentId: string,
-  testId: string
+  testId: string,
 ): Promise<TestAttemptDocument | null> {
   const response = await databases.listRows<TestAttemptDocument>({
     databaseId: databaseId!,
@@ -192,7 +192,7 @@ export async function getBestAttempt(
 export async function startAttempt(
   studentId: string,
   testId: string,
-  courseId: string
+  courseId: string,
 ): Promise<TestAttemptDocument> {
   // Check for existing in-progress attempt
   const existingAttempt = await getInProgressAttempt(studentId, testId);
@@ -235,7 +235,7 @@ export async function submitAnswer(
   attemptId: string,
   questionIndex: number,
   selectedIndex: number,
-  isMarkedForReview: boolean = false
+  isMarkedForReview: boolean = false,
 ): Promise<TestAttemptDocument> {
   // Get current attempt
   const attempt = await getAttemptById(attemptId);
@@ -281,7 +281,7 @@ export async function submitAnswer(
  */
 export async function submitAnswersBatch(
   attemptId: string,
-  newAnswers: Answer[]
+  newAnswers: Answer[],
 ): Promise<TestAttemptDocument> {
   // Get current attempt
   const attempt = await getAttemptById(attemptId);
@@ -326,7 +326,7 @@ export async function submitAnswersBatch(
  * Complete an attempt - calculate score and mark as completed
  */
 export async function completeAttempt(
-  attemptId: string
+  attemptId: string,
 ): Promise<TestAttemptDocument> {
   // Get current attempt
   const attempt = await getAttemptById(attemptId);
@@ -380,7 +380,7 @@ export async function completeAttempt(
  * Mark an attempt as expired
  */
 export async function expireAttempt(
-  attemptId: string
+  attemptId: string,
 ): Promise<TestAttemptDocument> {
   const response = await databases.updateRow<TestAttemptDocument>({
     databaseId: databaseId!,
@@ -403,7 +403,7 @@ export async function expireAttempt(
  */
 function calculateScore(
   answers: Answer[],
-  questions: QuestionDocument[]
+  questions: QuestionDocument[],
 ): { score: number; percentage: number } {
   if (questions.length === 0) {
     return { score: 0, percentage: 0 };
@@ -462,7 +462,7 @@ export async function getTestAttemptStats(testId: string): Promise<{
 
   const totalScore = completedAttempts.reduce(
     (sum, a) => sum + (a.percentage || 0),
-    0
+    0,
   );
   const passedCount = completedAttempts.filter((a) => a.passed).length;
 
@@ -480,7 +480,7 @@ export async function getTestAttemptStats(testId: string): Promise<{
 export async function getStudentTestHistory(
   studentId: string,
   testId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<TestAttemptDocument>> {
   const queries = [
     Query.equal("studentId", studentId),
@@ -492,7 +492,7 @@ export async function getStudentTestHistory(
   const response = await databases.listRows<TestAttemptDocument>(
     databaseId!,
     tables.testAttempts!,
-    queries
+    queries,
   );
 
   return {

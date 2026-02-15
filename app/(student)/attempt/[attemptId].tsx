@@ -48,7 +48,7 @@ export default function AttemptScreen() {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [localAnswers, setLocalAnswers] = useState<Record<number, LocalAnswer>>(
-    {}
+    {},
   );
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isBackgrounded, setIsBackgrounded] = useState(false);
@@ -119,7 +119,7 @@ export default function AttemptScreen() {
         onError: () => {
           Alert.alert("Error", "Failed to submit test. Please try again.");
         },
-      }
+      },
     );
   }, [attemptId, attemptData, studentId, completeAttemptMutation, router]);
 
@@ -151,7 +151,7 @@ export default function AttemptScreen() {
       const now = new Date();
       const remaining = Math.max(
         0,
-        Math.floor((endTimeRef.current.getTime() - now.getTime()) / 1000)
+        Math.floor((endTimeRef.current.getTime() - now.getTime()) / 1000),
       );
       return remaining;
     };
@@ -184,7 +184,7 @@ export default function AttemptScreen() {
             const now = new Date();
             const remaining = Math.max(
               0,
-              Math.floor((endTimeRef.current.getTime() - now.getTime()) / 1000)
+              Math.floor((endTimeRef.current.getTime() - now.getTime()) / 1000),
             );
             setTimeRemaining(remaining);
 
@@ -193,7 +193,7 @@ export default function AttemptScreen() {
             }
           }
         }
-      }
+      },
     );
 
     return () => {
@@ -218,7 +218,7 @@ export default function AttemptScreen() {
             style: "destructive",
             onPress: handleSubmitTest,
           },
-        ]
+        ],
       );
     } else {
       Alert.alert("Submit Test", "Are you sure you want to submit your test?", [
@@ -463,7 +463,7 @@ export default function AttemptScreen() {
         <TouchableOpacity
           onPress={() =>
             setCurrentQuestionIndex((prev) =>
-              Math.min(questions.length - 1, prev + 1)
+              Math.min(questions.length - 1, prev + 1),
             )
           }
           disabled={

@@ -4,7 +4,9 @@
 
 import { ID, Query } from "appwrite";
 import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { getCourseById } from "./courses";
 import { buildQueries, type QueryOptions } from "./helpers";
+import { getTestById } from "./tests";
 import type {
   CreateQuestionInput,
   PaginatedResponse,
@@ -19,7 +21,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getQuestionsByTest(
   testId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<QuestionDocument>> {
   const queries = [
     Query.equal("testId", testId),
@@ -45,7 +47,7 @@ export async function getQuestionsByTest(
 export async function getQuestionsBySubject(
   testId: string,
   subjectId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<QuestionDocument>> {
   const queries = [
     Query.equal("testId", testId),
@@ -83,8 +85,17 @@ export async function getQuestionById(id: string): Promise<QuestionDocument> {
  * Create a new question
  */
 export async function createQuestion(
-  data: CreateQuestionInput
+  data: CreateQuestionInput,
+  callingUserId: string,
 ): Promise<QuestionDocument> {
+  const test = await getTestById(data.testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only create questions for your own courses",
+    );
+  }
+
   const response = await databases.createRow<QuestionDocument>({
     databaseId: databaseId!,
     tableId: tables.questions!,
@@ -110,8 +121,18 @@ export async function createQuestion(
  */
 export async function updateQuestion(
   id: string,
-  data: UpdateQuestionInput
+  data: UpdateQuestionInput,
+  callingUserId: string,
 ): Promise<QuestionDocument> {
+  const question = await getQuestionById(id);
+  const test = await getTestById(question.testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only update questions for your own courses",
+    );
+  }
+
   const response = await databases.updateRow<QuestionDocument>({
     databaseId: databaseId!,
     tableId: tables.questions!,
@@ -125,7 +146,19 @@ export async function updateQuestion(
 /**
  * Delete a question
  */
-export async function deleteQuestion(id: string): Promise<void> {
+export async function deleteQuestion(
+  id: string,
+  callingUserId: string,
+): Promise<void> {
+  const question = await getQuestionById(id);
+  const test = await getTestById(question.testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only delete questions for your own courses",
+    );
+  }
+
   await databases.deleteRow({
     databaseId: databaseId!,
     tableId: tables.questions!,
@@ -140,8 +173,17 @@ export async function deleteQuestion(id: string): Promise<void> {
  */
 export async function reorderQuestions(
   testId: string,
-  questionIds: string[]
+  questionIds: string[],
+  callingUserId: string,
 ): Promise<void> {
+  const test = await getTestById(testId);
+  const course = await getCourseById(test.courseId);
+  if (course.teacherId !== callingUserId) {
+    throw new Error(
+      "Forbidden: You can only reorder questions for your own courses",
+    );
+  }
+
   // Update each question with its new order
   const updates = questionIds.map((questionId, index) =>
     databases.updateRow({
@@ -149,7 +191,7 @@ export async function reorderQuestions(
       tableId: tables.questions!,
       rowId: questionId,
       data: { order: index + 1 },
-    })
+    }),
   );
 
   await Promise.all(updates);
@@ -172,8 +214,19 @@ export async function getQuestionCount(testId: string): Promise<number> {
  * Bulk create questions for a test
  */
 export async function bulkCreateQuestions(
-  questions: CreateQuestionInput[]
+  questions: CreateQuestionInput[],
+  callingUserId: string,
 ): Promise<QuestionDocument[]> {
+  if (questions.length > 0) {
+    const test = await getTestById(questions[0].testId);
+    const course = await getCourseById(test.courseId);
+    if (course.teacherId !== callingUserId) {
+      throw new Error(
+        "Forbidden: You can only create questions for your own courses",
+      );
+    }
+  }
+
   const created = await Promise.all(
     questions.map((data) =>
       databases.createRow<QuestionDocument>({
@@ -191,8 +244,8 @@ export async function bulkCreateQuestions(
           explanation: data.explanation,
           order: data.order,
         },
-      })
-    )
+      }),
+    ),
   );
 
   return created as QuestionDocument[];

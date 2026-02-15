@@ -40,7 +40,7 @@ import type { CreateActivityInput } from "@/lib/services/types";
  */
 export function useActivitiesByUser(
   userId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.activities.byUser(userId!),
@@ -64,7 +64,7 @@ export function useActivitiesByUser(
  */
 export function useRecentActivities(
   userId: string | undefined,
-  limit: number = 10
+  limit: number = 10,
 ) {
   return useQuery({
     queryKey: queryKeys.activities.recent(userId!, limit),
@@ -110,7 +110,7 @@ export function useActivity(activityId: string | undefined) {
 export function useActivitiesByType(
   userId: string | undefined,
   type: "test_completed" | "course_started" | "achievement" | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.activities.byType(userId!, type!),

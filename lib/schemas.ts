@@ -86,7 +86,7 @@ export const testFormSchema = z.object({
         const score = parseInt(val);
         return !isNaN(score) && score >= 0 && score <= 100;
       },
-      { message: "Passing score must be between 0 and 100" }
+      { message: "Passing score must be between 0 and 100" },
     ),
   subjects: z.array(subjectSchema).min(1, "At least one subject is required"),
 });
@@ -126,7 +126,7 @@ export const mcqFormSchema = z
     } else {
       // Validate correct option has text
       const correctOption = data.options.find(
-        (o) => o.id === data.correctOptionId
+        (o) => o.id === data.correctOptionId,
       );
       if (!correctOption?.text.trim()) {
         ctx.addIssue({
@@ -152,7 +152,7 @@ export type MCQFormSchemaData = z.infer<typeof mcqFormSchema>;
  */
 export function validateForm<T>(
   schema: z.ZodSchema<T>,
-  data: unknown
+  data: unknown,
 ): { isValid: boolean; errors: Record<string, string> } {
   const result = schema.safeParse(data);
 

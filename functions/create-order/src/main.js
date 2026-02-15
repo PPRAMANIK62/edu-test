@@ -12,6 +12,7 @@
  * - APPWRITE_API_KEY: Appwrite API key with database read permissions
  * - APPWRITE_DATABASE_ID: Database ID
  * - APPWRITE_COURSES_TABLE_ID: Courses table ID
+ * - APPWRITE_PURCHASES_TABLE_ID: Purchases table ID
  *
  * Request Body:
  * {
@@ -39,7 +40,7 @@
  * }
  */
 
-import { Client, Databases } from "node-appwrite";
+import { Client, Databases, Query } from "node-appwrite";
 import Razorpay from "razorpay";
 
 /**
@@ -58,7 +59,7 @@ export default async ({ req, res, log, error }) => {
         success: false,
         error: "Method not allowed",
       },
-      405
+      405,
     );
   }
 
@@ -73,7 +74,7 @@ export default async ({ req, res, log, error }) => {
         success: false,
         error: "Invalid request body",
       },
-      400
+      400,
     );
   }
 
@@ -86,7 +87,7 @@ export default async ({ req, res, log, error }) => {
         success: false,
         error: "Missing required fields: courseId and studentId are required",
       },
-      400
+      400,
     );
   }
 
@@ -99,6 +100,7 @@ export default async ({ req, res, log, error }) => {
     "APPWRITE_API_KEY",
     "APPWRITE_DATABASE_ID",
     "APPWRITE_COURSES_TABLE_ID",
+    "APPWRITE_PURCHASES_TABLE_ID",
   ];
 
   for (const envVar of requiredEnvVars) {
@@ -109,7 +111,7 @@ export default async ({ req, res, log, error }) => {
           success: false,
           error: "Server configuration error",
         },
-        500
+        500,
       );
     }
   }
@@ -130,7 +132,7 @@ export default async ({ req, res, log, error }) => {
       course = await databases.getDocument(
         process.env.APPWRITE_DATABASE_ID,
         process.env.APPWRITE_COURSES_TABLE_ID,
-        courseId
+        courseId,
       );
     } catch (e) {
       error(`Course not found: ${courseId}`, e.message);
@@ -139,7 +141,7 @@ export default async ({ req, res, log, error }) => {
           success: false,
           error: "Course not found",
         },
-        404
+        404,
       );
     }
 
@@ -150,7 +152,7 @@ export default async ({ req, res, log, error }) => {
           success: false,
           error: "Course is not available for purchase",
         },
-        400
+        400,
       );
     }
 
@@ -161,7 +163,31 @@ export default async ({ req, res, log, error }) => {
           success: false,
           error: "This course is free. No payment required.",
         },
-        400
+        400,
+      );
+    }
+
+    // Check for existing completed purchase (idempotency)
+    const existingPurchases = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID,
+      process.env.APPWRITE_PURCHASES_TABLE_ID,
+      [
+        Query.equal("studentId", studentId),
+        Query.equal("courseId", courseId),
+        Query.equal("paymentStatus", "completed"),
+        Query.limit(1),
+      ],
+    );
+
+    if (existingPurchases.total > 0) {
+      log(`Student ${studentId} already purchased course ${courseId}`);
+      return res.json(
+        {
+          success: false,
+          error: "You have already purchased this course",
+          alreadyPurchased: true,
+        },
+        409,
       );
     }
 
@@ -201,7 +227,7 @@ export default async ({ req, res, log, error }) => {
           success: false,
           error: `Razorpay error: ${razorpayError?.error?.description || razorpayError?.message || "Failed to create order"}`,
         },
-        500
+        500,
       );
     }
 
@@ -236,7 +262,7 @@ export default async ({ req, res, log, error }) => {
         error:
           e?.message || "Failed to create payment order. Please try again.",
       },
-      500
+      500,
     );
   }
 };

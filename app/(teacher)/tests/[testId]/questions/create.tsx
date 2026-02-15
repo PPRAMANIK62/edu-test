@@ -71,7 +71,7 @@ export default function CreateQuestionScreen() {
   const validate = (): boolean => {
     const { isValid, errors: validationErrors } = validateForm(
       mcqFormSchema,
-      formData
+      formData,
     );
     setErrors(validationErrors);
     return isValid;
@@ -110,7 +110,7 @@ export default function CreateQuestionScreen() {
         onError: () => {
           Alert.alert("Error", "Failed to create question. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -126,7 +126,7 @@ export default function CreateQuestionScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();

@@ -6,6 +6,7 @@ import { useCreateTest, useCreateTestSubject } from "@/hooks/use-tests";
 import { TestFormData, testFormSchema, validateForm } from "@/lib/schemas";
 import { Subject } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
+import type { Href } from "expo-router";
 import { Plus, Trash2 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -51,7 +52,7 @@ export default function CreateTestScreen() {
   const validate = (): boolean => {
     const { isValid, errors: validationErrors } = validateForm(
       testFormSchema,
-      formData
+      formData,
     );
     setErrors(validationErrors);
     return isValid;
@@ -87,7 +88,7 @@ export default function CreateTestScreen() {
               text: "Add Questions",
               onPress: () => {
                 router.replace(
-                  `/(teacher)/tests/${newTest.$id}/questions` as any
+                  `/(teacher)/tests/${newTest.$id}/questions` as Href,
                 );
               },
             },
@@ -100,7 +101,7 @@ export default function CreateTestScreen() {
         onError: () => {
           Alert.alert("Error", "Failed to create test. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -116,7 +117,7 @@ export default function CreateTestScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();

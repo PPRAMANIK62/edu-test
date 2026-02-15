@@ -5,6 +5,7 @@ import { getAnswersFromAttempt, useAttempt } from "@/hooks/use-attempts";
 import { useQuestionsByTest } from "@/hooks/use-questions";
 import type { Question } from "@/types";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import type { Href } from "expo-router";
 import React, { useMemo } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -116,12 +117,12 @@ const ReviewScreen = () => {
 
         <View className="px-6 pb-8 gap-3">
           <ActionButton
-            onPress={() => router.push("/(student)/(tabs)/dashboard" as any)}
+            onPress={() => router.push("/(student)/(tabs)/dashboard" as Href)}
             variant="primary"
             label="Back to Dashboard"
           />
           <ActionButton
-            onPress={() => router.push("/(student)/(tabs)/tests" as any)}
+            onPress={() => router.push("/(student)/(tabs)/tests" as Href)}
             variant="secondary"
             label="Take Another Test"
           />

@@ -34,7 +34,7 @@ const TeacherStudents = () => {
   const { data: coursesData } = useCoursesByTeacher(teacherId);
   const courseIds = useMemo(
     () => coursesData?.documents.map((c) => c.$id) || [],
-    [coursesData]
+    [coursesData],
   );
 
   // Fetch students from database
@@ -49,7 +49,7 @@ const TeacherStudents = () => {
   // Fetch student stats from analytics service
   const studentIds = useMemo(
     () => studentsData?.map((s) => s.$id) || [],
-    [studentsData]
+    [studentsData],
   );
 
   const { data: studentStatsMap } = useQuery({
@@ -97,7 +97,7 @@ const TeacherStudents = () => {
       students?.reduce(
         (best, student) =>
           student.averageScore > (best?.averageScore || 0) ? student : best,
-        students[0]
+        students[0],
       )?.name || "N/A";
 
     return {
@@ -111,7 +111,7 @@ const TeacherStudents = () => {
   const filteredStudents = students?.filter(
     (student) =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
+      student.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (

@@ -65,7 +65,7 @@ const TeacherDashboard = () => {
   // Fetch course performance data
   const courseIds = useMemo(
     () => coursesData?.documents.map((c) => c.$id) || [],
-    [coursesData]
+    [coursesData],
   );
 
   const { data: coursePerformanceData } = useQuery({
@@ -206,7 +206,7 @@ const TeacherDashboard = () => {
                   className="bg-white rounded-2xl p-4 shadow-sm"
                   onPress={() => {
                     router.push(
-                      `/(teacher)/courses/${course.courseId}/analytics`
+                      `/(teacher)/courses/${course.courseId}/analytics`,
                     );
                   }}
                 >
@@ -232,7 +232,7 @@ const TeacherDashboard = () => {
                       className="bg-violet-50 rounded-full p-2"
                       onPress={() => {
                         router.push(
-                          `/(teacher)/courses/${course.courseId}/edit`
+                          `/(teacher)/courses/${course.courseId}/edit`,
                         );
                       }}
                     >

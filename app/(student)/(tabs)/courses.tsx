@@ -35,7 +35,7 @@ const CoursesTab = () => {
     () => [
       ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
     ],
-    [enrolledCoursesData]
+    [enrolledCoursesData],
   );
 
   // Fetch teacher names
@@ -53,7 +53,7 @@ const CoursesTab = () => {
     return enrolledCoursesData.documents.map((course): Course => {
       // Find enrollment progress for this course
       const enrollment = enrollmentsData?.documents.find(
-        (e) => e.courseId === course.$id
+        (e) => e.courseId === course.$id,
       );
 
       return {

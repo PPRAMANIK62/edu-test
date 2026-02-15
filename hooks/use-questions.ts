@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { invalidateTestQuestions, queryKeys } from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
+import { useAppwrite } from "@/providers/appwrite";
 import {
   bulkCreateQuestions,
   createQuestion,
@@ -43,7 +44,7 @@ import type {
  */
 export function useQuestionsByTest(
   testId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.questions.byTest(testId!),
@@ -69,7 +70,7 @@ export function useQuestionsByTest(
 export function useQuestionsBySubject(
   testId: string | undefined,
   subjectId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.questions.bySubject(testId!, subjectId!),
@@ -116,9 +117,11 @@ export function useQuestion(questionId: string | undefined) {
  */
 export function useCreateQuestion() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
-    mutationFn: (data: CreateQuestionInput) => createQuestion(data),
+    mutationFn: (data: CreateQuestionInput) =>
+      createQuestion(data, userProfile!.$id),
     onSuccess: (newQuestion) => {
       // Invalidate questions for the test
       invalidateTestQuestions(queryClient, newQuestion.testId);
@@ -149,6 +152,7 @@ export function useCreateQuestion() {
  */
 export function useUpdateQuestion() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({
@@ -158,12 +162,12 @@ export function useUpdateQuestion() {
       questionId: string;
       testId: string;
       data: UpdateQuestionInput;
-    }) => updateQuestion(questionId, data),
+    }) => updateQuestion(questionId, data, userProfile!.$id),
     onSuccess: (updatedQuestion, { questionId, testId }) => {
       // Update the cache directly
       queryClient.setQueryData<QuestionDocument>(
         queryKeys.questions.detail(questionId),
-        updatedQuestion
+        updatedQuestion,
       );
 
       // Invalidate test questions
@@ -185,10 +189,11 @@ export function useUpdateQuestion() {
  */
 export function useDeleteQuestion() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({ questionId }: { questionId: string; testId: string }) =>
-      deleteQuestion(questionId),
+      deleteQuestion(questionId, userProfile!.$id),
     onSuccess: (_, { questionId, testId }) => {
       // Remove from cache
       queryClient.removeQueries({
@@ -219,6 +224,7 @@ export function useDeleteQuestion() {
  */
 export function useReorderQuestions() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({
@@ -227,7 +233,7 @@ export function useReorderQuestions() {
     }: {
       testId: string;
       questionIds: string[];
-    }) => reorderQuestions(testId, questionIds),
+    }) => reorderQuestions(testId, questionIds, userProfile!.$id),
     onSuccess: (_, { testId }) => {
       // Invalidate questions for the test
       invalidateTestQuestions(queryClient, testId);
@@ -248,6 +254,7 @@ export function useReorderQuestions() {
  */
 export function useBulkCreateQuestions() {
   const queryClient = useQueryClient();
+  const { userProfile } = useAppwrite();
 
   return useMutation({
     mutationFn: ({
@@ -255,7 +262,7 @@ export function useBulkCreateQuestions() {
     }: {
       testId: string;
       questions: CreateQuestionInput[];
-    }) => bulkCreateQuestions(questions),
+    }) => bulkCreateQuestions(questions, userProfile!.$id),
     onSuccess: (_, { testId }) => {
       // Invalidate questions for the test
       invalidateTestQuestions(queryClient, testId);

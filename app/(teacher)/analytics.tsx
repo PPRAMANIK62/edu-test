@@ -103,7 +103,7 @@ const TeacherAnalytics = () => {
                         revenueData.topCourses.length > 0
                           ? revenueData.totalRevenue /
                               revenueData.topCourses.length
-                          : 0
+                          : 0,
                       )}
                       bgColor="bg-sky-50"
                       iconBgColor="bg-sky-100"
@@ -153,7 +153,7 @@ const TeacherAnalytics = () => {
                 <View className="bg-white rounded-2xl px-4 py-2 shadow-sm">
                   {revenueData.revenueByMonth.map((month, index) => {
                     const maxRevenue = Math.max(
-                      ...revenueData.revenueByMonth.map((m) => m.revenue)
+                      ...revenueData.revenueByMonth.map((m) => m.revenue),
                     );
                     const barWidth =
                       maxRevenue > 0
@@ -204,7 +204,7 @@ const TeacherAnalytics = () => {
                         activeOpacity={0.7}
                         onPress={() => {
                           router.push(
-                            `/(teacher)/courses/${course.courseId}/analytics`
+                            `/(teacher)/courses/${course.courseId}/analytics`,
                           );
                         }}
                       >

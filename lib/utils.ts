@@ -2,7 +2,7 @@ export const formatTimeAgo = (timestamp: string) => {
   const date = new Date(timestamp);
   const now = new Date();
   const diffInHours = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60),
   );
 
   if (diffInHours < 1) return "Just now";

@@ -1,5 +1,6 @@
 import { Test } from "@/types";
 import { router } from "expo-router";
+import type { Href } from "expo-router";
 import { BookOpen, Clock, Edit2, FileQuestion } from "lucide-react-native";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -10,7 +11,7 @@ interface TeacherTestCardProps {
 
 const TeacherTestCard = ({ test }: TeacherTestCardProps) => {
   const handleManageQuestions = () => {
-    router.push(`/(teacher)/tests/${test.id}/questions` as any);
+    router.push(`/(teacher)/tests/${test.id}/questions` as Href);
   };
 
   return (

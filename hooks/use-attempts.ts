@@ -42,7 +42,7 @@ import type { Answer, TestAttemptDocument } from "@/lib/services/types";
  */
 export function useAttemptsByStudent(
   studentId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.attempts.byStudent(studentId!),
@@ -66,7 +66,7 @@ export function useAttemptsByStudent(
  */
 export function useAttemptsByTest(
   testId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.attempts.byTest(testId!),
@@ -90,7 +90,7 @@ export function useAttemptsByTest(
  */
 export function useCompletedAttemptsByTest(
   testId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.attempts.completedByTest(testId!),
@@ -134,7 +134,7 @@ export function useAttempt(attemptId: string | undefined) {
  */
 export function useInProgressAttempt(
   studentId: string | undefined,
-  testId: string | undefined
+  testId: string | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.attempts.inProgress(studentId!, testId!),
@@ -160,7 +160,7 @@ export function useInProgressAttempt(
 export function useStudentTestHistory(
   studentId: string | undefined,
   testId: string | undefined,
-  options?: QueryOptions
+  options?: QueryOptions,
 ) {
   return useQuery({
     queryKey: queryKeys.attempts.history(studentId!, testId!),
@@ -202,7 +202,7 @@ export function useStartAttempt() {
       // Set the new attempt in cache
       queryClient.setQueryData<TestAttemptDocument>(
         queryKeys.attempts.detail(newAttempt.$id),
-        newAttempt
+        newAttempt,
       );
 
       // Invalidate in-progress query
@@ -249,7 +249,7 @@ export function useSubmitAnswer() {
       // Update the cache directly
       queryClient.setQueryData<TestAttemptDocument>(
         queryKeys.attempts.detail(attemptId),
-        updatedAttempt
+        updatedAttempt,
       );
     },
   });
@@ -281,7 +281,7 @@ export function useSubmitAnswersBatch() {
       // Update the cache directly
       queryClient.setQueryData<TestAttemptDocument>(
         queryKeys.attempts.detail(attemptId),
-        updatedAttempt
+        updatedAttempt,
       );
     },
   });
@@ -313,7 +313,7 @@ export function useCompleteAttempt() {
       // Update the cache directly
       queryClient.setQueryData<TestAttemptDocument>(
         queryKeys.attempts.detail(attemptId),
-        completedAttempt
+        completedAttempt,
       );
 
       // Comprehensive invalidation after attempt completion

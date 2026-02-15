@@ -102,7 +102,7 @@ export default function EditQuestionScreen() {
   const validate = (): boolean => {
     const { isValid, errors: validationErrors } = validateForm(
       mcqFormSchema,
-      formData
+      formData,
     );
     setErrors(validationErrors);
     return isValid;
@@ -139,7 +139,7 @@ export default function EditQuestionScreen() {
         onError: () => {
           Alert.alert("Error", "Failed to update question. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -155,7 +155,7 @@ export default function EditQuestionScreen() {
             style: "destructive",
             onPress: () => router.back(),
           },
-        ]
+        ],
       );
     } else {
       router.back();

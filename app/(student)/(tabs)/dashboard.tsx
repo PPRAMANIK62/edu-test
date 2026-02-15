@@ -36,7 +36,7 @@ const StudentDashboard = () => {
     () => [
       ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
     ],
-    [enrolledCoursesData]
+    [enrolledCoursesData],
   );
 
   // Fetch teacher names
@@ -59,7 +59,7 @@ const StudentDashboard = () => {
       testsCompleted > 0
         ? Math.round(
             completedAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) /
-              testsCompleted
+              testsCompleted,
           )
         : 0;
 
@@ -81,14 +81,14 @@ const StudentDashboard = () => {
 
     // Find enrollment with progress > 0
     const inProgressEnrollment = enrollmentsData.documents.find(
-      (e) => e.progress > 0 && e.status === "active"
+      (e) => e.progress > 0 && e.status === "active",
     );
 
     if (!inProgressEnrollment) return null;
 
     // Find the corresponding course
     const course = enrolledCoursesData.documents.find(
-      (c) => c.$id === inProgressEnrollment.courseId
+      (c) => c.$id === inProgressEnrollment.courseId,
     );
 
     if (!course) return null;

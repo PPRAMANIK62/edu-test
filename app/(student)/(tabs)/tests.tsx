@@ -52,7 +52,7 @@ const TestsTab = () => {
             testsResult.documents.map(async (test) => {
               const attemptCount = await getTestAttemptCount(
                 studentId,
-                test.$id
+                test.$id,
               );
               return {
                 id: test.$id,
@@ -67,10 +67,10 @@ const TestsTab = () => {
                 isAvailable: test.isPublished,
                 courseName: course.title,
               } as Test & { courseName: string };
-            })
+            }),
           );
           return testsWithAttempts;
-        }
+        },
       );
 
       const testsArrays = await Promise.all(testsPromises);

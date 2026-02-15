@@ -177,7 +177,7 @@ const CourseAnalytics = () => {
                             className={`font-bold ${performanceData.trends.revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
                           >
                             {Math.abs(
-                              performanceData.trends.revenueChange
+                              performanceData.trends.revenueChange,
                             ).toFixed(1)}
                             %
                           </Text>
@@ -199,7 +199,7 @@ const CourseAnalytics = () => {
                           className={`font-bold ${performanceData.trends.enrollmentChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
                         >
                           {Math.abs(
-                            performanceData.trends.enrollmentChange
+                            performanceData.trends.enrollmentChange,
                           ).toFixed(1)}
                           %
                         </Text>

@@ -247,7 +247,7 @@ export function invalidateQuestions(queryClient: QueryClient) {
  */
 export function invalidateTestQuestions(
   queryClient: QueryClient,
-  testId: string
+  testId: string,
 ) {
   return queryClient.invalidateQueries({
     queryKey: queryKeys.questions.byTest(testId),
@@ -266,7 +266,7 @@ export function invalidateEnrollments(queryClient: QueryClient) {
  */
 export function invalidateStudentEnrollments(
   queryClient: QueryClient,
-  studentId: string
+  studentId: string,
 ) {
   return Promise.all([
     queryClient.invalidateQueries({
@@ -293,7 +293,7 @@ export function invalidatePurchases(queryClient: QueryClient) {
  */
 export function invalidateStudentPurchases(
   queryClient: QueryClient,
-  studentId: string
+  studentId: string,
 ) {
   return queryClient.invalidateQueries({
     queryKey: queryKeys.purchases.byStudent(studentId),
@@ -312,7 +312,7 @@ export function invalidateAttempts(queryClient: QueryClient) {
  */
 export function invalidateStudentAttempts(
   queryClient: QueryClient,
-  studentId: string
+  studentId: string,
 ) {
   return queryClient.invalidateQueries({
     queryKey: queryKeys.attempts.byStudent(studentId),
@@ -340,7 +340,7 @@ export function invalidateActivities(queryClient: QueryClient) {
  */
 export function invalidateUserActivities(
   queryClient: QueryClient,
-  userId: string
+  userId: string,
 ) {
   return queryClient.invalidateQueries({
     queryKey: queryKeys.activities.byUser(userId),
@@ -354,7 +354,7 @@ export function invalidateUserActivities(
 export function invalidateAfterEnrollment(
   queryClient: QueryClient,
   studentId: string,
-  courseId: string
+  courseId: string,
 ) {
   return Promise.all([
     invalidateStudentEnrollments(queryClient, studentId),
@@ -377,7 +377,7 @@ export function invalidateAfterEnrollment(
 export function invalidateAfterPurchase(
   queryClient: QueryClient,
   studentId: string,
-  courseId: string
+  courseId: string,
 ) {
   return Promise.all([
     invalidateStudentPurchases(queryClient, studentId),
@@ -401,7 +401,7 @@ export function invalidateAfterAttempt(
   queryClient: QueryClient,
   studentId: string,
   testId: string,
-  attemptId?: string
+  attemptId?: string,
 ) {
   const invalidations = [
     invalidateStudentAttempts(queryClient, studentId),

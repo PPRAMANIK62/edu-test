@@ -60,7 +60,7 @@ function logPaymentEvent(event: string, data?: Record<string, unknown>): void {
 export function verifySignatureFormat(
   orderId: string,
   paymentId: string,
-  signature: string
+  signature: string,
 ): boolean {
   // Basic format validation
   // The actual cryptographic verification happens server-side via webhook
@@ -92,17 +92,17 @@ export function verifySignatureFormat(
  * @returns Order response from server
  */
 export async function createPaymentOrder(
-  input: CreateOrderInput
+  input: CreateOrderInput,
 ): Promise<CreateOrderResponse> {
   if (!CREATE_ORDER_FUNCTION_ID) {
     throw new Error(
-      "Payment function not configured. Set EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID in your environment."
+      "Payment function not configured. Set EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID in your environment.",
     );
   }
 
   if (CREATE_ORDER_FUNCTION_ID === "your_create_order_function_id") {
     throw new Error(
-      "Payment function ID is still placeholder. Deploy the create-order function and update EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID."
+      "Payment function ID is still placeholder. Deploy the create-order function and update EXPO_PUBLIC_CREATE_ORDER_FUNCTION_ID.",
     );
   }
 
@@ -119,7 +119,7 @@ export async function createPaymentOrder(
       }),
       false, // async
       "/", // path
-      ExecutionMethod.POST // method
+      ExecutionMethod.POST, // method
     );
 
     logPaymentEvent("Execution response", {
@@ -131,14 +131,14 @@ export async function createPaymentOrder(
     // Check if execution was successful
     if (execution.status === "failed") {
       throw new Error(
-        `Function execution failed: ${execution.errors || "Unknown error"}`
+        `Function execution failed: ${execution.errors || "Unknown error"}`,
       );
     }
 
     // Check for empty response
     if (!execution.responseBody || execution.responseBody.trim() === "") {
       throw new Error(
-        "Function returned empty response. Check function logs in Appwrite console."
+        "Function returned empty response. Check function logs in Appwrite console.",
       );
     }
 
@@ -167,7 +167,7 @@ export async function createPaymentOrder(
  * @returns Promise resolving to success response or rejecting with error
  */
 export async function openRazorpayCheckout(
-  options: RazorpayCheckoutOptions
+  options: RazorpayCheckoutOptions,
 ): Promise<RazorpaySuccessResponse> {
   if (!isRazorpayConfigured()) {
     throw new Error("Razorpay is not configured");
@@ -212,7 +212,7 @@ export async function handlePaymentSuccess(
   courseId: string,
   studentId: string,
   amount: number,
-  currency: string = DEFAULT_CURRENCY
+  currency: string = DEFAULT_CURRENCY,
 ): Promise<PurchaseDocument> {
   logPaymentEvent("Processing payment success", {
     paymentId: response.razorpay_payment_id,
@@ -223,7 +223,7 @@ export async function handlePaymentSuccess(
   const isValidFormat = verifySignatureFormat(
     response.razorpay_order_id,
     response.razorpay_payment_id,
-    response.razorpay_signature
+    response.razorpay_signature,
   );
 
   if (!isValidFormat) {
@@ -300,7 +300,7 @@ export async function handlePaymentSuccess(
  */
 async function autoEnrollAfterPurchase(
   studentId: string,
-  courseId: string
+  courseId: string,
 ): Promise<void> {
   try {
     const alreadyEnrolled = await isStudentEnrolled(studentId, courseId);
@@ -325,7 +325,7 @@ async function autoEnrollAfterPurchase(
  * @returns Error message string
  */
 export function handlePaymentFailure(
-  error: RazorpayErrorResponse | Error
+  error: RazorpayErrorResponse | Error,
 ): string {
   let errorMessage: string;
 
@@ -390,7 +390,7 @@ export function isPaymentCancelled(error: unknown): boolean {
  * @returns Payment result
  */
 export async function purchaseCourse(
-  options: PurchaseCourseOptions
+  options: PurchaseCourseOptions,
 ): Promise<PaymentResult> {
   const {
     courseId,
@@ -468,7 +468,7 @@ export async function purchaseCourse(
       courseId,
       student.$id,
       orderResponse.course.price,
-      orderResponse.order.currency
+      orderResponse.order.currency,
     );
 
     onPaymentSuccess?.(purchase);
@@ -490,7 +490,7 @@ export async function purchaseCourse(
 
     // Handle failure
     const errorMessage = handlePaymentFailure(
-      error as RazorpayErrorResponse | Error
+      error as RazorpayErrorResponse | Error,
     );
     onPaymentFailure?.(errorMessage);
 
@@ -514,7 +514,7 @@ export function courseRequiresPayment(course: CourseDocument): boolean {
 export async function canAccessCourse(
   studentId: string,
   courseId: string,
-  coursePrice: number
+  coursePrice: number,
 ): Promise<boolean> {
   // Free courses are accessible to all
   if (coursePrice <= 0) {

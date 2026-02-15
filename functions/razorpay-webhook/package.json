@@ -2,8 +2,8 @@
   "name": "razorpay-webhook",
   "version": "1.0.0",
   "description": "Appwrite Function to handle Razorpay webhook events",
-  "main": "src/main.js",
   "type": "module",
+  "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js"
   },

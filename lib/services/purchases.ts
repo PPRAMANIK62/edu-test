@@ -23,7 +23,7 @@ const { databaseId, tables } = APPWRITE_CONFIG;
  */
 export async function getPurchasesByStudent(
   studentId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<PurchaseDocument>> {
   const queries = [
     Query.equal("studentId", studentId),
@@ -49,7 +49,7 @@ export async function getPurchasesByStudent(
  */
 export async function getPurchasesByCourse(
   courseId: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
 ): Promise<PaginatedResponse<PurchaseDocument>> {
   const queries = [
     Query.equal("courseId", courseId),
@@ -74,7 +74,7 @@ export async function getPurchasesByCourse(
  * Get purchase by ID
  */
 export async function getPurchaseById(
-  purchaseId: string
+  purchaseId: string,
 ): Promise<PurchaseDocument | null> {
   try {
     const response = await databases.getRow<PurchaseDocument>({
@@ -93,7 +93,7 @@ export async function getPurchaseById(
  */
 export async function hasStudentPurchased(
   studentId: string,
-  courseId: string
+  courseId: string,
 ): Promise<boolean> {
   const response = await databases.listRows({
     databaseId: databaseId!,
@@ -114,7 +114,7 @@ export async function hasStudentPurchased(
  */
 export async function getPurchase(
   studentId: string,
-  courseId: string
+  courseId: string,
 ): Promise<PurchaseDocument | null> {
   const response = await databases.listRows<PurchaseDocument>({
     databaseId: databaseId!,
@@ -141,7 +141,7 @@ export async function getPurchase(
  * Create a new purchase
  */
 export async function createPurchase(
-  input: CreatePurchaseInput
+  input: CreatePurchaseInput,
 ): Promise<PurchaseDocument> {
   // Check if already purchased
   const existingPurchase = await getPurchase(input.studentId, input.courseId);
@@ -190,7 +190,7 @@ export async function getCourseRevenue(courseId: string): Promise<number> {
  * Get total revenue for a teacher (across all their courses)
  */
 export async function getTeacherRevenue(
-  courseIds: string[]
+  courseIds: string[],
 ): Promise<{ total: number; byCourse: Record<string, number> }> {
   const byCourse: Record<string, number> = {};
   let total = 0;
@@ -222,7 +222,7 @@ export async function getPurchaseCount(courseId: string): Promise<number> {
  */
 export async function getRecentPurchases(
   courseIds?: string[],
-  limit: number = 10
+  limit: number = 10,
 ): Promise<PurchaseDocument[]> {
   const queries: string[] = [
     Query.orderDesc("purchasedAt"),

@@ -23,7 +23,7 @@ const BrowseTab = () => {
   // Get unique teacher IDs
   const teacherIds = useMemo(
     () => [...new Set(coursesData?.documents.map((c) => c.teacherId) || [])],
-    [coursesData]
+    [coursesData],
   );
 
   // Fetch teacher names
@@ -40,7 +40,7 @@ const BrowseTab = () => {
     if (!coursesData?.documents) return [];
 
     const enrolledCourseIds = new Set(
-      enrollmentsData?.documents.map((e) => e.courseId) || []
+      enrollmentsData?.documents.map((e) => e.courseId) || [],
     );
 
     return coursesData.documents
@@ -63,7 +63,7 @@ const BrowseTab = () => {
           isPurchased: false,
           enrollmentCount: course.enrollmentCount,
           rating: course.rating,
-        })
+        }),
       );
   }, [coursesData, enrollmentsData, teacherNamesMap]);
 

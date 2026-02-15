@@ -50,7 +50,7 @@ export function buildQueries(options: QueryOptions = {}): string[] {
 export function dateRangeQuery(
   field: string,
   start?: Date,
-  end?: Date
+  end?: Date,
 ): string[] {
   const queries: string[] = [];
 
@@ -69,7 +69,7 @@ export function dateRangeQuery(
  * Get date range for time filter
  */
 export function getDateRangeFromFilter(
-  filter: "7d" | "30d" | "90d" | "1y" | "all"
+  filter: "7d" | "30d" | "90d" | "1y" | "all",
 ): { start: Date | undefined; end: Date } {
   const end = new Date();
   let start: Date | undefined;

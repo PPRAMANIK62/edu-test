@@ -87,7 +87,7 @@ export const UserList = ({ currentUserProfile }: UserListProps) => {
           text: "Confirm",
           onPress: () => updateRoleMutation.mutate({ userId, newRole }),
         },
-      ]
+      ],
     );
   };
 
@@ -101,7 +101,7 @@ export const UserList = ({ currentUserProfile }: UserListProps) => {
         return usersToFilter.filter((user) => user.role === "teacher");
       case "tas":
         return usersToFilter.filter(
-          (user) => user.role === "teaching_assistant"
+          (user) => user.role === "teaching_assistant",
         );
       case "students":
         return usersToFilter.filter((user) => user.role === "student");

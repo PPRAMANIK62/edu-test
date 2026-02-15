@@ -41,7 +41,7 @@ function verifyWebhookSignature(body, signature, secret) {
 
   return crypto.timingSafeEqual(
     Buffer.from(signature),
-    Buffer.from(expectedSignature)
+    Buffer.from(expectedSignature),
   );
 }
 
@@ -64,7 +64,7 @@ export default async ({ req, res, log, error }) => {
     error("RAZORPAY_WEBHOOK_SECRET not configured");
     return res.json(
       { success: false, error: "Server configuration error" },
-      500
+      500,
     );
   }
 
@@ -80,7 +80,7 @@ export default async ({ req, res, log, error }) => {
     const isValid = verifyWebhookSignature(
       bodyString,
       signature,
-      process.env.RAZORPAY_WEBHOOK_SECRET
+      process.env.RAZORPAY_WEBHOOK_SECRET,
     );
 
     if (!isValid) {
@@ -91,7 +91,7 @@ export default async ({ req, res, log, error }) => {
     error("Signature verification failed:", e.message);
     return res.json(
       { success: false, error: "Signature verification failed" },
-      401
+      401,
     );
   }
 
@@ -121,7 +121,7 @@ export default async ({ req, res, log, error }) => {
       error(`Missing environment variable: ${envVar}`);
       return res.json(
         { success: false, error: "Server configuration error" },
-        500
+        500,
       );
     }
   }
@@ -163,7 +163,7 @@ export default async ({ req, res, log, error }) => {
     error(`Error processing webhook event ${event}:`, e.message, e.stack);
     return res.json(
       { success: false, error: "Failed to process webhook" },
-      500
+      500,
     );
   }
 };
@@ -202,7 +202,7 @@ async function handlePaymentCaptured(databases, payload, log, error) {
   const existingPurchases = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID,
     process.env.APPWRITE_PURCHASES_TABLE_ID,
-    [Query.equal("razorpayPaymentId", paymentId)]
+    [Query.equal("razorpayPaymentId", paymentId)],
   );
 
   if (existingPurchases.total > 0) {
@@ -221,7 +221,7 @@ async function handlePaymentCaptured(databases, payload, log, error) {
         paymentStatus: "completed",
         webhookVerified: true,
         webhookReceivedAt: new Date().toISOString(),
-      }
+      },
     );
     log(`Updated existing purchase: ${existing.$id}`);
     return;
@@ -231,7 +231,7 @@ async function handlePaymentCaptured(databases, payload, log, error) {
   const orderPurchases = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID,
     process.env.APPWRITE_PURCHASES_TABLE_ID,
-    [Query.equal("razorpayOrderId", orderId)]
+    [Query.equal("razorpayOrderId", orderId)],
   );
 
   if (orderPurchases.total > 0) {
@@ -247,7 +247,7 @@ async function handlePaymentCaptured(databases, payload, log, error) {
         paymentMethod: paymentMethod || null,
         webhookVerified: true,
         webhookReceivedAt: new Date().toISOString(),
-      }
+      },
     );
     log(`Updated purchase with payment details: ${existing.$id}`);
 
@@ -280,7 +280,7 @@ async function handlePaymentCaptured(databases, payload, log, error) {
     [
       Permission.read(Role.user(studentId)),
       Permission.update(Role.user(studentId)),
-    ]
+    ],
   );
 
   log(`Created purchase record: ${purchase.$id}`);
@@ -308,14 +308,14 @@ async function handlePaymentFailed(databases, payload, log, error) {
   } = payment;
 
   log(
-    `Processing payment.failed: ${paymentId}, error: ${errorCode} - ${errorDescription}`
+    `Processing payment.failed: ${paymentId}, error: ${errorCode} - ${errorDescription}`,
   );
 
   // Find purchase by order ID
   const purchases = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID,
     process.env.APPWRITE_PURCHASES_TABLE_ID,
-    [Query.equal("razorpayOrderId", orderId)]
+    [Query.equal("razorpayOrderId", orderId)],
   );
 
   if (purchases.total === 0) {
@@ -341,7 +341,7 @@ async function handlePaymentFailed(databases, payload, log, error) {
       paymentStatus: "failed",
       webhookVerified: true,
       webhookReceivedAt: new Date().toISOString(),
-    }
+    },
   );
 
   log(`Updated purchase status to failed: ${purchase.$id}`);
@@ -366,7 +366,7 @@ async function handleRefundCreated(databases, payload, log, error) {
   const purchases = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID,
     process.env.APPWRITE_PURCHASES_TABLE_ID,
-    [Query.equal("razorpayPaymentId", paymentId)]
+    [Query.equal("razorpayPaymentId", paymentId)],
   );
 
   if (purchases.total === 0) {
@@ -385,7 +385,7 @@ async function handleRefundCreated(databases, payload, log, error) {
       paymentStatus: "refunded",
       webhookVerified: true,
       webhookReceivedAt: new Date().toISOString(),
-    }
+    },
   );
 
   log(`Updated purchase status to refunded: ${purchase.$id}`);
@@ -398,11 +398,11 @@ async function createEnrollmentIfNotExists(
   databases,
   studentId,
   courseId,
-  log
+  log,
 ) {
   if (!process.env.APPWRITE_ENROLLMENTS_TABLE_ID) {
     log(
-      "APPWRITE_ENROLLMENTS_TABLE_ID not configured, skipping enrollment creation"
+      "APPWRITE_ENROLLMENTS_TABLE_ID not configured, skipping enrollment creation",
     );
     return;
   }
@@ -411,12 +411,12 @@ async function createEnrollmentIfNotExists(
   const enrollments = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID,
     process.env.APPWRITE_ENROLLMENTS_TABLE_ID,
-    [Query.equal("studentId", studentId), Query.equal("courseId", courseId)]
+    [Query.equal("studentId", studentId), Query.equal("courseId", courseId)],
   );
 
   if (enrollments.total > 0) {
     log(
-      `Enrollment already exists for student ${studentId} in course ${courseId}`
+      `Enrollment already exists for student ${studentId} in course ${courseId}`,
     );
     return;
   }
@@ -439,7 +439,7 @@ async function createEnrollmentIfNotExists(
     [
       Permission.read(Role.user(studentId)),
       Permission.update(Role.user(studentId)),
-    ]
+    ],
   );
 
   log(`Created enrollment: ${enrollment.$id}`);
