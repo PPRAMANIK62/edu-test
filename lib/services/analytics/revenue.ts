@@ -5,19 +5,11 @@
  */
 
 import type { AnalyticsQueryOptions, RevenueMetrics } from "@/types";
-import { Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../../appwrite";
-import { fetchAllRows } from "../../appwrite-helpers";
-import { dateRangeQuery, getDateRangeFromFilter } from "../helpers";
-import type {
-  CourseDocument,
-  EnrollmentDocument,
-  PurchaseDocument,
-  TestDocument,
-} from "../types";
+import { supabase } from "../../supabase";
+import { fetchAllRows, TABLES } from "../../supabase-helpers";
+import { getDateRangeFromFilter } from "../helpers";
+import type { CourseRow, EnrollmentRow, PurchaseRow, TestRow } from "../types";
 import { calculatePercentageChange, getPreviousPeriodRange } from "./helpers";
-
-const { databaseId, tables } = APPWRITE_CONFIG;
 
 /**
  * Calculate revenue analytics for a teacher
@@ -26,58 +18,49 @@ export async function getRevenueAnalytics(
   teacherId: string,
   options: AnalyticsQueryOptions = {},
 ): Promise<RevenueMetrics> {
-  const { timeRange = "30d" } = options;
+  const { time_range = "30d" } = options;
 
   // Get teacher's courses
-  const courseResponse = await databases.listRows<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    queries: [Query.equal("teacherId", teacherId), Query.limit(100)],
-  });
+  const { data: courseData, error: courseError } = await supabase
+    .from(TABLES.courses)
+    .select("*")
+    .eq("teacher_id", teacherId)
+    .limit(100);
 
-  const teacherCourses = courseResponse.rows as CourseDocument[];
-  const courseIds = teacherCourses.map((c) => c.$id);
+  if (courseError) throw courseError;
+
+  const teacherCourses = (courseData ?? []) as CourseRow[];
+  const courseIds = teacherCourses.map((c) => c.id);
 
   if (courseIds.length === 0) {
     return {
-      totalRevenue: 0,
-      revenueByMonth: [],
-      topCourses: [],
+      total_revenue: 0,
+      revenue_by_month: [],
+      top_courses: [],
       trends: {
-        percentageChange: 0,
-        comparisonPeriod: `vs. previous ${timeRange}`,
+        percentage_change: 0,
+        comparison_period: `vs. previous ${time_range}`,
       },
     };
   }
 
-  // Build date range queries
-  const { start: currentStart } = getDateRangeFromFilter(timeRange);
-  const currentDateQueries = currentStart
-    ? dateRangeQuery("purchasedAt", currentStart)
-    : [];
+  const { start: currentStart } = getDateRangeFromFilter(time_range);
 
-  // Get all purchases for teacher's courses in current period
-  // Note: Appwrite Query.equal with array does an OR operation
-  const purchaseQueries = [
-    Query.equal("courseId", courseIds),
-    ...currentDateQueries,
-  ];
+  const purchases = await fetchAllRows<PurchaseRow>(TABLES.purchases, (q) => {
+    let query = q.in("course_id", courseIds);
+    if (currentStart) {
+      query = query.gte("purchased_at", currentStart.toISOString());
+    }
+    return query;
+  });
 
-  const purchaseResponse = await fetchAllRows<PurchaseDocument>(
-    tables.purchases!,
-    purchaseQueries,
-  );
-
-  const purchases = purchaseResponse.rows;
-
-  // Calculate total revenue
   const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
 
   // Calculate revenue by month
   const monthlyRevenue = new Map<string, number>();
 
   purchases.forEach((purchase) => {
-    const date = new Date(purchase.purchasedAt);
+    const date = new Date(purchase.purchased_at);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     monthlyRevenue.set(
       monthKey,
@@ -85,7 +68,6 @@ export async function getRevenueAnalytics(
     );
   });
 
-  // Sort by month and format
   const sortedMonths = Array.from(monthlyRevenue.entries()).sort(([a], [b]) =>
     a.localeCompare(b),
   );
@@ -103,70 +85,67 @@ export async function getRevenueAnalytics(
   const courseRevenue = new Map<string, number>();
   purchases.forEach((purchase) => {
     courseRevenue.set(
-      purchase.courseId,
-      (courseRevenue.get(purchase.courseId) || 0) + purchase.amount,
+      purchase.course_id,
+      (courseRevenue.get(purchase.course_id) || 0) + purchase.amount,
     );
   });
 
-  // Get top 5 courses by revenue
   const topCourseIds = Array.from(courseRevenue.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([courseId]) => courseId);
+    .map(([id]) => id);
 
   const enrollmentCountsMap = new Map<string, number>();
   const testCountsMap = new Map<string, number>();
   if (topCourseIds.length > 0) {
-    const [enrollmentResponse, testResponse] = await Promise.all([
-      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-        Query.equal("courseId", topCourseIds),
-      ]),
-      fetchAllRows<TestDocument>(tables.tests!, [
-        Query.equal("courseId", topCourseIds),
-      ]),
+    const [topEnrollments, topTests] = await Promise.all([
+      fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+        q.in("course_id", topCourseIds),
+      ),
+      fetchAllRows<TestRow>(TABLES.tests, (q) =>
+        q.in("course_id", topCourseIds),
+      ),
     ]);
 
-    enrollmentResponse.rows.forEach((enrollment) => {
+    topEnrollments.forEach((enrollment) => {
       enrollmentCountsMap.set(
-        enrollment.courseId,
-        (enrollmentCountsMap.get(enrollment.courseId) || 0) + 1,
+        enrollment.course_id,
+        (enrollmentCountsMap.get(enrollment.course_id) || 0) + 1,
       );
     });
 
-    testResponse.rows.forEach((test) => {
+    topTests.forEach((test) => {
       testCountsMap.set(
-        test.courseId,
-        (testCountsMap.get(test.courseId) || 0) + 1,
+        test.course_id,
+        (testCountsMap.get(test.course_id) || 0) + 1,
       );
     });
   }
 
-  // Build top courses with stats
-  const topCourses = topCourseIds.map((courseId) => {
-    const course = teacherCourses.find((c) => c.$id === courseId);
+  const topCourses = topCourseIds.map((id) => {
+    const course = teacherCourses.find((c) => c.id === id);
     return {
-      courseId,
-      courseTitle: course?.title || "Unknown Course",
-      revenue: courseRevenue.get(courseId) || 0,
-      enrollmentCount: enrollmentCountsMap.get(courseId) || 0,
-      testCount: testCountsMap.get(courseId) || 0,
+      course_id: id,
+      course_title: course?.title || "Unknown Course",
+      revenue: courseRevenue.get(id) || 0,
+      enrollment_count: enrollmentCountsMap.get(id) || 0,
+      test_count: testCountsMap.get(id) || 0,
     };
   });
 
   // Calculate previous period for trends
-  const previousRange = getPreviousPeriodRange(timeRange);
+  const previousRange = getPreviousPeriodRange(time_range);
 
-  const previousPurchaseQueries = [
-    Query.equal("courseId", courseIds),
-    ...dateRangeQuery("purchasedAt", previousRange.start, previousRange.end),
-  ];
-
-  const previousPurchaseResponse = await fetchAllRows<PurchaseDocument>(
-    tables.purchases!,
-    previousPurchaseQueries,
+  const previousPurchases = await fetchAllRows<PurchaseRow>(
+    TABLES.purchases,
+    (q) =>
+      q
+        .in("course_id", courseIds)
+        .gte("purchased_at", previousRange.start.toISOString())
+        .lte("purchased_at", previousRange.end.toISOString()),
   );
 
-  const previousRevenue = previousPurchaseResponse.rows.reduce(
+  const previousRevenue = previousPurchases.reduce(
     (sum, p) => sum + p.amount,
     0,
   );
@@ -176,12 +155,12 @@ export async function getRevenueAnalytics(
   );
 
   return {
-    totalRevenue,
-    revenueByMonth,
-    topCourses,
+    total_revenue: totalRevenue,
+    revenue_by_month: revenueByMonth,
+    top_courses: topCourses,
     trends: {
-      percentageChange,
-      comparisonPeriod: `vs. previous ${timeRange}`,
+      percentage_change: percentageChange,
+      comparison_period: `vs. previous ${time_range}`,
     },
   };
 }

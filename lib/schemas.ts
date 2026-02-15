@@ -145,90 +145,97 @@ export type MCQFormSchemaData = z.infer<typeof mcqFormSchema>;
 // ============================================
 
 export const createCourseInputSchema = z.object({
-  teacherId: z.string().min(1, "Teacher ID is required"),
+  teacher_id: z.string().min(1, "Teacher ID is required"),
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().min(1, "Description is required").max(2000),
-  imageUrl: z.string().min(1, "Image URL is required").max(500),
+  image_url: z.string().min(1, "Image URL is required").max(500),
   price: z.number().min(0, "Price must be non-negative"),
   currency: z.string().max(10).optional(),
   subjects: z.array(z.string()).min(1, "At least one subject required"),
-  estimatedHours: z.number().int().positive("Estimated hours must be positive"),
-  isPublished: z.boolean().optional(),
+  estimated_hours: z
+    .number()
+    .int()
+    .positive("Estimated hours must be positive"),
+  is_published: z.boolean().optional(),
 });
 
 export const updateCourseInputSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().min(1).max(2000).optional(),
-  imageUrl: z.string().min(1).max(500).optional(),
+  image_url: z.string().min(1).max(500).optional(),
   price: z.number().min(0).optional(),
   currency: z.string().max(10).optional(),
   subjects: z.array(z.string()).optional(),
-  estimatedHours: z.number().int().positive().optional(),
-  isPublished: z.boolean().optional(),
+  estimated_hours: z.number().int().positive().optional(),
+  is_published: z.boolean().optional(),
 });
 
 export const createTestInputSchema = z.object({
-  courseId: z.string().min(1, "Course ID is required"),
+  course_id: z.string().min(1, "Course ID is required"),
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().min(1, "Description is required").max(2000),
-  durationMinutes: z.number().int().positive("Duration must be positive"),
-  passingScore: z.number().int().min(0).max(100, "Passing score must be 0-100"),
-  isPublished: z.boolean().optional(),
+  duration_minutes: z.number().int().positive("Duration must be positive"),
+  passing_score: z
+    .number()
+    .int()
+    .min(0)
+    .max(100, "Passing score must be 0-100"),
+  is_published: z.boolean().optional(),
 });
 
 export const updateTestInputSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().min(1).max(2000).optional(),
-  durationMinutes: z.number().int().positive().optional(),
-  passingScore: z.number().int().min(0).max(100).optional(),
-  isPublished: z.boolean().optional(),
+  duration_minutes: z.number().int().positive().optional(),
+  passing_score: z.number().int().min(0).max(100).optional(),
+  is_published: z.boolean().optional(),
 });
 
 export const createQuestionInputSchema = z.object({
-  testId: z.string().min(1, "Test ID is required"),
-  subjectId: z.string().min(1, "Subject ID is required"),
-  subjectName: z.string().min(1, "Subject name is required").max(100),
+  test_id: z.string().min(1, "Test ID is required"),
+  subject_id: z.string().min(1, "Subject ID is required"),
+  subject_name: z.string().min(1, "Subject name is required").max(100),
   type: z.enum(["mcq"]).optional(),
   text: z.string().min(1, "Question text is required").max(2000),
   options: z.array(z.string()).min(2, "At least 2 options required"),
-  correctIndex: z.number().int().min(0, "Correct index must be non-negative"),
+  correct_index: z.number().int().min(0, "Correct index must be non-negative"),
   explanation: z.string().min(1, "Explanation is required").max(2000),
   order: z.number().int().min(0),
 });
 
 export const updateQuestionInputSchema = z.object({
-  subjectId: z.string().min(1).optional(),
-  subjectName: z.string().min(1).max(100).optional(),
+  subject_id: z.string().min(1).optional(),
+  subject_name: z.string().min(1).max(100).optional(),
   text: z.string().min(1).max(2000).optional(),
   options: z.array(z.string()).min(2).optional(),
-  correctIndex: z.number().int().min(0).optional(),
+  correct_index: z.number().int().min(0).optional(),
   explanation: z.string().min(1).max(2000).optional(),
   order: z.number().int().min(0).optional(),
 });
 
 export const createEnrollmentInputSchema = z.object({
-  studentId: z.string().min(1, "Student ID is required"),
-  courseId: z.string().min(1, "Course ID is required"),
+  student_id: z.string().min(1, "Student ID is required"),
+  course_id: z.string().min(1, "Course ID is required"),
 });
 
 export const createPurchaseInputSchema = z.object({
-  studentId: z.string().min(1, "Student ID is required"),
-  courseId: z.string().min(1, "Course ID is required"),
+  student_id: z.string().min(1, "Student ID is required"),
+  course_id: z.string().min(1, "Course ID is required"),
   amount: z.number().positive("Amount must be positive"),
   currency: z.string().max(10).optional(),
-  razorpayOrderId: z.string().optional(),
-  razorpayPaymentId: z.string().optional(),
-  razorpaySignature: z.string().optional(),
-  paymentStatus: z
+  razorpay_order_id: z.string().optional(),
+  razorpay_payment_id: z.string().optional(),
+  razorpay_signature: z.string().optional(),
+  payment_status: z
     .enum(["pending", "completed", "failed", "refunded"])
     .optional(),
-  paymentMethod: z.string().optional(),
+  payment_method: z.string().optional(),
 });
 
 export const startAttemptInputSchema = z.object({
-  studentId: z.string().min(1, "Student ID is required"),
-  testId: z.string().min(1, "Test ID is required"),
-  courseId: z.string().min(1, "Course ID is required"),
+  student_id: z.string().min(1, "Student ID is required"),
+  test_id: z.string().min(1, "Test ID is required"),
+  course_id: z.string().min(1, "Course ID is required"),
 });
 
 // ============================================

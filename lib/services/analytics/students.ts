@@ -4,16 +4,8 @@
  * Functions for calculating student-level statistics.
  */
 
-import { Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../../appwrite";
-import { fetchAllRows } from "../../appwrite-helpers";
-import type {
-  EnrollmentDocument,
-  PurchaseDocument,
-  TestAttemptDocument,
-} from "../types";
-
-const { databaseId, tables } = APPWRITE_CONFIG;
+import { countRows, fetchAllRows, TABLES } from "../../supabase-helpers";
+import type { EnrollmentRow, PurchaseRow, TestAttemptRow } from "../types";
 
 /**
  * Get detailed stats for a specific student
@@ -24,23 +16,19 @@ export async function getStudentStats(studentId: string): Promise<{
   averageScore: number;
   totalSpent: number;
 }> {
-  const [enrollmentResponse, attemptResponse, purchaseResponse] =
-    await Promise.all([
-      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-        Query.equal("studentId", studentId),
-      ]),
-      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
-        Query.equal("studentId", studentId),
-        Query.equal("status", "completed"),
-      ]),
-      fetchAllRows<PurchaseDocument>(tables.purchases!, [
-        Query.equal("studentId", studentId),
-      ]),
-    ]);
+  const [enrollments, attempts, purchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.eq("student_id", studentId),
+    ),
+    fetchAllRows<TestAttemptRow>(TABLES.test_attempts, (q) =>
+      q.eq("student_id", studentId).eq("status", "completed"),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q.eq("student_id", studentId),
+    ),
+  ]);
 
-  const enrolledCourses = enrollmentResponse.total;
-
-  const attempts = attemptResponse.rows;
+  const enrolledCourses = enrollments.length;
   const completedTests = attempts.length;
   const averageScore =
     attempts.length > 0
@@ -48,10 +36,7 @@ export async function getStudentStats(studentId: string): Promise<{
         attempts.length
       : 0;
 
-  const totalSpent = purchaseResponse.rows.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
+  const totalSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
 
   return {
     enrolledCourses,
@@ -79,21 +64,18 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
     return new Map();
   }
 
-  const [enrollmentResponse, attemptResponse, purchaseResponse] =
-    await Promise.all([
-      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-        Query.equal("studentId", studentIds),
-      ]),
-      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
-        Query.equal("studentId", studentIds),
-        Query.equal("status", "completed"),
-      ]),
-      fetchAllRows<PurchaseDocument>(tables.purchases!, [
-        Query.equal("studentId", studentIds),
-      ]),
-    ]);
+  const [enrollments, attempts, purchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.in("student_id", studentIds),
+    ),
+    fetchAllRows<TestAttemptRow>(TABLES.test_attempts, (q) =>
+      q.in("student_id", studentIds).eq("status", "completed"),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q.in("student_id", studentIds),
+    ),
+  ]);
 
-  // Aggregate data per student
   const statsMap = new Map<
     string,
     {
@@ -105,7 +87,6 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
     }
   >();
 
-  // Initialize all students
   studentIds.forEach((id) => {
     statsMap.set(id, {
       enrolledCourses: 0,
@@ -116,17 +97,15 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
     });
   });
 
-  // Count enrollments
-  enrollmentResponse.rows.forEach((enrollment) => {
-    const stats = statsMap.get(enrollment.studentId);
+  enrollments.forEach((enrollment) => {
+    const stats = statsMap.get(enrollment.student_id);
     if (stats) {
       stats.enrolledCourses += 1;
     }
   });
 
-  // Count attempts and scores
-  attemptResponse.rows.forEach((attempt) => {
-    const stats = statsMap.get(attempt.studentId);
+  attempts.forEach((attempt) => {
+    const stats = statsMap.get(attempt.student_id);
     if (stats) {
       stats.completedTests += 1;
       stats.totalScore += attempt.percentage || 0;
@@ -134,15 +113,13 @@ export async function getStudentsWithStats(studentIds: string[]): Promise<
     }
   });
 
-  // Sum purchases
-  purchaseResponse.rows.forEach((purchase) => {
-    const stats = statsMap.get(purchase.studentId);
+  purchases.forEach((purchase) => {
+    const stats = statsMap.get(purchase.student_id);
     if (stats) {
       stats.totalSpent += purchase.amount;
     }
   });
 
-  // Convert to final format with computed averages
   const result = new Map<
     string,
     {
@@ -173,15 +150,7 @@ export async function getTestAttemptCount(
   studentId: string,
   testId: string,
 ): Promise<number> {
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("testId", testId),
-      Query.limit(1),
-    ],
-  });
-
-  return response.total;
+  return countRows(TABLES.test_attempts, (q) =>
+    q.eq("student_id", studentId).eq("test_id", testId),
+  );
 }

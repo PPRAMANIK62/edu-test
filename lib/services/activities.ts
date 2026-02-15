@@ -1,233 +1,170 @@
-/**
- * Activity Service
- * Handles activity logging and retrieval
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { buildQueries, parseJSON, type QueryOptions } from "./helpers";
+import { supabase } from "../supabase";
+import { DEFAULT_LIMIT, MAX_LIMIT, type QueryOptions } from "./helpers";
 import type {
-  ActivityDocument,
+  ActivityRow,
   CreateActivityInput,
   PaginatedResponse,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-// ============================================================================
-// Query Functions
-// ============================================================================
-
-/**
- * Get activities by user ID
- */
 export async function getActivitiesByUser(
-  userId: string,
+  user_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<ActivityDocument>> {
-  const queries = [
-    Query.equal("userId", userId),
-    Query.orderDesc("$createdAt"),
-    ...buildQueries(options),
-  ];
+): Promise<PaginatedResponse<ActivityRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<ActivityDocument>({
-    databaseId: databaseId!,
-    tableId: tables.activities!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("activities")
+    .select("*", { count: "exact" })
+    .eq("user_id", user_id)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
+  if (error) throw error;
+  const rows = (data ?? []) as ActivityRow[];
   return {
-    documents: response.rows,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get recent activities with a limit (convenience function)
- */
 export async function getRecentActivitiesByUser(
-  userId: string,
+  user_id: string,
   limit: number = 10,
-): Promise<ActivityDocument[]> {
-  const result = await getActivitiesByUser(userId, { limit });
+): Promise<ActivityRow[]> {
+  const result = await getActivitiesByUser(user_id, { limit });
   return result.documents;
 }
 
-/**
- * Get activity by ID
- */
 export async function getActivityById(
   activityId: string,
-): Promise<ActivityDocument | null> {
-  try {
-    const response = await databases.getRow<ActivityDocument>({
-      databaseId: databaseId!,
-      tableId: tables.activities!,
-      rowId: activityId,
-    });
-    return response;
-  } catch {
-    return null;
-  }
+): Promise<ActivityRow | null> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("*")
+    .eq("id", activityId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data as ActivityRow | null;
 }
 
-/**
- * Get activities by type for a user
- */
 export async function getActivitiesByType(
-  userId: string,
+  user_id: string,
   type: "test_completed" | "course_started" | "achievement",
   options: QueryOptions = {},
-): Promise<PaginatedResponse<ActivityDocument>> {
-  const queries = [
-    Query.equal("userId", userId),
-    Query.equal("type", type),
-    Query.orderDesc("$createdAt"),
-    ...buildQueries(options),
-  ];
+): Promise<PaginatedResponse<ActivityRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<ActivityDocument>({
-    databaseId: databaseId!,
-    tableId: tables.activities!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("activities")
+    .select("*", { count: "exact" })
+    .eq("user_id", user_id)
+    .eq("type", type)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
+  if (error) throw error;
+  const rows = (data ?? []) as ActivityRow[];
   return {
-    documents: response.rows,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-// ============================================================================
-// Mutation Functions
-// ============================================================================
-
-/**
- * Create a new activity (log activity)
- */
+// metadata is jsonb — written directly, no JSON.stringify needed
 export async function logActivity(
   input: CreateActivityInput,
-): Promise<ActivityDocument> {
-  const response = await databases.createRow<ActivityDocument>({
-    databaseId: databaseId!,
-    tableId: tables.activities!,
-    rowId: ID.unique(),
-    data: {
-      userId: input.userId,
+): Promise<ActivityRow> {
+  const { data, error } = await supabase
+    .from("activities")
+    .insert({
+      user_id: input.user_id,
       type: input.type,
       title: input.title,
       subtitle: input.subtitle,
-      metadata: JSON.stringify(input.metadata || {}),
-    },
-  });
+      metadata: input.metadata || {},
+    })
+    .select()
+    .single();
 
-  return response;
+  if (error) throw error;
+  return data as ActivityRow;
 }
 
-/**
- * Log a test completed activity
- */
 export async function logTestCompleted(
-  userId: string,
+  user_id: string,
   testTitle: string,
   score: number,
   passed: boolean,
-  testId?: string,
-  attemptId?: string,
-): Promise<ActivityDocument> {
+  test_id?: string,
+  attempt_id?: string,
+): Promise<ActivityRow> {
   return logActivity({
-    userId,
+    user_id,
     type: "test_completed",
     title: `Completed: ${testTitle}`,
     subtitle: `Score: ${score}% - ${passed ? "Passed" : "Failed"}`,
-    metadata: {
-      testId,
-      attemptId,
-      score,
-      passed,
-    },
+    metadata: { test_id, attempt_id, score, passed },
   });
 }
 
-/**
- * Log a course started activity
- */
 export async function logCourseStarted(
-  userId: string,
+  user_id: string,
   courseTitle: string,
-  courseId?: string,
-): Promise<ActivityDocument> {
+  course_id?: string,
+): Promise<ActivityRow> {
   return logActivity({
-    userId,
+    user_id,
     type: "course_started",
     title: `Started: ${courseTitle}`,
     subtitle: "New course enrollment",
-    metadata: {
-      courseId,
-    },
+    metadata: { course_id },
   });
 }
 
-/**
- * Log an achievement activity
- */
 export async function logAchievement(
-  userId: string,
+  user_id: string,
   title: string,
   description: string,
   achievementType?: string,
-): Promise<ActivityDocument> {
+): Promise<ActivityRow> {
   return logActivity({
-    userId,
+    user_id,
     type: "achievement",
     title,
     subtitle: description,
-    metadata: {
-      achievementType,
-    },
+    metadata: { achievementType },
   });
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Parse metadata from activity
- */
+// metadata is jsonb — already parsed, no JSON.parse needed
 export function getActivityMetadata<T = Record<string, unknown>>(
-  activity: ActivityDocument,
+  activity: ActivityRow,
 ): T {
-  return parseJSON<T>(activity.metadata, {} as T);
+  return (activity.metadata ?? {}) as T;
 }
 
-/**
- * Delete an activity
- */
 export async function deleteActivity(activityId: string): Promise<void> {
-  await databases.deleteRow({
-    databaseId: databaseId!,
-    tableId: tables.activities!,
-    rowId: activityId,
-  });
+  const { error } = await supabase
+    .from("activities")
+    .delete()
+    .eq("id", activityId);
+  if (error) throw error;
 }
 
-/**
- * Delete all activities for a user
- * Use with caution - primarily for account cleanup
- */
-export async function deleteActivitiesByUser(userId: string): Promise<number> {
+export async function deleteActivitiesByUser(user_id: string): Promise<number> {
   let deleted = 0;
   let hasMore = true;
 
   while (hasMore) {
-    const result = await getActivitiesByUser(userId, { limit: 100 });
+    const result = await getActivitiesByUser(user_id, { limit: 100 });
 
     for (const activity of result.documents) {
-      await deleteActivity(activity.$id);
+      await deleteActivity(activity.id);
       deleted++;
     }
 
@@ -237,21 +174,14 @@ export async function deleteActivitiesByUser(userId: string): Promise<number> {
   return deleted;
 }
 
-// ============================================================================
-// Analytics Functions
-// ============================================================================
-
-/**
- * Get activity count by type for a user
- */
 export async function getActivityCountByType(
-  userId: string,
+  user_id: string,
 ): Promise<Record<string, number>> {
   const types = ["test_completed", "course_started", "achievement"] as const;
   const counts: Record<string, number> = {};
 
   for (const type of types) {
-    const result = await getActivitiesByType(userId, type, { limit: 1 });
+    const result = await getActivitiesByType(user_id, type, { limit: 1 });
     counts[type] = result.total;
   }
 

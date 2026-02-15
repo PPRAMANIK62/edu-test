@@ -13,16 +13,16 @@ const BrowseCard = ({ course }: { course: Course }) => {
     <CourseCardBase
       title={course.title}
       description={course.description}
-      imageUrl={course.imageUrl}
+      imageUrl={course.image_url}
       onPress={() => router.push(`/(student)/courses/${course.id}`)}
       titleClassName="text-xl font-bold text-gray-900 mb-1"
       subtitle={
         <Text className="text-sm text-primary-600 font-medium">
-          {course.teacherName}
+          {course.teacher_name}
         </Text>
       }
       badge={
-        !course.isPurchased ? (
+        !course.is_purchased ? (
           <View className="bg-primary-600 rounded-lg px-3 py-1.5">
             <Text className="text-white font-bold text-sm">
               ₹{course.price}
@@ -35,19 +35,19 @@ const BrowseCard = ({ course }: { course: Course }) => {
           <View className="flex-row items-center">
             <Users size={16} color="#6b7280" />
             <Text className="text-sm text-gray-600 ml-1">
-              {course.enrollmentCount}
+              {course.enrollment_count}
             </Text>
           </View>
           <View className="flex-row items-center">
             <FileText size={16} color="#6b7280" />
             <Text className="text-sm text-gray-600 ml-1">
-              {course.totalTests} tests
+              {course.total_tests} tests
             </Text>
           </View>
           <View className="flex-row items-center">
             <Clock size={16} color="#6b7280" />
             <Text className="text-sm text-gray-600 ml-1">
-              {course.estimatedHours}h
+              {course.estimated_hours}h
             </Text>
           </View>
         </View>

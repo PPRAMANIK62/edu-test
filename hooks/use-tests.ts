@@ -14,7 +14,7 @@ import {
   queryKeys,
 } from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
-import { useAppwrite } from "@/providers/appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   createTest,
   createTestSubject,
@@ -30,7 +30,7 @@ import {
 } from "@/lib/services/tests";
 import type {
   CreateTestInput,
-  TestDocument,
+  TestRow,
   UpdateTestInput,
 } from "@/lib/services/types";
 import { createQueryHook } from "./create-query-hook";
@@ -116,22 +116,19 @@ export const useTestSubjects = createQueryHook(
  */
 export function useCreateTest() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
-    mutationFn: (data: CreateTestInput) => createTest(data, userProfile!.$id),
+    mutationFn: (data: CreateTestInput) => createTest(data, userProfile!.id),
     onSuccess: (newTest) => {
-      // Invalidate test lists for the course
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.byCourse(newTest.courseId),
+        queryKey: queryKeys.tests.byCourse(newTest.course_id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.publishedByCourse(newTest.courseId),
+        queryKey: queryKeys.tests.publishedByCourse(newTest.course_id),
       });
-
-      // Invalidate course stats
       queryClient.invalidateQueries({
-        queryKey: queryKeys.courses.withStats(newTest.courseId),
+        queryKey: queryKeys.courses.withStats(newTest.course_id),
       });
     },
   });
@@ -150,27 +147,22 @@ export function useCreateTest() {
  */
 export function useUpdateTest() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({ testId, data }: { testId: string; data: UpdateTestInput }) =>
-      updateTest(testId, data, userProfile!.$id),
+      updateTest(testId, data, userProfile!.id),
     onSuccess: (updatedTest, { testId }) => {
-      // Update the cache directly
-      queryClient.setQueryData<TestDocument>(
+      queryClient.setQueryData<TestRow>(
         queryKeys.tests.detail(testId),
         updatedTest,
       );
-
-      // Invalidate related queries
       invalidateTest(queryClient, testId);
-
-      // Invalidate course test lists
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.byCourse(updatedTest.courseId),
+        queryKey: queryKeys.tests.byCourse(updatedTest.course_id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.publishedByCourse(updatedTest.courseId),
+        queryKey: queryKeys.tests.publishedByCourse(updatedTest.course_id),
       });
     },
   });
@@ -189,11 +181,11 @@ export function useUpdateTest() {
  */
 export function useDeleteTest() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({ testId }: { testId: string; courseId: string }) =>
-      deleteTest(testId, userProfile!.$id),
+      deleteTest(testId, userProfile!.id),
     onSuccess: (_, { testId, courseId }) => {
       // Remove from cache
       queryClient.removeQueries({
@@ -228,22 +220,21 @@ export function useDeleteTest() {
  */
 export function useCreateTestSubject() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: (data: {
-      testId: string;
+      test_id: string;
       name: string;
-      questionCount: number;
+      question_count: number;
       order: number;
-    }) => createTestSubject(data, userProfile!.$id),
-    onSuccess: (_, { testId }) => {
-      // Invalidate subject queries
+    }) => createTestSubject(data, userProfile!.id),
+    onSuccess: (_, { test_id }) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.subjects(testId),
+        queryKey: queryKeys.tests.subjects(test_id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.withSubjects(testId),
+        queryKey: queryKeys.tests.withSubjects(test_id),
       });
     },
   });
@@ -256,7 +247,7 @@ export function useCreateTestSubject() {
  */
 export function useUpdateTestSubject() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -266,8 +257,8 @@ export function useUpdateTestSubject() {
     }: {
       subjectId: string;
       testId: string;
-      data: Partial<{ name: string; questionCount: number; order: number }>;
-    }) => updateTestSubject(subjectId, data, testId, userProfile!.$id),
+      data: Partial<{ name: string; question_count: number; order: number }>;
+    }) => updateTestSubject(subjectId, data, testId, userProfile!.id),
     onSuccess: (_, { testId }) => {
       // Invalidate subject queries
       queryClient.invalidateQueries({
@@ -287,7 +278,7 @@ export function useUpdateTestSubject() {
  */
 export function useDeleteTestSubject() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -296,7 +287,7 @@ export function useDeleteTestSubject() {
     }: {
       subjectId: string;
       testId: string;
-    }) => deleteTestSubject(subjectId, testId, userProfile!.$id),
+    }) => deleteTestSubject(subjectId, testId, userProfile!.id),
     onSuccess: (_, { testId }) => {
       // Invalidate subject queries
       queryClient.invalidateQueries({

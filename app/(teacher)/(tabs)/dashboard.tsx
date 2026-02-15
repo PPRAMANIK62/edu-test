@@ -1,6 +1,6 @@
 import ErrorState from "@/components/error-state";
 import StatCard from "@/components/teacher/stat-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useCoursesByTeacher } from "@/hooks/use-courses";
 import { isTeacher } from "@/lib/permissions";
 import {
@@ -37,8 +37,8 @@ interface CoursePerformance {
 const TeacherDashboard = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
-  const teacherId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const teacherId = userProfile?.id;
 
   // Check permissions
   const canCreate = userProfile ? isTeacher(userProfile.role) : false;
@@ -75,7 +75,7 @@ const TeacherDashboard = () => {
 
   // Fetch course performance data
   const courseIds = useMemo(
-    () => coursesData?.documents.map((c) => c.$id) || [],
+    () => coursesData?.documents.map((c) => c.id) || [],
     [coursesData],
   );
 
@@ -116,9 +116,9 @@ const TeacherDashboard = () => {
     if (!coursesData || !coursePerformanceData) return [];
 
     return coursesData.documents.map((course) => {
-      const perfData = coursePerformanceData.get(course.$id);
+      const perfData = coursePerformanceData.get(course.id);
       return {
-        courseId: course.$id,
+        courseId: course.id,
         title: course.title,
         enrollmentCount: perfData?.enrollmentCount || 0,
         revenue: perfData?.revenue || 0,

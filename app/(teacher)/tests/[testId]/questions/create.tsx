@@ -28,9 +28,9 @@ export default function CreateQuestionScreen() {
 
   const [formData, setFormData] = useState<MCQFormData>({
     text: "",
-    subjectId: "",
+    subject_id: "",
     options: createDefaultOptions(),
-    correctOptionId: "",
+    correct_option_id: "",
     explanation: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -43,12 +43,12 @@ export default function CreateQuestionScreen() {
   const test = useMemo(() => {
     if (!testData) return null;
     return {
-      id: testData.$id,
+      id: testData.id,
       title: testData.title,
       subjects: testData.subjects.map((s) => ({
-        id: s.$id,
+        id: s.id,
         name: s.name,
-        questionCount: s.questionCount || 0,
+        question_count: s.question_count || 0,
       })),
     };
   }, [testData]);
@@ -65,7 +65,7 @@ export default function CreateQuestionScreen() {
   const isDirty =
     formData.text ||
     formData.options.some((o) => o.text) ||
-    formData.correctOptionId ||
+    formData.correct_option_id ||
     formData.explanation;
 
   const validate = (): boolean => {
@@ -80,7 +80,7 @@ export default function CreateQuestionScreen() {
   const handleCreate = () => {
     if (!validate() || !test) return;
 
-    const subject = test.subjects.find((s) => s.id === formData.subjectId);
+    const subject = test.subjects.find((s) => s.id === formData.subject_id);
     const nextOrder = (existingQuestions?.length || 0) + 1;
 
     // Filter out empty options
@@ -88,14 +88,14 @@ export default function CreateQuestionScreen() {
 
     createMutation.mutate(
       {
-        testId: testId,
-        subjectId: formData.subjectId,
-        subjectName: subject?.name || "",
+        test_id: testId,
+        subject_id: formData.subject_id,
+        subject_name: subject?.name || "",
         type: "mcq",
         text: formData.text.trim(),
         options: validOptions.map((o) => o.text),
-        correctIndex: validOptions.findIndex(
-          (o) => o.id === formData.correctOptionId,
+        correct_index: validOptions.findIndex(
+          (o) => o.id === formData.correct_option_id,
         ),
         explanation: formData.explanation.trim(),
         order: nextOrder,

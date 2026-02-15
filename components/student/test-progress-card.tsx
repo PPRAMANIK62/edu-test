@@ -28,7 +28,7 @@ const TestProgressCard = ({ course }: { course: Course }) => {
                 {course.title}
               </Text>
               <Text className="text-blue-100 text-sm">
-                {course.progress}% Complete • {course.totalTests} tests
+                {course.progress}% Complete • {course.total_tests} tests
               </Text>
             </View>
             <View className="bg-white/20 rounded-full p-3">

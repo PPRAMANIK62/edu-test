@@ -1,6 +1,6 @@
 import ErrorState from "@/components/error-state";
 import TestCard from "@/components/student/test-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useAvailableTests } from "@/hooks/use-available-tests";
 import { useEnrolledCourses } from "@/hooks/use-courses";
 import { useRouter } from "expo-router";
@@ -18,8 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const TestsTab = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   const {
     data: enrolledCoursesData,

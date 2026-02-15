@@ -15,8 +15,8 @@ const TestCard = ({ test, courseName }: Props) => {
     <TestCardBase
       title={test.title}
       description={test.description}
-      totalQuestions={test.totalQuestions}
-      durationMinutes={test.durationMinutes}
+      totalQuestions={test.total_questions}
+      durationMinutes={test.duration_minutes}
       onPress={() => router.push(`/(student)/test/${test.id}/intro`)}
       className="bg-white rounded-2xl p-4 shadow-sm mb-4"
       statsClassName="flex-row items-center gap-4 my-4"
@@ -28,11 +28,11 @@ const TestCard = ({ test, courseName }: Props) => {
         ) : undefined
       }
       stats={
-        test.bestScore ? (
+        test.best_score ? (
           <View className="flex-row items-center">
             <Trophy size={16} color="#38a169" />
             <Text className="text-sm text-green-600 ml-1 font-semibold">
-              {test.bestScore}%
+              {test.best_score}%
             </Text>
           </View>
         ) : undefined
@@ -40,9 +40,9 @@ const TestCard = ({ test, courseName }: Props) => {
       action={
         <View className="flex-row items-center justify-between">
           <Text className="text-sm text-gray-500">
-            {test.attemptCount === 0
+            {test.attempt_count === 0
               ? "Not attempted yet"
-              : `${test.attemptCount} attempt${test.attemptCount > 1 ? "s" : ""}`}
+              : `${test.attempt_count} attempt${test.attempt_count > 1 ? "s" : ""}`}
           </Text>
           <View className="bg-primary-600 rounded-lg px-4 py-2">
             <Text className="text-white font-semibold text-sm">Start Test</Text>

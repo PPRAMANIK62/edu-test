@@ -13,7 +13,7 @@ import {
   queryKeys,
 } from "@/lib/query-keys";
 import type { QueryOptions } from "@/lib/services/helpers";
-import { useAppwrite } from "@/providers/appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   bulkCreateQuestions,
   createQuestion,
@@ -26,7 +26,7 @@ import {
 } from "@/lib/services/questions";
 import type {
   CreateQuestionInput,
-  QuestionDocument,
+  QuestionRow,
   UpdateQuestionInput,
 } from "@/lib/services/types";
 import { createQueryHook } from "./create-query-hook";
@@ -107,23 +107,18 @@ export const useQuestion = createQueryHook(
  */
 export function useCreateQuestion() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: (data: CreateQuestionInput) =>
-      createQuestion(data, userProfile!.$id),
+      createQuestion(data, userProfile!.id),
     onSuccess: (newQuestion) => {
-      // Invalidate questions for the test
-      invalidateTestQuestions(queryClient, newQuestion.testId);
-
-      // Invalidate question count
+      invalidateTestQuestions(queryClient, newQuestion.test_id);
       queryClient.invalidateQueries({
-        queryKey: queryKeys.questions.count(newQuestion.testId),
+        queryKey: queryKeys.questions.count(newQuestion.test_id),
       });
-
-      // Invalidate course stats (question count)
       queryClient.invalidateQueries({
-        queryKey: queryKeys.tests.withSubjects(newQuestion.testId),
+        queryKey: queryKeys.tests.withSubjects(newQuestion.test_id),
       });
     },
   });
@@ -142,7 +137,7 @@ export function useCreateQuestion() {
  */
 export function useUpdateQuestion() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -152,15 +147,12 @@ export function useUpdateQuestion() {
       questionId: string;
       testId: string;
       data: UpdateQuestionInput;
-    }) => updateQuestion(questionId, data, userProfile!.$id),
+    }) => updateQuestion(questionId, data, userProfile!.id),
     onSuccess: (updatedQuestion, { questionId, testId }) => {
-      // Update the cache directly
-      queryClient.setQueryData<QuestionDocument>(
+      queryClient.setQueryData<QuestionRow>(
         queryKeys.questions.detail(questionId),
         updatedQuestion,
       );
-
-      // Invalidate test questions
       invalidateTestQuestions(queryClient, testId);
     },
   });
@@ -179,11 +171,11 @@ export function useUpdateQuestion() {
  */
 export function useDeleteQuestion() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({ questionId }: { questionId: string; testId: string }) =>
-      deleteQuestion(questionId, userProfile!.$id),
+      deleteQuestion(questionId, userProfile!.id),
     onSuccess: (_, { questionId, testId }) => {
       // Remove from cache
       queryClient.removeQueries({
@@ -214,7 +206,7 @@ export function useDeleteQuestion() {
  */
 export function useReorderQuestions() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -223,7 +215,7 @@ export function useReorderQuestions() {
     }: {
       testId: string;
       questionIds: string[];
-    }) => reorderQuestions(testId, questionIds, userProfile!.$id),
+    }) => reorderQuestions(testId, questionIds, userProfile!.id),
     onSuccess: (_, { testId }) => {
       // Invalidate questions for the test
       invalidateTestQuestions(queryClient, testId);
@@ -244,7 +236,7 @@ export function useReorderQuestions() {
  */
 export function useBulkCreateQuestions() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -252,7 +244,7 @@ export function useBulkCreateQuestions() {
     }: {
       testId: string;
       questions: CreateQuestionInput[];
-    }) => bulkCreateQuestions(questions, userProfile!.$id),
+    }) => bulkCreateQuestions(questions, userProfile!.id),
     onSuccess: (_, { testId }) => {
       // Invalidate questions for the test
       invalidateTestQuestions(queryClient, testId);

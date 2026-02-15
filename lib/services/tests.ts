@@ -1,374 +1,285 @@
-/**
- * Test Service - CRUD operations for tests
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows } from "../appwrite-helpers";
+import { supabase } from "../supabase";
+import { fetchAllRows } from "../supabase-helpers";
 import { createTestInputSchema, updateTestInputSchema } from "../schemas";
 import { getCourseById } from "./courses";
-import { buildQueries, requireOwnership, type QueryOptions } from "./helpers";
+import {
+  requireOwnership,
+  DEFAULT_LIMIT,
+  MAX_LIMIT,
+  type QueryOptions,
+} from "./helpers";
 import type {
   CreateTestInput,
   PaginatedResponse,
-  QuestionDocument,
-  TestDocument,
-  TestSubjectDocument,
+  QuestionRow,
+  TestRow,
+  TestSubjectRow,
   UpdateTestInput,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-/**
- * Get tests for a course
- */
 export async function getTestsByCourse(
-  courseId: string,
+  course_id: string,
   options: QueryOptions = {},
 ): Promise<
-  PaginatedResponse<
-    TestDocument & { questionCount: number; subjectCount: number }
-  >
+  PaginatedResponse<TestRow & { question_count: number; subject_count: number }>
 > {
-  const queries = [
-    Query.equal("courseId", courseId),
-    ...buildQueries({ ...options, orderBy: options.orderBy || "$createdAt" }),
-  ];
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<TestDocument>({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("tests")
+    .select("*", { count: "exact" })
+    .eq("course_id", course_id)
+    .order(options.orderBy || "created_at", {
+      ascending: options.orderType === "asc",
+    })
+    .range(offset, offset + limit - 1);
 
-  const documents = response.rows as TestDocument[];
+  if (error) throw error;
+  const rows = (data ?? []) as TestRow[];
 
-  if (documents.length === 0) {
+  if (rows.length === 0) {
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Get test IDs
-  const testIds = documents.map((t) => t.$id);
+  const testIds = rows.map((t) => t.id);
 
-  // Fetch question counts
-  const questionResponse = await fetchAllRows<QuestionDocument>(
-    tables.questions!,
-    [Query.equal("testId", testIds)],
-  );
+  const [questions, subjects] = await Promise.all([
+    fetchAllRows<QuestionRow>("questions", (q) => q.in("test_id", testIds)),
+    fetchAllRows<TestSubjectRow>("test_subjects", (q) =>
+      q.in("test_id", testIds),
+    ),
+  ]);
 
-  // Fetch subject counts
-  const subjectResponse = await fetchAllRows<TestSubjectDocument>(
-    tables.testSubjects!,
-    [Query.equal("testId", testIds)],
-  );
-
-  // Build question count map
   const questionCountMap = new Map<string, number>();
-  for (const question of questionResponse.rows) {
-    questionCountMap.set(
-      question.testId,
-      (questionCountMap.get(question.testId) || 0) + 1,
-    );
+  for (const q of questions) {
+    questionCountMap.set(q.test_id, (questionCountMap.get(q.test_id) || 0) + 1);
   }
 
-  // Build subject count map
   const subjectCountMap = new Map<string, number>();
-  for (const subject of subjectResponse.rows) {
-    subjectCountMap.set(
-      subject.testId,
-      (subjectCountMap.get(subject.testId) || 0) + 1,
-    );
+  for (const s of subjects) {
+    subjectCountMap.set(s.test_id, (subjectCountMap.get(s.test_id) || 0) + 1);
   }
 
-  // Merge counts with tests
-  const testsWithCounts = documents.map((test) => ({
+  const testsWithCounts = rows.map((test) => ({
     ...test,
-    questionCount: questionCountMap.get(test.$id) || 0,
-    subjectCount: subjectCountMap.get(test.$id) || 0,
+    question_count: questionCountMap.get(test.id) || 0,
+    subject_count: subjectCountMap.get(test.id) || 0,
   }));
 
   return {
     documents: testsWithCounts,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + documents.length,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get published tests for a course (student view)
- * Includes question count for each test
- */
 export async function getPublishedTestsByCourse(
-  courseId: string,
+  course_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<TestDocument & { questionCount: number }>> {
-  const queries = [
-    Query.equal("courseId", courseId),
-    Query.equal("isPublished", true),
-    ...buildQueries({ ...options, orderBy: options.orderBy || "$createdAt" }),
-  ];
+): Promise<PaginatedResponse<TestRow & { question_count: number }>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<TestDocument>({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("tests")
+    .select("*", { count: "exact" })
+    .eq("course_id", course_id)
+    .eq("is_published", true)
+    .order(options.orderBy || "created_at", {
+      ascending: options.orderType === "asc",
+    })
+    .range(offset, offset + limit - 1);
 
-  const documents = response.rows as TestDocument[];
+  if (error) throw error;
+  const rows = (data ?? []) as TestRow[];
 
-  if (documents.length === 0) {
+  if (rows.length === 0) {
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Get test IDs and fetch question counts
-  const testIds = documents.map((t) => t.$id);
-  const questionResponse = await fetchAllRows<QuestionDocument>(
-    tables.questions!,
-    [Query.equal("testId", testIds)],
+  const testIds = rows.map((t) => t.id);
+  const questions = await fetchAllRows<QuestionRow>("questions", (q) =>
+    q.in("test_id", testIds),
   );
 
-  // Build question count map
   const questionCountMap = new Map<string, number>();
-  for (const question of questionResponse.rows) {
-    questionCountMap.set(
-      question.testId,
-      (questionCountMap.get(question.testId) || 0) + 1,
-    );
+  for (const q of questions) {
+    questionCountMap.set(q.test_id, (questionCountMap.get(q.test_id) || 0) + 1);
   }
 
-  // Merge question counts with tests
-  const testsWithCounts = documents.map((test) => ({
+  const testsWithCounts = rows.map((test) => ({
     ...test,
-    questionCount: questionCountMap.get(test.$id) || 0,
+    question_count: questionCountMap.get(test.id) || 0,
   }));
 
   return {
     documents: testsWithCounts,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + documents.length,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get a single test by ID
- */
-export async function getTestById(id: string): Promise<TestDocument> {
-  const response = await databases.getRow<TestDocument>({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    rowId: id,
-  });
+export async function getTestById(id: string): Promise<TestRow> {
+  const { data, error } = await supabase
+    .from("tests")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  return response as TestDocument;
+  if (error) throw error;
+  return data as TestRow;
 }
 
-/**
- * Get test with subjects
- */
 export async function getTestWithSubjects(
   id: string,
-): Promise<TestDocument & { subjects: TestSubjectDocument[] }> {
+): Promise<TestRow & { subjects: TestSubjectRow[] }> {
   const test = await getTestById(id);
 
-  const subjectsResponse = await databases.listRows<TestSubjectDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    queries: [
-      Query.equal("testId", id),
-      Query.orderAsc("order"),
-      Query.limit(100),
-    ],
-  });
+  const { data, error } = await supabase
+    .from("test_subjects")
+    .select("*")
+    .eq("test_id", id)
+    .order("order", { ascending: true })
+    .limit(100);
+
+  if (error) throw error;
 
   return {
     ...test,
-    subjects: subjectsResponse.rows as TestSubjectDocument[],
+    subjects: (data ?? []) as TestSubjectRow[],
   };
 }
 
-/**
- * Create a new test
- */
 export async function createTest(
   data: CreateTestInput,
   callingUserId: string,
-): Promise<TestDocument> {
+): Promise<TestRow> {
   createTestInputSchema.parse(data);
-  const course = await getCourseById(data.courseId);
+  const course = await getCourseById(data.course_id);
   requireOwnership(course, callingUserId, "create tests for", "courses");
 
-  const response = await databases.createRow<TestDocument>({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    rowId: ID.unique(),
-    data: {
-      courseId: data.courseId,
+  const { data: row, error } = await supabase
+    .from("tests")
+    .insert({
+      course_id: data.course_id,
       title: data.title,
       description: data.description,
-      durationMinutes: data.durationMinutes,
-      passingScore: data.passingScore,
-      isPublished: data.isPublished ?? false,
-    },
-  });
+      duration_minutes: data.duration_minutes,
+      passing_score: data.passing_score,
+      is_published: data.is_published ?? false,
+    })
+    .select()
+    .single();
 
-  return response as TestDocument;
+  if (error) throw error;
+  return row as TestRow;
 }
 
-/**
- * Update an existing test
- */
 export async function updateTest(
   id: string,
   data: UpdateTestInput,
   callingUserId: string,
-): Promise<TestDocument> {
+): Promise<TestRow> {
   updateTestInputSchema.parse(data);
   const test = await getTestById(id);
-  const course = await getCourseById(test.courseId);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "update tests for", "courses");
 
-  const response = await databases.updateRow<TestDocument>({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    rowId: id,
-    data,
-  });
+  const { data: row, error } = await supabase
+    .from("tests")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response as TestDocument;
+  if (error) throw error;
+  return row as TestRow;
 }
 
-/**
- * Delete a test (and its subjects and questions)
- */
 export async function deleteTest(
   id: string,
   callingUserId: string,
 ): Promise<void> {
   const test = await getTestById(id);
-  const course = await getCourseById(test.courseId);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "delete tests for", "courses");
 
-  // Delete associated subjects
-  const subjectsResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    queries: [Query.equal("testId", id), Query.limit(100)],
-  });
+  // Cascade delete: subjects, questions, then test
+  await supabase.from("test_subjects").delete().eq("test_id", id);
+  await supabase.from("questions").delete().eq("test_id", id);
 
-  for (const subject of subjectsResponse.rows) {
-    await databases.deleteRow({
-      databaseId: databaseId!,
-      tableId: tables.testSubjects!,
-      rowId: subject.$id,
-    });
-  }
-
-  // Delete associated questions
-  const questionsResponse = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries: [Query.equal("testId", id), Query.limit(500)],
-  });
-
-  for (const question of questionsResponse.rows) {
-    await databases.deleteRow({
-      databaseId: databaseId!,
-      tableId: tables.questions!,
-      rowId: question.$id,
-    });
-  }
-
-  // Delete the test
-  await databases.deleteRow({
-    databaseId: databaseId!,
-    tableId: tables.tests!,
-    rowId: id,
-  });
+  const { error } = await supabase.from("tests").delete().eq("id", id);
+  if (error) throw error;
 }
 
-/**
- * Create a test subject
- */
 export async function createTestSubject(
   data: {
-    testId: string;
+    test_id: string;
     name: string;
-    questionCount: number;
+    question_count: number;
     order: number;
   },
   callingUserId: string,
-): Promise<TestSubjectDocument> {
-  const test = await getTestById(data.testId);
-  const course = await getCourseById(test.courseId);
+): Promise<TestSubjectRow> {
+  const test = await getTestById(data.test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "create subjects for", "courses");
 
-  const response = await databases.createRow<TestSubjectDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    rowId: ID.unique(),
-    data,
-  });
+  const { data: row, error } = await supabase
+    .from("test_subjects")
+    .insert(data)
+    .select()
+    .single();
 
-  return response as TestSubjectDocument;
+  if (error) throw error;
+  return row as TestSubjectRow;
 }
 
-/**
- * Update a test subject
- */
 export async function updateTestSubject(
   id: string,
-  data: Partial<{ name: string; questionCount: number; order: number }>,
-  testId: string,
+  data: Partial<{ name: string; question_count: number; order: number }>,
+  test_id: string,
   callingUserId: string,
-): Promise<TestSubjectDocument> {
-  const test = await getTestById(testId);
-  const course = await getCourseById(test.courseId);
+): Promise<TestSubjectRow> {
+  const test = await getTestById(test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "update subjects for", "courses");
 
-  const response = await databases.updateRow<TestSubjectDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    rowId: id,
-    data,
-  });
+  const { data: row, error } = await supabase
+    .from("test_subjects")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response as TestSubjectDocument;
+  if (error) throw error;
+  return row as TestSubjectRow;
 }
 
-/**
- * Delete a test subject
- */
 export async function deleteTestSubject(
   id: string,
-  testId: string,
+  test_id: string,
   callingUserId: string,
 ): Promise<void> {
-  const test = await getTestById(testId);
-  const course = await getCourseById(test.courseId);
+  const test = await getTestById(test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "delete subjects for", "courses");
 
-  await databases.deleteRow({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    rowId: id,
-  });
+  const { error } = await supabase.from("test_subjects").delete().eq("id", id);
+  if (error) throw error;
 }
 
-/**
- * Get subjects for a test
- */
 export async function getSubjectsByTest(
-  testId: string,
-): Promise<TestSubjectDocument[]> {
-  const response = await databases.listRows<TestSubjectDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testSubjects!,
-    queries: [
-      Query.equal("testId", testId),
-      Query.orderAsc("order"),
-      Query.limit(100),
-    ],
-  });
+  test_id: string,
+): Promise<TestSubjectRow[]> {
+  const { data, error } = await supabase
+    .from("test_subjects")
+    .select("*")
+    .eq("test_id", test_id)
+    .order("order", { ascending: true })
+    .limit(100);
 
-  return response.rows as TestSubjectDocument[];
+  if (error) throw error;
+  return (data ?? []) as TestSubjectRow[];
 }

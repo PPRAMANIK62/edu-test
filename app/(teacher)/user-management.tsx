@@ -1,6 +1,6 @@
 import ScreenHeader from "@/components/teacher/screen-header";
 import { UserList } from "@/components/teacher/user-list";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { isTeacher } from "@/lib/permissions";
 import { router } from "expo-router";
 import React, { useEffect } from "react";
@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * Only accessible to teachers with user management permissions
  */
 export default function UserManagementScreen() {
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   // Redirect non-teachers
   useEffect(() => {

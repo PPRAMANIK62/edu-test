@@ -192,12 +192,12 @@ export const UserList = ({ currentUserProfile }: UserListProps) => {
       {/* User List */}
       <FlatList
         data={filteredUsers}
-        keyExtractor={(item) => item.$id}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <UserCard
             user={item}
             currentUserRole={currentUserProfile.role}
-            currentUserId={currentUserProfile.$id}
+            currentUserId={currentUserProfile.id}
             onRoleChange={handleRoleChange}
             isUpdating={updateRoleMutation.isPending}
           />

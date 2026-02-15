@@ -1,4 +1,4 @@
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { signUpSchema, validateForm } from "@/lib/schemas";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const SignUpScreen = () => {
   const router = useRouter();
-  const { signUp } = useAppwrite();
+  const { signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");

@@ -1,261 +1,200 @@
-/**
- * Common types for service layer
- */
-
-import type { Models } from "appwrite";
-
-// ============================================================================
-// Response Types
-// ============================================================================
-
-/**
- * Paginated list response
- */
 export interface PaginatedResponse<T> {
   documents: T[];
   total: number;
   hasMore: boolean;
 }
 
-// ============================================================================
-// Database Document Types (matches Appwrite TablesDB schema)
-// ============================================================================
-
-/**
- * Base row with Appwrite TablesDB metadata
- */
-export interface BaseDocument extends Models.Row {
-  $id: string;
-  $tableId: string;
-  $databaseId: string;
-  $sequence: number;
-  $createdAt: string;
-  $updatedAt: string;
-  $permissions: string[];
+export interface BaseRow {
+  id: string;
+  created_at: string;
 }
 
-/**
- * Course document from database
- */
-export interface CourseDocument extends BaseDocument {
-  teacherId: string;
+export interface ProfileRow extends BaseRow {
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: "teacher" | "teaching_assistant" | "student";
+  is_primary_teacher: boolean;
+  updated_at: string;
+}
+
+export interface CourseRow extends BaseRow {
+  teacher_id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  image_url: string;
   price: number;
   currency: string;
   subjects: string[];
-  estimatedHours: number;
-  isPublished: boolean;
+  estimated_hours: number;
+  is_published: boolean;
+  updated_at: string;
 }
 
-/**
- * Test document from database
- */
-export interface TestDocument extends BaseDocument {
-  courseId: string;
+export interface TestRow extends BaseRow {
+  course_id: string;
   title: string;
   description: string;
-  durationMinutes: number;
-  passingScore: number;
-  isPublished: boolean;
+  duration_minutes: number;
+  passing_score: number;
+  is_published: boolean;
+  updated_at: string;
 }
 
-/**
- * Test subject document from database
- */
-export interface TestSubjectDocument extends BaseDocument {
-  testId: string;
+export interface TestSubjectRow extends BaseRow {
+  test_id: string;
   name: string;
-  questionCount: number;
+  question_count: number;
   order: number;
 }
 
-/**
- * Question document from database
- * Options stored as string array: ["Option A", "Option B", "Option C", "Option D"]
- * correctIndex: 0-3 indicating correct option
- */
-export interface QuestionDocument extends BaseDocument {
-  testId: string;
-  subjectId: string;
-  subjectName: string;
+export interface QuestionRow extends BaseRow {
+  test_id: string;
+  subject_id: string;
+  subject_name: string;
   type: "mcq";
   text: string;
   options: string[];
-  correctIndex: number;
+  correct_index: number;
   explanation: string;
   order: number;
 }
 
-/**
- * User document from database
- */
-export interface UserDocument extends BaseDocument {
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: "teacher" | "teaching_assistant" | "student";
-  isPrimaryTeacher?: boolean;
-}
-
-/**
- * Enrollment document from database
- */
-export interface EnrollmentDocument extends BaseDocument {
-  studentId: string;
-  courseId: string;
+export interface EnrollmentRow extends BaseRow {
+  student_id: string;
+  course_id: string;
   status: "active" | "completed";
   progress: number;
-  enrolledAt: string;
-  completedAt: string | null;
+  enrolled_at: string;
+  completed_at: string | null;
 }
 
-/**
- * Payment status enum
- */
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
-/**
- * Purchase document from database
- */
-export interface PurchaseDocument extends BaseDocument {
-  studentId: string;
-  courseId: string;
+export interface PurchaseRow extends BaseRow {
+  student_id: string;
+  course_id: string;
   amount: number;
   currency: string;
-  purchasedAt: string;
-  // Razorpay payment fields
-  razorpayOrderId: string | null;
-  razorpayPaymentId: string | null;
-  razorpaySignature: string | null;
-  paymentStatus: PaymentStatus;
-  paymentMethod: string | null; // upi/card/wallet/netbanking
-  // Webhook verification fields
-  webhookVerified: boolean;
-  webhookReceivedAt: string | null;
+  purchased_at: string;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  razorpay_signature: string | null;
+  payment_status: PaymentStatus;
+  payment_method: string | null;
+  webhook_verified: boolean;
+  webhook_received_at: string | null;
 }
 
-/**
- * Answer format: [questionIndex, selectedIndex, isMarkedForReview]
- * Example: [0, 1, false] = Question 0, Option B selected, not marked for review
- */
+/** Answer tuple: [questionIndex, selectedIndex, isMarkedForReview] */
 export type Answer = [number, number, boolean];
 
-/**
- * Test attempt document from database
- */
-export interface TestAttemptDocument extends BaseDocument {
-  studentId: string;
-  testId: string;
-  courseId: string;
-  startedAt: string;
-  completedAt: string | null;
+export interface TestAttemptRow extends BaseRow {
+  student_id: string;
+  test_id: string;
+  course_id: string;
+  started_at: string;
+  completed_at: string | null;
   status: "in_progress" | "completed" | "expired";
-  answers: string[]; // Array of JSON strings, each representing an Answer tuple
+  answers: Answer[];
   score: number | null;
   percentage: number | null;
   passed: boolean | null;
 }
 
-/**
- * Activity document from database
- * Note: Uses $createdAt from BaseDocument for timestamp
- */
-export interface ActivityDocument extends BaseDocument {
-  userId: string;
+export interface ActivityRow extends BaseRow {
+  user_id: string;
   type: "test_completed" | "course_started" | "achievement";
   title: string;
   subtitle: string;
-  metadata: string; // JSON string
+  metadata: Record<string, unknown>;
 }
 
 // ============================================================================
-// Input Types for Create/Update Operations
+// Input Types
 // ============================================================================
 
 export interface CreateCourseInput {
-  teacherId: string;
+  teacher_id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  image_url: string;
   price: number;
   currency?: string;
   subjects: string[];
-  estimatedHours: number;
-  isPublished?: boolean;
+  estimated_hours: number;
+  is_published?: boolean;
 }
 
 export interface UpdateCourseInput {
   title?: string;
   description?: string;
-  imageUrl?: string;
+  image_url?: string;
   price?: number;
   currency?: string;
   subjects?: string[];
-  estimatedHours?: number;
-  isPublished?: boolean;
+  estimated_hours?: number;
+  is_published?: boolean;
 }
 
 export interface CreateTestInput {
-  courseId: string;
+  course_id: string;
   title: string;
   description: string;
-  durationMinutes: number;
-  passingScore: number;
-  isPublished?: boolean;
+  duration_minutes: number;
+  passing_score: number;
+  is_published?: boolean;
 }
 
 export interface UpdateTestInput {
   title?: string;
   description?: string;
-  durationMinutes?: number;
-  passingScore?: number;
-  isPublished?: boolean;
+  duration_minutes?: number;
+  passing_score?: number;
+  is_published?: boolean;
 }
 
 export interface CreateQuestionInput {
-  testId: string;
-  subjectId: string;
-  subjectName: string;
+  test_id: string;
+  subject_id: string;
+  subject_name: string;
   type?: "mcq";
   text: string;
   options: string[];
-  correctIndex: number;
+  correct_index: number;
   explanation: string;
   order: number;
 }
 
 export interface UpdateQuestionInput {
-  subjectId?: string;
-  subjectName?: string;
+  subject_id?: string;
+  subject_name?: string;
   text?: string;
   options?: string[];
-  correctIndex?: number;
+  correct_index?: number;
   explanation?: string;
   order?: number;
 }
 
 export interface CreateEnrollmentInput {
-  studentId: string;
-  courseId: string;
+  student_id: string;
+  course_id: string;
 }
 
 export interface CreatePurchaseInput {
-  studentId: string;
-  courseId: string;
+  student_id: string;
+  course_id: string;
   amount: number;
   currency?: string;
-  // Razorpay payment fields
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
-  razorpaySignature?: string;
-  paymentStatus?: PaymentStatus;
-  paymentMethod?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+  payment_status?: PaymentStatus;
+  payment_method?: string;
 }
 
 export interface CreateActivityInput {
-  userId: string;
+  user_id: string;
   type: "test_completed" | "course_started" | "achievement";
   title: string;
   subtitle: string;
@@ -266,19 +205,13 @@ export interface CreateActivityInput {
 // Payment Types
 // ============================================================================
 
-/**
- * Input for creating a payment order
- */
 export interface CreateOrderInput {
-  courseId: string;
-  studentId: string;
-  studentEmail?: string;
-  studentName?: string;
+  course_id: string;
+  student_id: string;
+  student_email?: string;
+  student_name?: string;
 }
 
-/**
- * Response from create-order Appwrite Function
- */
 export interface CreateOrderResponse {
   success: boolean;
   error?: string;
@@ -291,7 +224,7 @@ export interface CreateOrderResponse {
   course?: {
     id: string;
     title: string;
-    imageUrl: string;
+    image_url: string;
     price: number;
   };
   key?: string;
@@ -301,24 +234,18 @@ export interface CreateOrderResponse {
   };
 }
 
-/**
- * Payment result from the checkout flow
- */
 export interface PaymentResult {
   success: boolean;
-  purchase?: PurchaseDocument;
+  purchase?: PurchaseRow;
   error?: string;
   cancelled?: boolean;
 }
 
-/**
- * Options for the purchase flow
- */
 export interface PurchaseCourseOptions {
-  courseId: string;
-  student: UserDocument;
+  course_id: string;
+  student: ProfileRow;
   onPaymentStart?: () => void;
-  onPaymentSuccess?: (purchase: PurchaseDocument) => void;
+  onPaymentSuccess?: (purchase: PurchaseRow) => void;
   onPaymentFailure?: (error: string) => void;
   onPaymentCancel?: () => void;
 }

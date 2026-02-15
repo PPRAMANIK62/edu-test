@@ -1,6 +1,6 @@
 import ErrorState from "@/components/error-state";
 import StudentCourseCard from "@/components/student/course-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useEnrolledCourses } from "@/hooks/use-courses";
 import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
 import { getUserNamesByIds } from "@/lib/user-management";
@@ -21,8 +21,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const CoursesTab = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   // Fetch enrolled courses for the student
   const {
@@ -38,7 +38,7 @@ const CoursesTab = () => {
   // Get unique teacher IDs
   const teacherIds = useMemo(
     () => [
-      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
+      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacher_id) || []),
     ],
     [enrolledCoursesData],
   );
@@ -58,26 +58,26 @@ const CoursesTab = () => {
     return enrolledCoursesData.documents.map((course): Course => {
       // Find enrollment progress for this course
       const enrollment = enrollmentsData?.documents.find(
-        (e) => e.courseId === course.$id,
+        (e) => e.course_id === course.id,
       );
 
       return {
-        id: course.$id,
+        id: course.id,
         title: course.title,
         description: course.description,
-        imageUrl: course.imageUrl,
+        image_url: course.image_url,
         price: course.price,
         currency: course.currency,
-        teacherId: course.teacherId,
-        teacherName:
-          teacherNamesMap?.get(course.teacherId) || "Course Instructor",
-        totalTests: course.testCount,
-        totalQuestions: 0,
-        estimatedHours: course.estimatedHours,
+        teacher_id: course.teacher_id,
+        teacher_name:
+          teacherNamesMap?.get(course.teacher_id) || "Course Instructor",
+        total_tests: course.test_count,
+        total_questions: 0,
+        estimated_hours: course.estimated_hours,
         subjects: course.subjects,
-        isPurchased: true, // They are enrolled so they have access
+        is_purchased: true, // They are enrolled so they have access
         progress: enrollment?.progress || 0,
-        enrollmentCount: course.enrollmentCount,
+        enrollment_count: course.enrollment_count,
       };
     });
   }, [enrolledCoursesData, enrollmentsData, teacherNamesMap]);

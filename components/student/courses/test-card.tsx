@@ -15,8 +15,8 @@ const CoursesTestCard = ({ test, isPurchased }: Props) => {
       <TestCardBase
         title={test.title}
         description={test.description}
-        totalQuestions={test.totalQuestions}
-        durationMinutes={test.durationMinutes}
+        totalQuestions={test.total_questions}
+        durationMinutes={test.duration_minutes}
         disabled
         className="bg-gray-100 rounded-xl p-4 border border-gray-200"
         headerClassName="flex-row items-start justify-between mb-3"
@@ -44,8 +44,8 @@ const CoursesTestCard = ({ test, isPurchased }: Props) => {
     <TestCardBase
       title={test.title}
       description={test.description}
-      totalQuestions={test.totalQuestions}
-      durationMinutes={test.durationMinutes}
+      totalQuestions={test.total_questions}
+      durationMinutes={test.duration_minutes}
       onPress={() => router.push(`/(student)/test/${test.id}/intro`)}
       className="bg-gray-50 rounded-xl p-4"
       headerClassName="flex-row items-start justify-between mb-3"
@@ -58,11 +58,11 @@ const CoursesTestCard = ({ test, isPurchased }: Props) => {
         </View>
       }
       stats={
-        test.bestScore ? (
+        test.best_score ? (
           <View className="flex-row items-center">
             <Trophy size={14} color="#38a169" />
             <Text className="text-sm text-green-600 ml-1 font-semibold">
-              Best: {test.bestScore}%
+              Best: {test.best_score}%
             </Text>
           </View>
         ) : undefined

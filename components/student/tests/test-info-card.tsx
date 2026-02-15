@@ -11,7 +11,7 @@ const TestInfoCard = ({ test }: { test: Test }) => {
       bgGradient: "bg-gradient-to-br from-blue-50 to-primary-50",
       borderColor: "border-primary-100",
       label: "Duration",
-      value: test.durationMinutes,
+      value: test.duration_minutes,
       unit: "minutes",
     },
     {
@@ -20,7 +20,7 @@ const TestInfoCard = ({ test }: { test: Test }) => {
       bgGradient: "bg-gradient-to-br from-purple-50 to-primary-50",
       borderColor: "border-purple-100",
       label: "Questions",
-      value: test.totalQuestions,
+      value: test.total_questions,
       unit: "total",
     },
   ];

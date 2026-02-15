@@ -20,7 +20,7 @@ const ReviewScreen = () => {
 
   // Fetch questions for the test
   const { data: questionsData, isLoading: questionsLoading } =
-    useQuestionsByTest(attemptData?.testId);
+    useQuestionsByTest(attemptData?.test_id);
 
   // Compute review data from attempt and questions
   const reviewData = useMemo(() => {
@@ -42,7 +42,7 @@ const ReviewScreen = () => {
     })[] = questions.map((q, index) => {
       const selectedIndex = answerMap.get(index);
       const isCorrect =
-        selectedIndex !== undefined && selectedIndex === q.correctIndex;
+        selectedIndex !== undefined && selectedIndex === q.correct_index;
 
       // Map options to the format expected by components
       const labels = ["A", "B", "C", "D"] as const;
@@ -53,14 +53,14 @@ const ReviewScreen = () => {
       }));
 
       return {
-        id: q.$id,
+        id: q.id,
         type: "mcq" as const,
-        testId: q.testId,
-        subjectId: q.subjectId,
-        subjectName: q.subjectName,
+        test_id: q.test_id,
+        subject_id: q.subject_id,
+        subject_name: q.subject_name,
         text: q.text,
         options,
-        correctOptionId: `opt-${q.correctIndex}`,
+        correct_option_id: `opt-${q.correct_index}`,
         explanation: q.explanation,
         order: q.order,
         selectedOptionId:

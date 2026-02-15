@@ -1,4 +1,4 @@
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { isTeacher } from "@/lib/permissions";
 import { useRouter } from "expo-router";
 import {
@@ -48,7 +48,7 @@ const SUPPORT_ITEMS = [
 ];
 
 const TeacherProfile = () => {
-  const { userProfile: user, signOut } = useAppwrite();
+  const { userProfile: user, signOut } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -107,12 +107,12 @@ const TeacherProfile = () => {
           <View className="bg-white rounded-2xl p-6 items-center shadow-sm mb-6">
             <View className="bg-gradient-to-br from-violet-100 to-sky-100 rounded-full w-20 h-20 items-center justify-center mb-4">
               <Text className="text-violet-700 font-bold text-3xl">
-                {user?.firstName?.charAt(0) || user?.email.charAt(0) || "T"}
+                {user?.first_name?.charAt(0) || user?.email.charAt(0) || "T"}
               </Text>
             </View>
             <Text className="text-gray-900 font-bold text-xl mb-1">
-              {user?.firstName && user?.lastName
-                ? `${user.firstName} ${user.lastName}`
+              {user?.first_name && user?.last_name
+                ? `${user.first_name} ${user.last_name}`
                 : user?.email}
             </Text>
             <Text className="text-gray-500 text-sm mb-3">{user?.email}</Text>

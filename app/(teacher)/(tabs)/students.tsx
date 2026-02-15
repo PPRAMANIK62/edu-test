@@ -1,6 +1,6 @@
 import StatCard from "@/components/teacher/stat-card";
 import StudentCard from "@/components/teacher/student-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useCoursesByTeacher } from "@/hooks/use-courses";
 import { useRecentEnrollments } from "@/hooks/use-enrollments";
 import { isTeacher } from "@/lib/permissions";
@@ -23,9 +23,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherStudents = () => {
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const teacherId = userProfile?.$id;
+  const teacherId = userProfile?.id;
 
   // Check if user can view revenue/spending data
   const showRevenue = userProfile ? isTeacher(userProfile.role) : false;
@@ -33,7 +33,7 @@ const TeacherStudents = () => {
   // Fetch teacher's courses to get course IDs
   const { data: coursesData } = useCoursesByTeacher(teacherId);
   const courseIds = useMemo(
-    () => coursesData?.documents.map((c) => c.$id) || [],
+    () => coursesData?.documents.map((c) => c.id) || [],
     [coursesData],
   );
 
@@ -48,7 +48,7 @@ const TeacherStudents = () => {
 
   // Fetch student stats from analytics service
   const studentIds = useMemo(
-    () => studentsData?.map((s) => s.$id) || [],
+    () => studentsData?.map((s) => s.id) || [],
     [studentsData],
   );
 
@@ -72,16 +72,16 @@ const TeacherStudents = () => {
     if (!studentsData) return [];
 
     return studentsData.map((user) => {
-      const stats = studentStatsMap?.get(user.$id);
+      const stats = studentStatsMap?.get(user.id);
       return {
-        id: user.$id,
-        name: `${user.firstName} ${user.lastName}`,
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
         email: user.email,
-        enrolledCourses: stats?.enrolledCourses || 0,
-        completedTests: stats?.completedTests || 0,
-        averageScore: stats?.averageScore || 0,
-        totalSpent: stats?.totalSpent || 0,
-        lastActive: new Date().toISOString(), // Would need activity tracking
+        enrolled_courses: stats?.enrolledCourses || 0,
+        completed_tests: stats?.completedTests || 0,
+        average_score: stats?.averageScore || 0,
+        total_spent: stats?.totalSpent || 0,
+        last_active: new Date().toISOString(), // Would need activity tracking
         status: "active" as const,
       };
     });
@@ -96,7 +96,7 @@ const TeacherStudents = () => {
     const topPerformer =
       students?.reduce(
         (best, student) =>
-          student.averageScore > (best?.averageScore || 0) ? student : best,
+          student.average_score > (best?.average_score || 0) ? student : best,
         students[0],
       )?.name || "N/A";
 

@@ -1,7 +1,7 @@
 import ScreenHeader from "@/components/teacher/screen-header";
 import StatCard from "@/components/teacher/stat-card";
 import TimeRangeSelector from "@/components/teacher/time-range-selector";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useCourseWithStats } from "@/hooks/use-courses";
 import {
   useCoursePerformance,
@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CourseAnalytics = () => {
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
   const [timeRange, setTimeRange] = useState<TimeRangeFilter>("30d");
 
@@ -58,13 +58,13 @@ const CourseAnalytics = () => {
   // Transform course data to expected format
   const course = courseData
     ? {
-        id: courseData.$id,
+        id: courseData.id,
         title: courseData.title,
-        totalTests: courseData.testCount,
-        totalQuestions: courseData.questionCount,
-        estimatedHours: courseData.estimatedHours,
+        total_tests: courseData.test_count,
+        total_questions: courseData.question_count,
+        estimated_hours: courseData.estimated_hours,
         price: courseData.price,
-        enrollmentCount: courseData.enrollmentCount,
+        enrollment_count: courseData.enrollment_count,
       }
     : null;
 
@@ -119,7 +119,7 @@ const CourseAnalytics = () => {
                   <StatCard
                     icon={<DollarSign size={20} color="#10b981" />}
                     label="Revenue"
-                    value={formatCurrency(performanceData.totalRevenue)}
+                    value={formatCurrency(performanceData.total_revenue)}
                     bgColor="bg-emerald-50"
                     iconBgColor="bg-emerald-100"
                   />
@@ -129,21 +129,21 @@ const CourseAnalytics = () => {
                 <StatCard
                   icon={<Users size={20} color="#0ea5e9" />}
                   label="Enrollments"
-                  value={performanceData.totalEnrollments.toString()}
+                  value={performanceData.total_enrollments.toString()}
                   bgColor="bg-sky-50"
                   iconBgColor="bg-sky-100"
                 />
                 <StatCard
                   icon={<Award size={20} color="#f59e0b" />}
                   label="Avg Rating"
-                  value={performanceData.averageRating.toFixed(1)}
+                  value={performanceData.average_rating.toFixed(1)}
                   bgColor="bg-amber-50"
                   iconBgColor="bg-amber-100"
                 />
                 <StatCard
                   icon={<Target size={20} color="#7c3aed" />}
                   label="Completion"
-                  value={`${performanceData.completionRate.toFixed(0)}%`}
+                  value={`${performanceData.completion_rate.toFixed(0)}%`}
                   bgColor="bg-violet-50"
                   iconBgColor="bg-violet-100"
                 />
@@ -151,8 +151,8 @@ const CourseAnalytics = () => {
             </View>
 
             {/* Performance Trends */}
-            {((showRevenue && performanceData.trends.revenueChange !== 0) ||
-              performanceData.trends.enrollmentChange !== 0) && (
+            {((showRevenue && performanceData.trends.revenue_change !== 0) ||
+              performanceData.trends.enrollment_change !== 0) && (
               <View className="px-6 mb-6">
                 <Text className="text-lg font-bold text-gray-900 mb-3">
                   Trends
@@ -160,46 +160,46 @@ const CourseAnalytics = () => {
                 <View className="bg-white rounded-2xl p-4 shadow-sm">
                   {/* Revenue change - only visible to teachers */}
                   {showRevenue &&
-                    performanceData.trends.revenueChange !== 0 && (
+                    performanceData.trends.revenue_change !== 0 && (
                       <View
-                        className={`flex-row items-center justify-between py-3 ${performanceData.trends.enrollmentChange !== 0 ? "border-b border-gray-100" : ""}`}
+                        className={`flex-row items-center justify-between py-3 ${performanceData.trends.enrollment_change !== 0 ? "border-b border-gray-100" : ""}`}
                       >
                         <Text className="text-gray-700 font-medium">
                           Revenue Change
                         </Text>
                         <View className="flex-row items-center gap-1">
-                          {performanceData.trends.revenueChange >= 0 ? (
+                          {performanceData.trends.revenue_change >= 0 ? (
                             <ArrowUp size={16} color="#10b981" />
                           ) : (
                             <ArrowDown size={16} color="#ef4444" />
                           )}
                           <Text
-                            className={`font-bold ${performanceData.trends.revenueChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                            className={`font-bold ${performanceData.trends.revenue_change >= 0 ? "text-emerald-600" : "text-red-600"}`}
                           >
                             {Math.abs(
-                              performanceData.trends.revenueChange,
+                              performanceData.trends.revenue_change,
                             ).toFixed(1)}
                             %
                           </Text>
                         </View>
                       </View>
                     )}
-                  {performanceData.trends.enrollmentChange !== 0 && (
+                  {performanceData.trends.enrollment_change !== 0 && (
                     <View className="flex-row items-center justify-between py-3">
                       <Text className="text-gray-700 font-medium">
                         Enrollment Change
                       </Text>
                       <View className="flex-row items-center gap-1">
-                        {performanceData.trends.enrollmentChange >= 0 ? (
+                        {performanceData.trends.enrollment_change >= 0 ? (
                           <ArrowUp size={16} color="#10b981" />
                         ) : (
                           <ArrowDown size={16} color="#ef4444" />
                         )}
                         <Text
-                          className={`font-bold ${performanceData.trends.enrollmentChange >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                          className={`font-bold ${performanceData.trends.enrollment_change >= 0 ? "text-emerald-600" : "text-red-600"}`}
                         >
                           {Math.abs(
-                            performanceData.trends.enrollmentChange,
+                            performanceData.trends.enrollment_change,
                           ).toFixed(1)}
                           %
                         </Text>
@@ -227,7 +227,7 @@ const CourseAnalytics = () => {
                     </Text>
                   </View>
                   <Text className="text-gray-900 font-bold text-lg">
-                    {engagementData.totalStudents}
+                    {engagementData.total_students}
                   </Text>
                 </View>
 
@@ -243,7 +243,7 @@ const CourseAnalytics = () => {
                     </Text>
                   </View>
                   <Text className="text-gray-900 font-bold text-lg">
-                    {engagementData.activeStudents}
+                    {engagementData.active_students}
                   </Text>
                 </View>
 
@@ -259,7 +259,7 @@ const CourseAnalytics = () => {
                     </Text>
                   </View>
                   <Text className="text-gray-900 font-bold text-lg">
-                    {engagementData.totalTestAttempts}
+                    {engagementData.total_test_attempts}
                   </Text>
                 </View>
 
@@ -275,7 +275,7 @@ const CourseAnalytics = () => {
                     </Text>
                   </View>
                   <Text className="text-gray-900 font-bold text-lg">
-                    {engagementData.averageTestScore.toFixed(1)}%
+                    {engagementData.average_test_score.toFixed(1)}%
                   </Text>
                 </View>
               </View>
@@ -291,7 +291,7 @@ const CourseAnalytics = () => {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-gray-700 font-medium">Total Tests</Text>
                   <Text className="text-gray-900 font-bold">
-                    {course?.totalTests ?? 0}
+                    {course?.total_tests ?? 0}
                   </Text>
                 </View>
 
@@ -302,7 +302,7 @@ const CourseAnalytics = () => {
                     Total Questions
                   </Text>
                   <Text className="text-gray-900 font-bold">
-                    {course?.totalQuestions ?? 0}
+                    {course?.total_questions ?? 0}
                   </Text>
                 </View>
 
@@ -313,7 +313,7 @@ const CourseAnalytics = () => {
                     Estimated Hours
                   </Text>
                   <Text className="text-gray-900 font-bold">
-                    {course?.estimatedHours ?? 0}h
+                    {course?.estimated_hours ?? 0}h
                   </Text>
                 </View>
 

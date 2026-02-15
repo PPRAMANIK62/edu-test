@@ -1,12 +1,3 @@
-/**
- * Helper utilities for Appwrite query building
- */
-
-import { Query } from "appwrite";
-
-/**
- * Query options for list operations
- */
 export interface QueryOptions {
   limit?: number;
   offset?: number;
@@ -14,60 +5,9 @@ export interface QueryOptions {
   orderType?: "asc" | "desc";
 }
 
-/**
- * Default query limits
- */
 export const DEFAULT_LIMIT = 25;
 export const MAX_LIMIT = 100;
 
-/**
- * Build query array from options
- */
-export function buildQueries(options: QueryOptions = {}): string[] {
-  const queries: string[] = [];
-
-  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
-  queries.push(Query.limit(limit));
-
-  if (options.offset && options.offset > 0) {
-    queries.push(Query.offset(options.offset));
-  }
-
-  if (options.orderBy) {
-    if (options.orderType === "desc") {
-      queries.push(Query.orderDesc(options.orderBy));
-    } else {
-      queries.push(Query.orderAsc(options.orderBy));
-    }
-  }
-
-  return queries;
-}
-
-/**
- * Build date range query
- */
-export function dateRangeQuery(
-  field: string,
-  start?: Date,
-  end?: Date,
-): string[] {
-  const queries: string[] = [];
-
-  if (start) {
-    queries.push(Query.greaterThanEqual(field, start.toISOString()));
-  }
-
-  if (end) {
-    queries.push(Query.lessThanEqual(field, end.toISOString()));
-  }
-
-  return queries;
-}
-
-/**
- * Get date range for time filter
- */
 export function getDateRangeFromFilter(
   filter: "7d" | "30d" | "90d" | "1y" | "all",
 ): { start: Date | undefined; end: Date } {
@@ -132,12 +72,12 @@ export function buildCountMap<T extends Record<string, unknown>>(
 }
 
 export function requireOwnership(
-  resource: { teacherId: string },
+  resource: { teacher_id: string },
   callingUserId: string,
   action: string,
   resourceType: string,
 ): void {
-  if (resource.teacherId !== callingUserId) {
+  if (resource.teacher_id !== callingUserId) {
     throw new Error(
       `Forbidden: You can only ${action} your own ${resourceType}`,
     );

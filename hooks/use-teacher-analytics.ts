@@ -36,7 +36,8 @@ export function useCoursePerformance(
 ) {
   return useQuery({
     queryKey: queryKeys.analytics.coursePerformance(courseId, timeRange),
-    queryFn: () => getCoursePerformanceMetrics(courseId, { timeRange }),
+    queryFn: () =>
+      getCoursePerformanceMetrics(courseId, { time_range: timeRange }),
     staleTime: STALE_TIMES.STATIC,
     enabled: !!courseId, // Only run if courseId is provided
   });
@@ -88,7 +89,7 @@ export function useRevenueAnalytics(
 ) {
   return useQuery({
     queryKey: queryKeys.analytics.revenueAnalytics(teacherId, timeRange),
-    queryFn: () => getRevenueAnalytics(teacherId, { timeRange }),
+    queryFn: () => getRevenueAnalytics(teacherId, { time_range: timeRange }),
     staleTime: STALE_TIMES.STATIC,
     enabled: !!teacherId,
   });

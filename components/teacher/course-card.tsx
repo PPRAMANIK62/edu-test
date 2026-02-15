@@ -16,7 +16,7 @@ const TeacherCourseCard = ({
     <CourseCardBase
       title={course.title}
       description={course.description}
-      imageUrl={course.imageUrl}
+      imageUrl={course.image_url}
       imageHeight="h-40"
       titleClassName="text-gray-900 font-bold text-lg mb-1"
       titleLines={2}
@@ -29,13 +29,13 @@ const TeacherCourseCard = ({
           <View className="flex-row items-center gap-1">
             <Users size={16} color="#6b7280" />
             <Text className="text-gray-700 font-semibold text-sm">
-              {course.enrollmentCount}
+              {course.enrollment_count}
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
             <BookOpen size={16} color="#6b7280" />
             <Text className="text-gray-700 font-semibold text-sm">
-              {course.totalTests} tests
+              {course.total_tests} tests
             </Text>
           </View>
           <View className="flex-1" />

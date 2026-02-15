@@ -4,7 +4,7 @@ import ScreenHeader from "@/components/teacher/screen-header";
 import { useCourse } from "@/hooks/use-courses";
 import { useCreateTest, useCreateTestSubject } from "@/hooks/use-tests";
 import { TestFormData, testFormSchema, validateForm } from "@/lib/schemas";
-import { Subject } from "@/types";
+import type { Subject } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
 import type { Href } from "expo-router";
 import { Plus, Trash2 } from "lucide-react-native";
@@ -63,12 +63,12 @@ export default function CreateTestScreen() {
 
     createTestMutation.mutate(
       {
-        courseId,
+        course_id: courseId,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        durationMinutes: parseInt(formData.durationMinutes),
-        passingScore: parseInt(formData.passingScore),
-        isPublished,
+        duration_minutes: parseInt(formData.durationMinutes),
+        passing_score: parseInt(formData.passingScore),
+        is_published: isPublished,
       },
       {
         onSuccess: async (newTest) => {
@@ -76,9 +76,9 @@ export default function CreateTestScreen() {
           for (let i = 0; i < formData.subjects.length; i++) {
             const subject = formData.subjects[i];
             await createSubjectMutation.mutateAsync({
-              testId: newTest.$id,
+              test_id: newTest.id,
               name: subject.name,
-              questionCount: subject.questionCount,
+              question_count: subject.questionCount,
               order: i + 1,
             });
           }
@@ -88,7 +88,7 @@ export default function CreateTestScreen() {
               text: "Add Questions",
               onPress: () => {
                 router.replace(
-                  `/(teacher)/tests/${newTest.$id}/questions` as Href,
+                  `/(teacher)/tests/${newTest.id}/questions` as Href,
                 );
               },
             },
@@ -126,7 +126,7 @@ export default function CreateTestScreen() {
   const handleAddSubject = () => {
     if (!newSubjectName.trim()) return;
 
-    const newSubject: Subject = {
+    const newSubject = {
       id: `subj-${Date.now()}`,
       name: newSubjectName.trim(),
       questionCount: 0,

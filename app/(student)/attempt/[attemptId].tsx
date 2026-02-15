@@ -1,4 +1,4 @@
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   getAnswersFromAttempt,
   useAttempt,
@@ -44,8 +44,8 @@ interface LocalAnswer {
 export default function AttemptScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const router = useRouter();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [localAnswers, setLocalAnswers] = useState<Record<number, LocalAnswer>>(
@@ -59,11 +59,11 @@ export default function AttemptScreen() {
   const { data: attemptData, isLoading: attemptLoading } =
     useAttempt(attemptId);
 
-  const { data: testData } = useTest(attemptData?.testId);
+  const { data: testData } = useTest(attemptData?.test_id);
 
   // Fetch questions for the test
   const { data: questionsData, isLoading: questionsLoading } =
-    useQuestionsByTest(attemptData?.testId);
+    useQuestionsByTest(attemptData?.test_id);
 
   // Mutations
   const submitAnswerMutation = useSubmitAnswer();
@@ -74,16 +74,16 @@ export default function AttemptScreen() {
     if (!questionsData?.documents) return [];
 
     return questionsData.documents.map((q, index) => ({
-      id: q.$id,
+      id: q.id,
       index,
-      subjectName: q.subjectName,
+      subject_name: q.subject_name,
       text: q.text,
       options: q.options.map((text, optIndex) => ({
         id: `opt-${optIndex}`,
         label: String.fromCharCode(65 + optIndex), // A, B, C, D
         text,
       })),
-      correctIndex: q.correctIndex,
+      correctIndex: q.correct_index,
     }));
   }, [questionsData]);
 
@@ -113,7 +113,7 @@ export default function AttemptScreen() {
       {
         attemptId,
         studentId,
-        testId: attemptData.testId,
+        testId: attemptData.test_id,
       },
       {
         onSuccess: () => {
@@ -142,8 +142,8 @@ export default function AttemptScreen() {
   useEffect(() => {
     if (!attemptData) return;
 
-    const startTime = new Date(attemptData.startedAt);
-    const durationMinutes = testData?.durationMinutes ?? 60;
+    const startTime = new Date(attemptData.started_at);
+    const durationMinutes = testData?.duration_minutes ?? 60;
     const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
     endTimeRef.current = endTime;
 
@@ -345,7 +345,7 @@ export default function AttemptScreen() {
         <View className="mb-4">
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-sm text-primary-600 font-semibold">
-              {currentQuestion.subjectName}
+              {currentQuestion.subject_name}
             </Text>
             <TouchableOpacity
               onPress={() => handleToggleFlag(currentQuestionIndex)}

@@ -1,215 +1,181 @@
-/**
- * Test Attempt Service
- * Handles all test attempt-related database operations
- *
- * Answer format: [questionIndex, selectedIndex, isMarkedForReview]
- * Example: [0, 1, false] = Question 0, Option B selected, not marked for review
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows, getRowSafe, paginatedQuery } from "../appwrite-helpers";
+import { supabase } from "../supabase";
+import { fetchAllRows } from "../supabase-helpers";
 import { startAttemptInputSchema } from "../schemas";
-import { nowISO, parseJSON, type QueryOptions } from "./helpers";
+import { nowISO, DEFAULT_LIMIT, MAX_LIMIT, type QueryOptions } from "./helpers";
 import { getTestById } from "./tests";
 import type {
   Answer,
   PaginatedResponse,
-  QuestionDocument,
-  TestAttemptDocument,
+  QuestionRow,
+  TestAttemptRow,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-// ============================================================================
-// Query Functions
-// ============================================================================
-
-/**
- * Get attempts by student ID
- */
 export async function getAttemptsByStudent(
-  studentId: string,
+  student_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<TestAttemptDocument>> {
-  return paginatedQuery<TestAttemptDocument>(
-    tables.testAttempts!,
-    [Query.equal("studentId", studentId), Query.orderDesc("startedAt")],
-    options,
-  );
+): Promise<PaginatedResponse<TestAttemptRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("test_attempts")
+    .select("*", { count: "exact" })
+    .eq("student_id", student_id)
+    .order("started_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as TestAttemptRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get attempts by test ID
- */
 export async function getAttemptsByTest(
-  testId: string,
+  test_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<TestAttemptDocument>> {
-  return paginatedQuery<TestAttemptDocument>(
-    tables.testAttempts!,
-    [Query.equal("testId", testId), Query.orderDesc("startedAt")],
-    options,
-  );
+): Promise<PaginatedResponse<TestAttemptRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("test_attempts")
+    .select("*", { count: "exact" })
+    .eq("test_id", test_id)
+    .order("started_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as TestAttemptRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get completed attempts by test ID (for analytics)
- */
 export async function getCompletedAttemptsByTest(
-  testId: string,
+  test_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<TestAttemptDocument>> {
-  return paginatedQuery<TestAttemptDocument>(
-    tables.testAttempts!,
-    [
-      Query.equal("testId", testId),
-      Query.equal("status", "completed"),
-      Query.orderDesc("completedAt"),
-    ],
-    options,
-  );
+): Promise<PaginatedResponse<TestAttemptRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("test_attempts")
+    .select("*", { count: "exact" })
+    .eq("test_id", test_id)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as TestAttemptRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get a single attempt by ID
- */
 export async function getAttemptById(
   attemptId: string,
-): Promise<TestAttemptDocument | null> {
-  return getRowSafe<TestAttemptDocument>(tables.testAttempts!, attemptId);
+): Promise<TestAttemptRow | null> {
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .select("*")
+    .eq("id", attemptId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as TestAttemptRow | null;
 }
 
-/**
- * Get parsed answers from attempt
- */
-export function getAnswersFromAttempt(attempt: TestAttemptDocument): Answer[] {
-  // Each element in the array is a JSON string representing an Answer tuple
-  return attempt.answers.map((answerStr) =>
-    parseJSON<Answer>(answerStr, [0, -1, false]),
-  );
+// In Supabase, answers is jsonb — already parsed as Answer[]
+export function getAnswersFromAttempt(attempt: TestAttemptRow): Answer[] {
+  return attempt.answers ?? [];
 }
 
-/**
- * Get in-progress attempt for student and test
- */
 export async function getInProgressAttempt(
-  studentId: string,
-  testId: string,
-): Promise<TestAttemptDocument | null> {
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("testId", testId),
-      Query.equal("status", "in_progress"),
-      Query.limit(1),
-    ],
-  });
+  student_id: string,
+  test_id: string,
+): Promise<TestAttemptRow | null> {
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .select("*")
+    .eq("student_id", student_id)
+    .eq("test_id", test_id)
+    .eq("status", "in_progress")
+    .maybeSingle();
 
-  if (response.total === 0) {
-    return null;
-  }
-
-  return response.rows[0] as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow | null;
 }
 
-/**
- * Get best attempt (highest score) for student and test
- */
 export async function getBestAttempt(
-  studentId: string,
-  testId: string,
-): Promise<TestAttemptDocument | null> {
-  const response = await databases.listRows<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("testId", testId),
-      Query.equal("status", "completed"),
-      Query.orderDesc("percentage"),
-      Query.limit(1),
-    ],
-  });
+  student_id: string,
+  test_id: string,
+): Promise<TestAttemptRow | null> {
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .select("*")
+    .eq("student_id", student_id)
+    .eq("test_id", test_id)
+    .eq("status", "completed")
+    .order("percentage", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (response.total === 0) {
-    return null;
-  }
-
-  return response.rows[0] as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow | null;
 }
 
-// ============================================================================
-// Mutation Functions
-// ============================================================================
-
-/**
- * Start a new test attempt
- */
 export async function startAttempt(
-  studentId: string,
-  testId: string,
-  courseId: string,
-): Promise<TestAttemptDocument> {
-  startAttemptInputSchema.parse({ studentId, testId, courseId });
-  const existingAttempt = await getInProgressAttempt(studentId, testId);
-  if (existingAttempt) {
-    return existingAttempt; // Resume existing attempt
-  }
+  student_id: string,
+  test_id: string,
+  course_id: string,
+): Promise<TestAttemptRow> {
+  startAttemptInputSchema.parse({ student_id, test_id, course_id });
+  const existingAttempt = await getInProgressAttempt(student_id, test_id);
+  if (existingAttempt) return existingAttempt;
 
   const now = nowISO();
 
-  const response = await databases.createRow<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    rowId: ID.unique(),
-    data: {
-      studentId,
-      testId,
-      courseId,
-      startedAt: now,
-      completedAt: null,
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .insert({
+      student_id,
+      test_id,
+      course_id,
+      started_at: now,
+      completed_at: null,
       status: "in_progress",
-      answers: [], // Empty answers array
+      answers: [],
       score: null,
       percentage: null,
       passed: null,
-    },
-  });
+    })
+    .select()
+    .single();
 
-  return response as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow;
 }
 
-/**
- * Submit an answer for a question
- *
- * @param attemptId - The attempt document ID
- * @param questionIndex - The 0-based index of the question
- * @param selectedIndex - The 0-based index of the selected option
- * @param isMarkedForReview - Whether the question is marked for review
- */
 export async function submitAnswer(
   attemptId: string,
   questionIndex: number,
   selectedIndex: number,
   isMarkedForReview: boolean = false,
-): Promise<TestAttemptDocument> {
-  // Get current attempt
+): Promise<TestAttemptRow> {
   const attempt = await getAttemptById(attemptId);
-  if (!attempt) {
-    throw new Error("Attempt not found");
-  }
-
-  if (attempt.status !== "in_progress") {
+  if (!attempt) throw new Error("Attempt not found");
+  if (attempt.status !== "in_progress")
     throw new Error("Cannot submit answers to a completed attempt");
-  }
 
-  // Parse existing answers
   const answers = getAnswersFromAttempt(attempt);
-
-  // Find and update or add the answer
   const existingIndex = answers.findIndex((a) => a[0] === questionIndex);
   const newAnswer: Answer = [questionIndex, selectedIndex, isMarkedForReview];
 
@@ -219,43 +185,31 @@ export async function submitAnswer(
     answers.push(newAnswer);
   }
 
-  // Sort answers by question index for consistency
   answers.sort((a, b) => a[0] - b[0]);
 
-  // Update attempt with new answers (each answer as JSON string in array)
-  const response = await databases.updateRow<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    rowId: attemptId,
-    data: {
-      answers: answers.map((a) => JSON.stringify(a)),
-    },
-  });
+  // jsonb column — write Answer[] directly, no JSON.stringify needed
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .update({ answers })
+    .eq("id", attemptId)
+    .select()
+    .single();
 
-  return response as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow;
 }
 
-/**
- * Submit multiple answers at once (batch update)
- */
 export async function submitAnswersBatch(
   attemptId: string,
   newAnswers: Answer[],
-): Promise<TestAttemptDocument> {
-  // Get current attempt
+): Promise<TestAttemptRow> {
   const attempt = await getAttemptById(attemptId);
-  if (!attempt) {
-    throw new Error("Attempt not found");
-  }
-
-  if (attempt.status !== "in_progress") {
+  if (!attempt) throw new Error("Attempt not found");
+  if (attempt.status !== "in_progress")
     throw new Error("Cannot submit answers to a completed attempt");
-  }
 
-  // Parse existing answers
   const answers = getAnswersFromAttempt(attempt);
 
-  // Merge new answers
   for (const newAnswer of newAnswers) {
     const existingIndex = answers.findIndex((a) => a[0] === newAnswer[0]);
     if (existingIndex >= 0) {
@@ -265,152 +219,100 @@ export async function submitAnswersBatch(
     }
   }
 
-  // Sort answers by question index
   answers.sort((a, b) => a[0] - b[0]);
 
-  // Update attempt (each answer as JSON string in array)
-  const response = await databases.updateRow<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    rowId: attemptId,
-    data: {
-      answers: answers.map((a) => JSON.stringify(a)),
-    },
-  });
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .update({ answers })
+    .eq("id", attemptId)
+    .select()
+    .single();
 
-  return response as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow;
 }
 
-/**
- * Complete an attempt - calculate score and mark as completed
- */
 export async function completeAttempt(
   attemptId: string,
-): Promise<TestAttemptDocument> {
-  // Get current attempt
+): Promise<TestAttemptRow> {
   const attempt = await getAttemptById(attemptId);
-  if (!attempt) {
-    throw new Error("Attempt not found");
-  }
+  if (!attempt) throw new Error("Attempt not found");
+  if (attempt.status === "completed") return attempt;
 
-  if (attempt.status === "completed") {
-    return attempt; // Already completed
-  }
+  const test = await getTestById(attempt.test_id);
+  if (!test) throw new Error("Test not found");
 
-  // Get test details for passing score
-  const test = await getTestById(attempt.testId);
-  if (!test) {
-    throw new Error("Test not found");
-  }
-
-  // Get all questions for this test
-  const questionsResult = await fetchAllRows<QuestionDocument>(
-    tables.questions!,
-    [Query.equal("testId", attempt.testId), Query.orderAsc("order")],
+  const questions = await fetchAllRows<QuestionRow>("questions", (q) =>
+    q.eq("test_id", attempt.test_id).order("order", { ascending: true }),
   );
-  const questions = questionsResult.rows;
 
-  // Calculate score
   const answers = getAnswersFromAttempt(attempt);
   const { score, percentage } = calculateScore(answers, questions);
-
-  // Determine if passed
-  const passed = percentage >= test.passingScore;
-
+  const passed = percentage >= test.passing_score;
   const now = nowISO();
 
-  // Update attempt with final results
-  const response = await databases.updateRow<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    rowId: attemptId,
-    data: {
-      completedAt: now,
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .update({
+      completed_at: now,
       status: "completed",
       score,
       percentage,
       passed,
-    },
-  });
+    })
+    .eq("id", attemptId)
+    .select()
+    .single();
 
-  return response as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow;
 }
 
-/**
- * Mark an attempt as expired
- */
 export async function expireAttempt(
   attemptId: string,
-): Promise<TestAttemptDocument> {
-  const response = await databases.updateRow<TestAttemptDocument>({
-    databaseId: databaseId!,
-    tableId: tables.testAttempts!,
-    rowId: attemptId,
-    data: {
-      status: "expired",
-    },
-  });
+): Promise<TestAttemptRow> {
+  const { data, error } = await supabase
+    .from("test_attempts")
+    .update({ status: "expired" })
+    .eq("id", attemptId)
+    .select()
+    .single();
 
-  return response as TestAttemptDocument;
+  if (error) throw error;
+  return data as TestAttemptRow;
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Calculate score from answers and questions
- */
 function calculateScore(
   answers: Answer[],
-  questions: QuestionDocument[],
+  questions: QuestionRow[],
 ): { score: number; percentage: number } {
-  if (questions.length === 0) {
-    return { score: 0, percentage: 0 };
-  }
+  if (questions.length === 0) return { score: 0, percentage: 0 };
 
   let correctCount = 0;
-
-  // Create a map of question index to correct index
-  // Questions are ordered, so their array index is the question index
   for (const answer of answers) {
     const [questionIndex, selectedIndex] = answer;
     const question = questions[questionIndex];
-
-    if (question && question.correctIndex === selectedIndex) {
+    if (question && question.correct_index === selectedIndex) {
       correctCount++;
     }
   }
 
   const percentage = Math.round((correctCount / questions.length) * 100);
-
-  return {
-    score: correctCount,
-    percentage,
-  };
+  return { score: correctCount, percentage };
 }
 
-// ============================================================================
-// Analytics Functions
-// ============================================================================
-
-/**
- * Get attempt statistics for a test
- */
-export async function getTestAttemptStats(testId: string): Promise<{
+export async function getTestAttemptStats(test_id: string): Promise<{
   totalAttempts: number;
   completedAttempts: number;
   averageScore: number;
   passRate: number;
 }> {
-  const completedResult = await fetchAllRows<TestAttemptDocument>(
-    tables.testAttempts!,
-    [Query.equal("testId", testId), Query.equal("status", "completed")],
+  const completedAttempts = await fetchAllRows<TestAttemptRow>(
+    "test_attempts",
+    (q) => q.eq("test_id", test_id).eq("status", "completed"),
   );
-  const completedAttempts = completedResult.rows;
 
-  // Get total attempts count
-  const allResult = await getAttemptsByTest(testId, { limit: 1 });
+  const allResult = await getAttemptsByTest(test_id, { limit: 1 });
 
   if (completedAttempts.length === 0) {
     return {
@@ -435,21 +337,27 @@ export async function getTestAttemptStats(testId: string): Promise<{
   };
 }
 
-/**
- * Get student's test history for a specific test
- */
 export async function getStudentTestHistory(
-  studentId: string,
-  testId: string,
+  student_id: string,
+  test_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<TestAttemptDocument>> {
-  return paginatedQuery<TestAttemptDocument>(
-    tables.testAttempts!,
-    [
-      Query.equal("studentId", studentId),
-      Query.equal("testId", testId),
-      Query.orderDesc("startedAt"),
-    ],
-    options,
-  );
+): Promise<PaginatedResponse<TestAttemptRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("test_attempts")
+    .select("*", { count: "exact" })
+    .eq("student_id", student_id)
+    .eq("test_id", test_id)
+    .order("started_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as TestAttemptRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }

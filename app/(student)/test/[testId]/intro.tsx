@@ -1,5 +1,5 @@
 import TestInfoCard from "@/components/student/tests/test-info-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useStartAttempt } from "@/hooks/use-attempts";
 import { useTestWithSubjects } from "@/hooks/use-tests";
 import { getTestAttemptCount } from "@/lib/services/analytics";
@@ -21,8 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const TestIntro = () => {
   const { testId } = useLocalSearchParams<{ testId: string }>();
   const router = useRouter();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   // Fetch test with subjects
   const { data: testData, isLoading } = useTestWithSubjects(testId);
@@ -42,27 +42,27 @@ const TestIntro = () => {
     if (!testData) return null;
 
     const subjects: Subject[] = testData.subjects.map((s) => ({
-      id: s.$id,
+      id: s.id,
       name: s.name,
-      questionCount: s.questionCount,
+      question_count: s.question_count,
     }));
 
     const totalQuestions = subjects.reduce(
-      (sum, s) => sum + s.questionCount,
+      (sum, s) => sum + s.question_count,
       0,
     );
 
     return {
-      id: testData.$id,
-      courseId: testData.courseId,
+      id: testData.id,
+      course_id: testData.course_id,
       title: testData.title,
       description: testData.description,
-      durationMinutes: testData.durationMinutes,
-      totalQuestions,
+      duration_minutes: testData.duration_minutes,
+      total_questions: totalQuestions,
       subjects,
-      passingScore: testData.passingScore,
-      attemptCount,
-      isAvailable: testData.isPublished,
+      passing_score: testData.passing_score,
+      attempt_count: attemptCount,
+      is_available: testData.is_published,
     };
   }, [testData, attemptCount]);
 
@@ -70,7 +70,7 @@ const TestIntro = () => {
     console.log("Starting test with:", {
       studentId,
       testId,
-      courseId: testData?.courseId,
+      courseId: testData?.course_id,
     });
     if (!studentId || !testId || !testData) {
       console.log("Missing required data:", { studentId, testId, testData });
@@ -81,12 +81,12 @@ const TestIntro = () => {
       {
         studentId,
         testId,
-        courseId: testData.courseId,
+        courseId: testData.course_id,
       },
       {
         onSuccess: (attempt) => {
-          console.log("Attempt created successfully:", attempt.$id);
-          router.replace(`/(student)/attempt/${attempt.$id}`);
+          console.log("Attempt created successfully:", attempt.id);
+          router.replace(`/(student)/attempt/${attempt.id}`);
         },
         onError: (error) => {
           console.error("Failed to start test:", error);
@@ -178,19 +178,19 @@ const TestIntro = () => {
               />
               <InstructionItem
                 number={4}
-                text={`You need ${test.passingScore}% to pass this test`}
+                text={`You need ${test.passing_score}% to pass this test`}
               />
             </View>
           </View>
 
-          {test.attemptCount > 0 && test.bestScore && (
+          {test.attempt_count > 0 && test.best_score && (
             <View className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
               <Text className="text-green-900 font-semibold mb-1">
                 Previous Best Score
               </Text>
               <Text className="text-green-700 text-sm">
-                You scored {test.bestScore}% in your previous attempt. Good luck
-                improving your score!
+                You scored {test.best_score}% in your previous attempt. Good
+                luck improving your score!
               </Text>
             </View>
           )}
@@ -250,7 +250,7 @@ const SubjectInfo = ({ subject, index, length }: SubjectInfoProps) => {
       <View className="flex-row items-center justify-between py-3">
         <Text className="text-gray-900 font-medium">{subject.name}</Text>
         <Text className="text-gray-600 font-semibold">
-          {subject.questionCount} questions
+          {subject.question_count} questions
         </Text>
       </View>
       {index < length - 1 && <View className="h-px bg-gray-200" />}

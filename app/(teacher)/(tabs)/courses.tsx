@@ -1,7 +1,7 @@
 import TeacherCourseCard from "@/components/teacher/course-card";
 import { useCoursesByTeacher } from "@/hooks/use-courses";
 import { isTeacher } from "@/lib/permissions";
-import { useAppwrite } from "@/providers/appwrite";
+import { useAuth } from "@/providers/auth";
 import { router } from "expo-router";
 import { BookOpen, Plus } from "lucide-react-native";
 import React, { useMemo } from "react";
@@ -9,9 +9,9 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TeacherCourses = () => {
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
   const canCreate = userProfile ? isTeacher(userProfile.role) : false;
-  const teacherId = userProfile?.$id;
+  const teacherId = userProfile?.id;
 
   const insets = useSafeAreaInsets();
 
@@ -23,21 +23,21 @@ const TeacherCourses = () => {
     if (!coursesData?.documents) return [];
 
     return coursesData.documents.map((course) => ({
-      id: course.$id,
+      id: course.id,
       title: course.title,
       description: course.description,
-      imageUrl: course.imageUrl,
+      image_url: course.image_url,
       price: course.price,
       currency: course.currency,
-      teacherId: course.teacherId,
-      teacherName: "You",
-      totalTests: course.testCount,
-      totalQuestions: 0,
-      estimatedHours: course.estimatedHours,
+      teacher_id: course.teacher_id,
+      teacher_name: "You",
+      total_tests: course.test_count,
+      total_questions: 0,
+      estimated_hours: course.estimated_hours,
       subjects: course.subjects,
-      isPurchased: true,
-      enrollmentCount: course.enrollmentCount,
-      isPublished: course.isPublished,
+      is_purchased: true,
+      enrollment_count: course.enrollment_count,
+      is_published: course.is_published,
     }));
   }, [coursesData]);
 

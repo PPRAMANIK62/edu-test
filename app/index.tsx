@@ -1,9 +1,9 @@
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 const Index = () => {
-  const { currentUser, userProfile, loading } = useAppwrite();
+  const { currentUser, userProfile, loading } = useAuth();
 
   if (loading) {
     return (

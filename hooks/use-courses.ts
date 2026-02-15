@@ -13,7 +13,7 @@ import {
   invalidateCourses,
   queryKeys,
 } from "@/lib/query-keys";
-import { useAppwrite } from "@/providers/appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   createCourse,
   deleteCourse,
@@ -26,7 +26,7 @@ import {
 } from "@/lib/services/courses";
 import type { QueryOptions } from "@/lib/services/helpers";
 import type {
-  CourseDocument,
+  CourseRow,
   CreateCourseInput,
   UpdateCourseInput,
 } from "@/lib/services/types";
@@ -130,18 +130,18 @@ export function useEnrolledCourses(
  */
 export function useCreateCourse() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: (data: CreateCourseInput) =>
-      createCourse(data, userProfile!.$id),
+      createCourse(data, userProfile!.id),
     onSuccess: (newCourse) => {
       // Invalidate course lists
       invalidateCourses(queryClient);
 
       // Invalidate teacher's course list
       queryClient.invalidateQueries({
-        queryKey: queryKeys.courses.byTeacher(newCourse.teacherId),
+        queryKey: queryKeys.courses.byTeacher(newCourse.teacher_id),
       });
     },
   });
@@ -160,7 +160,7 @@ export function useCreateCourse() {
  */
 export function useUpdateCourse() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({
@@ -169,10 +169,10 @@ export function useUpdateCourse() {
     }: {
       courseId: string;
       data: UpdateCourseInput;
-    }) => updateCourse(courseId, data, userProfile!.$id),
+    }) => updateCourse(courseId, data, userProfile!.id),
     onSuccess: (updatedCourse, { courseId }) => {
       // Update the cache directly for the updated course
-      queryClient.setQueryData<CourseDocument>(
+      queryClient.setQueryData<CourseRow>(
         queryKeys.courses.detail(courseId),
         updatedCourse,
       );
@@ -182,7 +182,7 @@ export function useUpdateCourse() {
 
       // Invalidate teacher's course list
       queryClient.invalidateQueries({
-        queryKey: queryKeys.courses.byTeacher(updatedCourse.teacherId),
+        queryKey: queryKeys.courses.byTeacher(updatedCourse.teacher_id),
       });
     },
   });
@@ -201,11 +201,11 @@ export function useUpdateCourse() {
  */
 export function useDeleteCourse() {
   const queryClient = useQueryClient();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   return useMutation({
     mutationFn: ({ courseId }: { courseId: string; teacherId?: string }) =>
-      deleteCourse(courseId, userProfile!.$id),
+      deleteCourse(courseId, userProfile!.id),
     onSuccess: (_, { courseId, teacherId }) => {
       // Remove from cache
       queryClient.removeQueries({

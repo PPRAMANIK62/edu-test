@@ -1,7 +1,7 @@
 import ProgressBar from "@/components/student/courses/progress-bar";
 import CoursesTestCard from "@/components/student/courses/test-card";
 import { PaymentButton } from "@/components/student/payment-button";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useCourse } from "@/hooks/use-courses";
 import { useIsStudentEnrolled } from "@/hooks/use-enrollments";
 import { usePurchaseStatus } from "@/hooks/use-payments";
@@ -15,8 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const CourseDetail = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   // Fetch course details
   const { data: courseData, isLoading: courseLoading } = useCourse(courseId);
@@ -40,20 +40,20 @@ const CourseDetail = () => {
     if (!courseData) return null;
 
     return {
-      id: courseData.$id,
+      id: courseData.id,
       title: courseData.title,
       description: courseData.description,
-      imageUrl: courseData.imageUrl,
+      image_url: courseData.image_url,
       price: courseData.price,
       currency: courseData.currency,
-      teacherId: courseData.teacherId,
-      teacherName: "Instructor", // TODO: Fetch teacher name
-      totalTests: testsData?.total || 0,
-      totalQuestions: 0, // Could compute from tests if needed
-      estimatedHours: courseData.estimatedHours,
+      teacher_id: courseData.teacher_id,
+      teacher_name: "Instructor", // TODO: Fetch teacher name
+      total_tests: testsData?.total || 0,
+      total_questions: 0, // Could compute from tests if needed
+      estimated_hours: courseData.estimated_hours,
       subjects: courseData.subjects,
-      isPurchased: isEnrolled || hasPurchased || canAccess || false,
-      enrollmentCount: 0,
+      is_purchased: isEnrolled || hasPurchased || canAccess || false,
+      enrollment_count: 0,
     };
   }, [courseData, testsData, isEnrolled, hasPurchased, canAccess]);
 
@@ -62,16 +62,16 @@ const CourseDetail = () => {
     if (!testsData?.documents) return [];
 
     return testsData.documents.map((test) => ({
-      id: test.$id,
-      courseId: test.courseId,
+      id: test.id,
+      course_id: test.course_id,
       title: test.title,
       description: test.description,
-      durationMinutes: test.durationMinutes,
-      totalQuestions: test.questionCount,
+      duration_minutes: test.duration_minutes,
+      total_questions: test.question_count,
       subjects: [],
-      passingScore: test.passingScore,
-      attemptCount: 0, // Will be computed from attempts
-      isAvailable: test.isPublished,
+      passing_score: test.passing_score,
+      attempt_count: 0, // Will be computed from attempts
+      is_available: test.is_published,
     }));
   }, [testsData]);
 
@@ -91,7 +91,7 @@ const CourseDetail = () => {
       <Stack.Screen />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <Image
-          source={{ uri: course.imageUrl }}
+          source={{ uri: course.image_url }}
           className="w-full h-64"
           resizeMode="cover"
         />
@@ -101,27 +101,27 @@ const CourseDetail = () => {
             {course.title}
           </Text>
           <Text className="text-sm text-primary-600 font-medium mb-4">
-            {course.teacherName}
+            {course.teacher_name}
           </Text>
 
           <View className="flex-row items-center gap-4 mb-6">
             <View className="flex-row items-center">
               <FileText size={18} color="#6b7280" />
               <Text className="text-base text-gray-600 ml-2">
-                {course.totalTests} tests
+                {course.total_tests} tests
               </Text>
             </View>
             <View className="flex-row items-center">
               <Clock size={18} color="#6b7280" />
               <Text className="text-base text-gray-600 ml-2">
-                {course.estimatedHours}h
+                {course.estimated_hours}h
               </Text>
             </View>
           </View>
 
           {course.progress && <ProgressBar course={course} />}
 
-          {!course.isPurchased && (
+          {!course.is_purchased && (
             <View className="bg-primary-50 border-2 border-primary-600 rounded-2xl p-5 mb-6">
               <View className="flex-row items-center justify-between mb-4">
                 <View>
@@ -163,7 +163,7 @@ const CourseDetail = () => {
                   <CoursesTestCard
                     key={test.id}
                     test={test}
-                    isPurchased={course.isPurchased}
+                    isPurchased={course.is_purchased}
                   />
                 ))
               ) : (

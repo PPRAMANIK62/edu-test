@@ -50,18 +50,18 @@ const StudentCard = ({
           </View>
           <Text className="text-gray-500 text-sm mb-1">{student.email}</Text>
           <Text className="text-gray-400 text-xs">
-            Last active {formatTimeAgo(student.lastActive)}
+            Last active {formatTimeAgo(student.last_active)}
           </Text>
         </View>
       </View>
 
       <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
-        <StudentStat value={student.enrolledCourses} label="Courses" />
+        <StudentStat value={student.enrolled_courses} label="Courses" />
         <Divider />
-        <StudentStat value={student.completedTests} label="Tests Done" />
+        <StudentStat value={student.completed_tests} label="Tests Done" />
         <Divider />
         <StudentStat
-          value={`${student.averageScore}%`}
+          value={`${student.average_score}%`}
           label="Avg Score"
           icon={<Star size={14} color="#f59e0b" fill="#f59e0b" />}
         />
@@ -69,7 +69,7 @@ const StudentCard = ({
         {showRevenue && (
           <>
             <Divider />
-            <StudentStat value={`$${student.totalSpent}`} label="Spent" />
+            <StudentStat value={`$${student.total_spent}`} label="Spent" />
           </>
         )}
       </View>

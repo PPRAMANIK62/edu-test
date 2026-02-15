@@ -5,12 +5,8 @@
  */
 
 import type { StudentEngagementMetrics } from "@/types";
-import { Query } from "appwrite";
-import { APPWRITE_CONFIG } from "../../appwrite";
-import { fetchAllRows } from "../../appwrite-helpers";
-import type { EnrollmentDocument, TestAttemptDocument } from "../types";
-
-const { tables } = APPWRITE_CONFIG;
+import { fetchAllRows, TABLES } from "../../supabase-helpers";
+import type { EnrollmentRow, TestAttemptRow } from "../types";
 
 /**
  * Calculate student engagement metrics for a course
@@ -18,32 +14,26 @@ const { tables } = APPWRITE_CONFIG;
 export async function getStudentEngagementMetrics(
   courseId: string,
 ): Promise<StudentEngagementMetrics> {
-  const [enrollmentResponse, attemptResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseId),
-    ]),
-    fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
-      Query.equal("courseId", courseId),
-      Query.equal("status", "completed"),
-    ]),
+  const [enrollments, testAttempts] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.eq("course_id", courseId),
+    ),
+    fetchAllRows<TestAttemptRow>(TABLES.test_attempts, (q) =>
+      q.eq("course_id", courseId).eq("status", "completed"),
+    ),
   ]);
 
-  const enrollments = enrollmentResponse.rows;
   const totalStudents = enrollments.length;
-  const testAttempts = attemptResponse.rows;
 
-  // Calculate active students (those with at least one test attempt)
-  const studentsWithAttempts = new Set(testAttempts.map((t) => t.studentId));
+  const studentsWithAttempts = new Set(testAttempts.map((t) => t.student_id));
   const activeStudents = studentsWithAttempts.size;
 
-  // Calculate average test score
   const averageTestScore =
     testAttempts.length > 0
       ? testAttempts.reduce((sum, t) => sum + (t.percentage || 0), 0) /
         testAttempts.length
       : 0;
 
-  // Calculate completion rate
   const completedEnrollments = enrollments.filter(
     (e) => e.status === "completed",
   );
@@ -51,11 +41,11 @@ export async function getStudentEngagementMetrics(
     totalStudents > 0 ? (completedEnrollments.length / totalStudents) * 100 : 0;
 
   return {
-    totalStudents,
-    activeStudents,
-    averageTestScore,
-    totalTestAttempts: testAttempts.length,
-    completionRate,
+    total_students: totalStudents,
+    active_students: activeStudents,
+    average_test_score: averageTestScore,
+    total_test_attempts: testAttempts.length,
+    completion_rate: completionRate,
   };
 }
 
@@ -67,12 +57,11 @@ export async function getAverageCompletionRate(
 ): Promise<number> {
   if (courseIds.length === 0) return 0;
 
-  const enrollmentResponse = await fetchAllRows<EnrollmentDocument>(
-    tables.enrollments!,
-    [Query.equal("courseId", courseIds)],
+  const enrollments = await fetchAllRows<EnrollmentRow>(
+    TABLES.enrollments,
+    (q) => q.in("course_id", courseIds),
   );
 
-  const enrollments = enrollmentResponse.rows;
   if (enrollments.length === 0) return 0;
 
   const completedCount = enrollments.filter(

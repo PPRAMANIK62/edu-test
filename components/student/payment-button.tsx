@@ -5,12 +5,12 @@
  * Handles the complete payment flow with loading states and feedback.
  */
 
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   usePurchaseCourseWithAlerts,
   usePurchaseStatus,
 } from "@/hooks/use-payments";
-import type { PurchaseDocument, UserDocument } from "@/lib/services/types";
+import type { PurchaseRow, ProfileRow } from "@/lib/services/types";
 import React from "react";
 import {
   ActivityIndicator,
@@ -26,7 +26,7 @@ export interface PaymentButtonProps {
   /** Course price in rupees */
   price: number;
   /** Optional callback when payment succeeds */
-  onSuccess?: (purchase: PurchaseDocument) => void;
+  onSuccess?: (purchase: PurchaseRow) => void;
   /** Optional callback when payment is cancelled */
   onCancel?: () => void;
   /** Optional custom styles for the button container */
@@ -67,12 +67,12 @@ export function PaymentButton({
   buttonText,
   size = "md",
 }: PaymentButtonProps) {
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
   const { purchaseWithAlerts, isPurchasing } = usePurchaseCourseWithAlerts();
 
   // Check current purchase status
   const { hasPurchased, isFree, canAccess, isLoading } = usePurchaseStatus(
-    userProfile?.$id,
+    userProfile?.id,
     courseId,
     price,
   );
@@ -82,7 +82,7 @@ export function PaymentButton({
       return;
     }
 
-    await purchaseWithAlerts(courseId, userProfile as UserDocument, {
+    await purchaseWithAlerts(courseId, userProfile as ProfileRow, {
       onSuccess,
       onCancel,
     });

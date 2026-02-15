@@ -35,13 +35,13 @@ const TeacherTestCard = ({ test }: TeacherTestCardProps) => {
         <View className="flex-row items-center gap-1">
           <FileQuestion size={16} color="#6b7280" />
           <Text className="text-gray-700 font-medium text-sm">
-            {test.totalQuestions} questions
+            {test.total_questions} questions
           </Text>
         </View>
         <View className="flex-row items-center gap-1">
           <Clock size={16} color="#6b7280" />
           <Text className="text-gray-700 font-medium text-sm">
-            {test.durationMinutes} min
+            {test.duration_minutes} min
           </Text>
         </View>
         <View className="flex-row items-center gap-1">

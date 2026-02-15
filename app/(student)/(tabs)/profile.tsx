@@ -1,4 +1,4 @@
-import { useAppwrite } from "@/providers/appwrite";
+import { useAuth } from "@/providers/auth";
 import { useRouter } from "expo-router";
 import {
   Award,
@@ -13,7 +13,7 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ProfileTab = () => {
-  const { userProfile: user, signOut } = useAppwrite();
+  const { userProfile: user, signOut } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -48,7 +48,7 @@ const ProfileTab = () => {
                 <User size={48} color="#1890ff" />
               </View>
               <Text className="text-2xl font-bold text-gray-900 mb-1">
-                {user?.firstName} {user?.lastName}
+                {user?.first_name} {user?.last_name}
               </Text>
               <View className="flex-row items-center">
                 <Mail size={16} color="#6b7280" />

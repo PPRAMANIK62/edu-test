@@ -1,103 +1,86 @@
+import type { User } from "@supabase/supabase-js";
+
 export type UserRole = "teacher" | "teaching_assistant" | "student";
 
-export interface UserProfile {
-  $id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  isPrimaryTeacher?: boolean;
-}
+export type SupabaseUser = User;
 
-export interface AppwriteUser {
-  $id: string;
+export interface UserProfile {
+  id: string;
   email: string;
-  name: string;
-  emailVerification: boolean;
-  prefs: Record<string, unknown>;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  is_primary_teacher?: boolean;
 }
 
 export interface Course {
   id: string;
   title: string;
   description: string;
-  imageUrl: string;
+  image_url: string;
   price: number;
   currency: string;
-  teacherId: string;
-  teacherName: string;
-  totalTests: number;
-  totalQuestions: number;
-  estimatedHours: number;
+  teacher_id: string;
+  teacher_name: string;
+  total_tests: number;
+  total_questions: number;
+  estimated_hours: number;
   subjects: string[];
-  isPurchased: boolean;
+  is_purchased: boolean;
   progress?: number;
-  enrollmentCount: number;
+  enrollment_count: number;
 }
 
 export interface Student {
   id: string;
   name: string;
   email: string;
-  enrolledCourses: number;
-  completedTests: number;
-  averageScore: number;
-  totalSpent: number;
-  lastActive: string;
+  enrolled_courses: number;
+  completed_tests: number;
+  average_score: number;
+  total_spent: number;
+  last_active: string;
   status: "active" | "inactive";
 }
 
 export interface Test {
   id: string;
-  courseId: string;
+  course_id: string;
   title: string;
   description: string;
-  durationMinutes: number;
-  totalQuestions: number;
+  duration_minutes: number;
+  total_questions: number;
   subjects: Subject[];
-  passingScore: number;
-  attemptCount: number;
-  bestScore?: number;
-  isAvailable: boolean;
+  passing_score: number;
+  attempt_count: number;
+  best_score?: number;
+  is_available: boolean;
 }
 
 export interface Subject {
   id: string;
   name: string;
-  questionCount: number;
+  question_count: number;
 }
 
-/**
- * Question type discriminator
- */
 export type QuestionType = "mcq";
 
-/**
- * Base question fields shared across all question types
- */
 export interface BaseQuestion {
   id: string;
-  testId: string;
-  subjectId: string;
-  subjectName: string;
+  test_id: string;
+  subject_id: string;
+  subject_name: string;
   text: string;
   order: number;
 }
 
-/**
- * MCQ Question type with multiple choice options
- */
 export interface MCQQuestion extends BaseQuestion {
   type: "mcq";
   options: QuestionOption[];
-  correctOptionId: string;
+  correct_option_id: string;
   explanation: string;
 }
 
-/**
- * Union type for all question types
- * Currently only MCQ, but designed for future extensibility
- */
 export type Question = MCQQuestion;
 
 export interface QuestionOption {
@@ -106,24 +89,21 @@ export interface QuestionOption {
   text: string;
 }
 
-/**
- * Form data for creating/editing MCQ questions
- */
 export interface MCQFormData {
   text: string;
-  subjectId: string;
+  subject_id: string;
   options: QuestionOption[];
-  correctOptionId: string;
+  correct_option_id: string;
   explanation: string;
 }
 
 export interface Attempt {
   id: string;
-  testId: string;
-  userId: string;
-  startTime: string;
-  endTime: string;
-  submittedAt?: string;
+  test_id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  submitted_at?: string;
   status: "in_progress" | "completed" | "expired";
   answers: AttemptAnswer[];
   score?: number;
@@ -131,34 +111,34 @@ export interface Attempt {
 }
 
 export interface AttemptAnswer {
-  questionId: string;
-  selectedOptionId?: string;
-  isMarkedForReview: boolean;
-  isCorrect?: boolean;
+  question_id: string;
+  selected_option_id?: string;
+  is_marked_for_review: boolean;
+  is_correct?: boolean;
 }
 
 export interface AttemptResult {
   attempt: Attempt;
   questions: Question[];
-  correctCount: number;
-  incorrectCount: number;
-  unansweredCount: number;
+  correct_count: number;
+  incorrect_count: number;
+  unanswered_count: number;
   score: number;
   percentage: number;
   passed: boolean;
 }
 
 export interface StudentDashboardStats {
-  coursesEnrolled: number;
-  testsCompleted: number;
-  averageScore: number;
-  totalStudyHours: number;
+  courses_enrolled: number;
+  tests_completed: number;
+  average_score: number;
+  total_study_hours: number;
 }
 
 export interface TeacherDashboardStats {
-  coursesCreated: number;
-  totalStudents: number;
-  totalRevenue: number;
+  courses_created: number;
+  total_students: number;
+  total_revenue: number;
 }
 
 export interface RecentActivity {
@@ -172,9 +152,9 @@ export interface RecentActivity {
 
 export interface RecentEnrollment {
   id: string;
-  studentName: string;
-  courseTitle: string;
-  enrolledAt: string;
+  student_name: string;
+  course_title: string;
+  enrolled_at: string;
   status: "active" | "completed";
 }
 
@@ -183,100 +163,80 @@ export interface CourseFormData {
   description: string;
   price: string;
   subjects: string[];
-  estimatedHours: string;
-  imageUrl: string;
+  estimated_hours: string;
+  image_url: string;
 }
 
 export interface StudentEnrollment {
   id: string;
-  studentId: string;
-  courseId: string;
-  courseTitle: string;
-  enrolledAt: string;
+  student_id: string;
+  course_id: string;
+  course_title: string;
+  enrolled_at: string;
   progress: number;
   status: "active" | "completed";
 }
 
 export interface StudentTestAttempt {
   id: string;
-  studentId: string;
-  testId: string;
-  testTitle: string;
+  student_id: string;
+  test_id: string;
+  test_title: string;
   score: number;
   percentage: number;
-  completedAt: string;
+  completed_at: string;
   passed: boolean;
 }
 
-// Analytics Types
-
-/**
- * Time range filter for analytics queries
- */
 export type TimeRangeFilter = "7d" | "30d" | "90d" | "1y" | "all";
 
-/**
- * Options for analytics queries
- */
 export interface AnalyticsQueryOptions {
-  timeRange?: TimeRangeFilter;
-  courseId?: string;
+  time_range?: TimeRangeFilter;
+  course_id?: string;
 }
 
-/**
- * Course performance metrics calculated from database
- */
 export interface CoursePerformanceMetrics {
-  courseId: string;
-  courseTitle: string;
-  totalRevenue: number;
-  totalEnrollments: number;
-  averageRating: number;
-  completionRate: number;
+  course_id: string;
+  course_title: string;
+  total_revenue: number;
+  total_enrollments: number;
+  average_rating: number;
+  completion_rate: number;
   trends: {
-    revenueChange: number; // percentage
-    enrollmentChange: number; // percentage
-    ratingChange: number; // percentage
+    revenue_change: number;
+    enrollment_change: number;
+    rating_change: number;
   };
 }
 
-/**
- * Student engagement metrics for a course
- */
 export interface StudentEngagementMetrics {
-  totalStudents: number;
-  activeStudents: number; // students with at least one test attempt
-  averageTestScore: number;
-  totalTestAttempts: number;
-  completionRate: number;
+  total_students: number;
+  active_students: number;
+  average_test_score: number;
+  total_test_attempts: number;
+  completion_rate: number;
 }
 
-/**
- * Revenue analytics metrics
- */
 export interface RevenueMetrics {
-  totalRevenue: number;
-  revenueByMonth: { month: string; revenue: number }[];
-  topCourses: {
-    courseId: string;
-    courseTitle: string;
+  total_revenue: number;
+  revenue_by_month: { month: string; revenue: number }[];
+  top_courses: {
+    course_id: string;
+    course_title: string;
     revenue: number;
-    enrollmentCount: number;
-    testCount: number;
+    enrollment_count: number;
+    test_count: number;
   }[];
   trends: {
-    percentageChange: number;
-    comparisonPeriod: string;
+    percentage_change: number;
+    comparison_period: string;
   };
 }
 
 // ============================================================================
-// Razorpay Types (re-exported from lib/razorpay.ts for convenience)
+// Razorpay Types (re-exported from lib/razorpay.ts)
 // ============================================================================
 
-/**
- * Options for opening Razorpay checkout modal
- */
 export type {
   RazorpayCheckoutOptions,
   RazorpayErrorResponse,

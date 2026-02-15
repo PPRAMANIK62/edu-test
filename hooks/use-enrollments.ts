@@ -27,7 +27,7 @@ import {
 import type { QueryOptions } from "@/lib/services/helpers";
 import type {
   CreateEnrollmentInput,
-  EnrollmentDocument,
+  EnrollmentRow,
 } from "@/lib/services/types";
 import { createQueryHook } from "./create-query-hook";
 
@@ -161,9 +161,8 @@ export function useEnrollStudent() {
 
   return useMutation({
     mutationFn: (data: CreateEnrollmentInput) => enrollStudent(data),
-    onSuccess: (_, { studentId, courseId }) => {
-      // Comprehensive invalidation for enrollment action
-      invalidateAfterEnrollment(queryClient, studentId, courseId);
+    onSuccess: (_, { student_id, course_id }) => {
+      invalidateAfterEnrollment(queryClient, student_id, course_id);
     },
   });
 }
@@ -194,7 +193,7 @@ export function useUpdateEnrollmentProgress() {
     }) => updateEnrollmentProgress(enrollmentId, progress),
     onSuccess: (updatedEnrollment, { enrollmentId, studentId, courseId }) => {
       // Update the cache directly
-      queryClient.setQueryData<EnrollmentDocument>(
+      queryClient.setQueryData<EnrollmentRow>(
         queryKeys.enrollments.detail(enrollmentId),
         updatedEnrollment,
       );

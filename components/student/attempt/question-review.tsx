@@ -24,7 +24,7 @@ const QuestionReviewCard = ({
       </View>
       <View className="flex-1">
         <Text className="text-sm text-primary-600 font-medium mb-1">
-          Question {index + 1} • {question.subjectName}
+          Question {index + 1} • {question.subject_name}
         </Text>
         <Text className="text-base font-semibold text-gray-900 leading-6 mb-3">
           {question.text}
@@ -35,7 +35,7 @@ const QuestionReviewCard = ({
             <AnswerOption
               key={option.id}
               option={option}
-              correctOptionId={question.correctOptionId}
+              correctOptionId={question.correct_option_id}
               selectedOptionId={question.selectedOptionId}
             />
           ))}

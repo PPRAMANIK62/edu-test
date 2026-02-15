@@ -23,7 +23,7 @@ export const UserCard = ({
 }: UserCardProps) => {
   const [showActions, setShowActions] = useState(false);
 
-  const isCurrentUser = user.$id === currentUserId;
+  const isCurrentUser = user.id === currentUserId;
 
   // Determine available role actions based on current role
   const getAvailableActions = (): UserRole[] => {
@@ -38,7 +38,7 @@ export const UserCard = ({
       actions.push("teaching_assistant", "teacher");
     } else if (user.role === "teaching_assistant") {
       actions.push("student", "teacher");
-    } else if (user.role === "teacher" && !user.isPrimaryTeacher) {
+    } else if (user.role === "teacher" && !user.is_primary_teacher) {
       actions.push("student", "teaching_assistant");
     }
 
@@ -67,7 +67,7 @@ export const UserCard = ({
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
           <Text className="text-lg font-semibold text-gray-900 mb-1">
-            {user.firstName} {user.lastName}
+            {user.first_name} {user.last_name}
           </Text>
           <Text className="text-sm text-gray-600">{user.email}</Text>
         </View>
@@ -98,7 +98,7 @@ export const UserCard = ({
               <TouchableOpacity
                 key={action}
                 onPress={() => {
-                  onRoleChange(user.$id, action);
+                  onRoleChange(user.id, action);
                   setShowActions(false);
                 }}
                 disabled={isUpdating}
@@ -122,7 +122,7 @@ export const UserCard = ({
         </View>
       )}
 
-      {user.isPrimaryTeacher && (
+      {user.is_primary_teacher && (
         <View className="mt-3 pt-3 border-t border-gray-200">
           <Text className="text-xs text-gray-500 italic">
             Primary teacher cannot be demoted
@@ -130,7 +130,7 @@ export const UserCard = ({
         </View>
       )}
 
-      {isCurrentUser && !user.isPrimaryTeacher && (
+      {isCurrentUser && !user.is_primary_teacher && (
         <View className="mt-3 pt-3 border-t border-gray-200">
           <Text className="text-xs text-gray-500 italic">
             You cannot change your own role

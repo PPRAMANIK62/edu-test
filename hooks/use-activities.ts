@@ -130,9 +130,8 @@ export function useLogActivity() {
 
   return useMutation({
     mutationFn: (data: CreateActivityInput) => logActivity(data),
-    onSuccess: (_, { userId }) => {
-      // Invalidate user's activities
-      invalidateUserActivities(queryClient, userId);
+    onSuccess: (_, { user_id }) => {
+      invalidateUserActivities(queryClient, user_id);
     },
   });
 }

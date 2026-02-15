@@ -4,7 +4,7 @@ import ImagePicker from "@/components/teacher/image-picker";
 import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
 import TeacherTestCard from "@/components/teacher/test-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import {
   useCourse,
   useDeleteCourse,
@@ -29,7 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const EditCourse = () => {
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -52,16 +52,16 @@ const EditCourse = () => {
     if (!testsData?.documents) return [];
 
     return testsData.documents.map((test) => ({
-      id: test.$id,
-      courseId: test.courseId,
+      id: test.id,
+      course_id: test.course_id,
       title: test.title,
       description: test.description,
-      durationMinutes: test.durationMinutes,
-      totalQuestions: test.questionCount,
-      subjects: Array(test.subjectCount).fill(""), // Create array with correct length
-      passingScore: test.passingScore,
-      attemptCount: 0,
-      isAvailable: test.isPublished,
+      duration_minutes: test.duration_minutes,
+      total_questions: test.question_count,
+      subjects: Array(test.subject_count).fill(""), // Create array with correct length
+      passing_score: test.passing_score,
+      attempt_count: 0,
+      is_available: test.is_published,
     }));
   }, [testsData]);
 
@@ -76,8 +76,8 @@ const EditCourse = () => {
         description: course.description,
         price: course.price.toString(),
         subjects: course.subjects,
-        estimatedHours: course.estimatedHours.toString(),
-        imageUri: course.imageUrl || null,
+        estimatedHours: course.estimated_hours.toString(),
+        imageUri: course.image_url || null,
       };
       setTitle(values.title);
       setDescription(values.description);
@@ -174,8 +174,8 @@ const EditCourse = () => {
             description,
             price: parseFloat(price),
             subjects,
-            estimatedHours: estimatedHours ? parseInt(estimatedHours) : 10,
-            imageUrl:
+            estimated_hours: estimatedHours ? parseInt(estimatedHours) : 10,
+            image_url:
               imageUri ||
               "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800",
           },

@@ -4,7 +4,7 @@ import RecentActivityCard from "@/components/student/recent-activity-card";
 import TestProgressCard from "@/components/student/test-progress-card";
 import StatCard from "@/components/teacher/stat-card";
 import { useRecentActivities } from "@/hooks/use-activities";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useAttemptsByStudent } from "@/hooks/use-attempts";
 import { useEnrolledCourses } from "@/hooks/use-courses";
 import { useActiveEnrollmentsByStudent } from "@/hooks/use-enrollments";
@@ -17,8 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const StudentDashboard = () => {
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   // Fetch enrolled courses for the student
   const {
@@ -64,7 +64,7 @@ const StudentDashboard = () => {
   // Get unique teacher IDs
   const teacherIds = useMemo(
     () => [
-      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacherId) || []),
+      ...new Set(enrolledCoursesData?.documents.map((c) => c.teacher_id) || []),
     ],
     [enrolledCoursesData],
   );
@@ -118,29 +118,29 @@ const StudentDashboard = () => {
 
     // Find the corresponding course
     const course = enrolledCoursesData.documents.find(
-      (c) => c.$id === inProgressEnrollment.courseId,
+      (c) => c.id === inProgressEnrollment.course_id,
     );
 
     if (!course) return null;
 
     // Return course with progress info for TestProgressCard
     return {
-      id: course.$id,
+      id: course.id,
       title: course.title,
       description: course.description,
-      imageUrl: course.imageUrl,
+      image_url: course.image_url,
       price: course.price,
       currency: course.currency,
-      teacherId: course.teacherId,
-      teacherName:
-        teacherNamesMap?.get(course.teacherId) || "Course Instructor",
-      totalTests: 0, // Computed when navigating to course detail
-      totalQuestions: 0,
-      estimatedHours: course.estimatedHours,
+      teacher_id: course.teacher_id,
+      teacher_name:
+        teacherNamesMap?.get(course.teacher_id) || "Course Instructor",
+      total_tests: 0, // Computed when navigating to course detail
+      total_questions: 0,
+      estimated_hours: course.estimated_hours,
       subjects: course.subjects,
-      isPurchased: true,
+      is_purchased: true,
       progress: inProgressEnrollment.progress,
-      enrollmentCount: 0,
+      enrollment_count: 0,
     };
   }, [enrollmentsData, enrolledCoursesData, teacherNamesMap]);
 
@@ -209,13 +209,13 @@ const StudentDashboard = () => {
           <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
             {recentActivities?.map((activity, index) => (
               <RecentActivityCard
-                key={activity.$id}
+                key={activity.id}
                 activity={{
-                  id: activity.$id,
+                  id: activity.id,
                   type: activity.type,
                   title: activity.title,
                   subtitle: activity.subtitle,
-                  timestamp: activity.$createdAt,
+                  timestamp: activity.created_at,
                 }}
                 index={index}
                 length={recentActivities.length}

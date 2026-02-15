@@ -10,20 +10,20 @@ const StudentCourseCard = ({ course }: { course: Course }) => {
     <CourseCardBase
       title={course.title}
       description={course.description}
-      imageUrl={course.imageUrl}
+      imageUrl={course.image_url}
       onPress={() => router.push(`/(student)/courses/${course.id}`)}
       stats={
         <View className="flex-row items-center gap-4 mb-4">
           <View className="flex-row items-center">
             <FileText size={16} color="#6b7280" />
             <Text className="text-sm text-gray-600 ml-1">
-              {course.totalTests} tests
+              {course.total_tests} tests
             </Text>
           </View>
           <View className="flex-row items-center">
             <Clock size={16} color="#6b7280" />
             <Text className="text-sm text-gray-600 ml-1">
-              {course.estimatedHours}h
+              {course.estimated_hours}h
             </Text>
           </View>
         </View>

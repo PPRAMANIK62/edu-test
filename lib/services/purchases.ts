@@ -1,214 +1,188 @@
-/**
- * Purchase Service
- * Handles all purchase-related database operations
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows, getRowSafe, paginatedQuery } from "../appwrite-helpers";
+import { supabase } from "../supabase";
+import { fetchAllRows } from "../supabase-helpers";
 import { createPurchaseInputSchema } from "../schemas";
-import { nowISO, type QueryOptions } from "./helpers";
+import { nowISO, DEFAULT_LIMIT, MAX_LIMIT, type QueryOptions } from "./helpers";
 import type {
   CreatePurchaseInput,
   PaginatedResponse,
-  PurchaseDocument,
+  PurchaseRow,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-// ============================================================================
-// Query Functions
-// ============================================================================
-
-/**
- * Get purchases by student ID
- */
 export async function getPurchasesByStudent(
-  studentId: string,
+  student_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<PurchaseDocument>> {
-  return paginatedQuery<PurchaseDocument>(
-    tables.purchases!,
-    [Query.equal("studentId", studentId), Query.orderDesc("purchasedAt")],
-    options,
-  );
+): Promise<PaginatedResponse<PurchaseRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("purchases")
+    .select("*", { count: "exact" })
+    .eq("student_id", student_id)
+    .order("purchased_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as PurchaseRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get purchases by course ID
- */
 export async function getPurchasesByCourse(
-  courseId: string,
+  course_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<PurchaseDocument>> {
-  return paginatedQuery<PurchaseDocument>(
-    tables.purchases!,
-    [Query.equal("courseId", courseId), Query.orderDesc("purchasedAt")],
-    options,
-  );
+): Promise<PaginatedResponse<PurchaseRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("purchases")
+    .select("*", { count: "exact" })
+    .eq("course_id", course_id)
+    .order("purchased_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as PurchaseRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get purchase by ID
- */
 export async function getPurchaseById(
   purchaseId: string,
-): Promise<PurchaseDocument | null> {
-  return getRowSafe<PurchaseDocument>(tables.purchases!, purchaseId);
+): Promise<PurchaseRow | null> {
+  const { data, error } = await supabase
+    .from("purchases")
+    .select("*")
+    .eq("id", purchaseId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as PurchaseRow | null;
 }
 
-/**
- * Check if student has purchased a course
- */
 export async function hasStudentPurchased(
-  studentId: string,
-  courseId: string,
+  student_id: string,
+  course_id: string,
 ): Promise<boolean> {
-  const response = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("courseId", courseId),
-      Query.limit(1),
-    ],
-  });
+  const { count, error } = await supabase
+    .from("purchases")
+    .select("*", { count: "exact", head: true })
+    .eq("student_id", student_id)
+    .eq("course_id", course_id);
 
-  return response.total > 0;
+  if (error) throw error;
+  return (count ?? 0) > 0;
 }
 
-/**
- * Get purchase by student and course
- * Returns the purchase record if it exists
- */
 export async function getPurchase(
-  studentId: string,
-  courseId: string,
-): Promise<PurchaseDocument | null> {
-  const response = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("courseId", courseId),
-      Query.limit(1),
-    ],
-  });
+  student_id: string,
+  course_id: string,
+): Promise<PurchaseRow | null> {
+  const { data, error } = await supabase
+    .from("purchases")
+    .select("*")
+    .eq("student_id", student_id)
+    .eq("course_id", course_id)
+    .maybeSingle();
 
-  if (response.total === 0) {
-    return null;
-  }
-
-  return response.rows[0] as PurchaseDocument;
+  if (error) throw error;
+  return data as PurchaseRow | null;
 }
 
-// ============================================================================
-// Mutation Functions
-// ============================================================================
-
-/**
- * Create a new purchase
- */
 export async function createPurchase(
   input: CreatePurchaseInput,
-): Promise<PurchaseDocument> {
+): Promise<PurchaseRow> {
   createPurchaseInputSchema.parse(input);
-  const existingPurchase = await getPurchase(input.studentId, input.courseId);
+  const existingPurchase = await getPurchase(input.student_id, input.course_id);
   if (existingPurchase) {
     throw new Error("Student has already purchased this course");
   }
 
   const now = nowISO();
 
-  const response = await databases.createRow<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    rowId: ID.unique(),
-    data: {
-      studentId: input.studentId,
-      courseId: input.courseId,
+  const { data, error } = await supabase
+    .from("purchases")
+    .insert({
+      student_id: input.student_id,
+      course_id: input.course_id,
       amount: input.amount,
       currency: input.currency || "INR",
-      purchasedAt: now,
-      paymentStatus: "pending",
-      paymentMethod: null,
-      razorpayOrderId: null,
-      razorpayPaymentId: null,
-      razorpaySignature: null,
-      webhookVerified: false,
-      webhookReceivedAt: null,
-    },
-  });
+      purchased_at: now,
+      payment_status: "pending",
+      payment_method: null,
+      razorpay_order_id: null,
+      razorpay_payment_id: null,
+      razorpay_signature: null,
+      webhook_verified: false,
+      webhook_received_at: null,
+    })
+    .select()
+    .single();
 
-  return response as PurchaseDocument;
+  if (error) throw error;
+  return data as PurchaseRow;
 }
 
-// ============================================================================
-// Analytics Functions
-// ============================================================================
-
-/**
- * Get total revenue for a course
- */
-export async function getCourseRevenue(courseId: string): Promise<number> {
-  const result = await fetchAllRows<PurchaseDocument>(tables.purchases!, [
-    Query.equal("courseId", courseId),
-  ]);
-  return result.rows.reduce((sum, purchase) => sum + purchase.amount, 0);
+export async function getCourseRevenue(course_id: string): Promise<number> {
+  const rows = await fetchAllRows<PurchaseRow>("purchases", (q) =>
+    q.eq("course_id", course_id),
+  );
+  return rows.reduce((sum, purchase) => sum + purchase.amount, 0);
 }
 
-/**
- * Get total revenue for a teacher (across all their courses)
- */
 export async function getTeacherRevenue(
   courseIds: string[],
 ): Promise<{ total: number; byCourse: Record<string, number> }> {
+  if (courseIds.length === 0) return { total: 0, byCourse: {} };
+
+  const rows = await fetchAllRows<PurchaseRow>("purchases", (q) =>
+    q.in("course_id", courseIds),
+  );
+
   const byCourse: Record<string, number> = {};
   let total = 0;
 
-  for (const courseId of courseIds) {
-    const revenue = await getCourseRevenue(courseId);
-    byCourse[courseId] = revenue;
-    total += revenue;
+  for (const purchase of rows) {
+    byCourse[purchase.course_id] =
+      (byCourse[purchase.course_id] || 0) + purchase.amount;
+    total += purchase.amount;
   }
 
   return { total, byCourse };
 }
 
-/**
- * Get purchase count for a course
- */
-export async function getPurchaseCount(courseId: string): Promise<number> {
-  const response = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries: [Query.equal("courseId", courseId), Query.limit(1)],
-  });
+export async function getPurchaseCount(course_id: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("purchases")
+    .select("*", { count: "exact", head: true })
+    .eq("course_id", course_id);
 
-  return response.total;
+  if (error) throw error;
+  return count ?? 0;
 }
 
-/**
- * Get recent purchases across all courses (for admin/teacher dashboard)
- */
 export async function getRecentPurchases(
   courseIds?: string[],
   limit: number = 10,
-): Promise<PurchaseDocument[]> {
-  const queries: string[] = [
-    Query.orderDesc("purchasedAt"),
-    Query.limit(limit),
-  ];
+): Promise<PurchaseRow[]> {
+  let query = supabase
+    .from("purchases")
+    .select("*")
+    .order("purchased_at", { ascending: false })
+    .limit(limit);
 
   if (courseIds && courseIds.length > 0) {
-    queries.unshift(Query.equal("courseId", courseIds));
+    query = query.in("course_id", courseIds);
   }
 
-  const response = await databases.listRows<PurchaseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.purchases!,
-    queries,
-  });
-
-  return response.rows as PurchaseDocument[];
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as PurchaseRow[];
 }

@@ -26,16 +26,16 @@ const QuestionForm = ({
     onFormDataChange({ ...formData, explanation });
   };
 
-  const handleSubjectChange = (subjectId: string) => {
-    onFormDataChange({ ...formData, subjectId });
+  const handleSubjectChange = (subject_id: string) => {
+    onFormDataChange({ ...formData, subject_id });
   };
 
   const handleOptionsChange = (options: QuestionOption[]) => {
     onFormDataChange({ ...formData, options });
   };
 
-  const handleCorrectOptionChange = (correctOptionId: string) => {
-    onFormDataChange({ ...formData, correctOptionId });
+  const handleCorrectOptionChange = (correct_option_id: string) => {
+    onFormDataChange({ ...formData, correct_option_id });
   };
 
   return (
@@ -61,7 +61,7 @@ const QuestionForm = ({
                 key={subject.id}
                 onPress={() => handleSubjectChange(subject.id)}
                 className={`px-4 py-2 rounded-full ${
-                  formData.subjectId === subject.id
+                  formData.subject_id === subject.id
                     ? "bg-violet-600"
                     : "bg-gray-100"
                 }`}
@@ -69,7 +69,7 @@ const QuestionForm = ({
               >
                 <Text
                   className={`text-sm font-medium ${
-                    formData.subjectId === subject.id
+                    formData.subject_id === subject.id
                       ? "text-white"
                       : "text-gray-700"
                   }`}
@@ -79,9 +79,9 @@ const QuestionForm = ({
               </TouchableOpacity>
             ))}
           </View>
-          {errors.subjectId && (
+          {errors.subject_id && (
             <Text className="text-red-500 text-sm mt-1">
-              {errors.subjectId}
+              {errors.subject_id}
             </Text>
           )}
         </View>
@@ -90,10 +90,10 @@ const QuestionForm = ({
       <FormSection title="Answer Options">
         <MCQOptionsEditor
           options={formData.options}
-          correctOptionId={formData.correctOptionId}
+          correctOptionId={formData.correct_option_id}
           onOptionsChange={handleOptionsChange}
           onCorrectOptionChange={handleCorrectOptionChange}
-          error={errors.options || errors.correctOptionId}
+          error={errors.options || errors.correct_option_id}
         />
       </FormSection>
 

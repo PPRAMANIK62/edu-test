@@ -1,273 +1,244 @@
-/**
- * Course Service - CRUD operations for courses
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { fetchAllRows, typedListRows } from "../appwrite-helpers";
+import { supabase } from "../supabase";
+import { fetchAllRows } from "../supabase-helpers";
 import { createCourseInputSchema, updateCourseInputSchema } from "../schemas";
 import {
   buildCountMap,
-  buildQueries,
   requireOwnership,
+  DEFAULT_LIMIT,
+  MAX_LIMIT,
   type QueryOptions,
 } from "./helpers";
 import type {
-  CourseDocument,
+  CourseRow,
   CreateCourseInput,
-  EnrollmentDocument,
+  EnrollmentRow,
   PaginatedResponse,
-  TestDocument,
+  TestRow,
   UpdateCourseInput,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-/**
- * Enrich courses with enrollment and test count stats.
- * Fetches all enrollments and tests for the given courses in parallel,
- * then builds count maps and merges with course data.
- *
- * @param extraTestQueries - Additional queries to filter tests (e.g. isPublished for student views)
- */
 async function enrichCoursesWithStats(
-  courses: CourseDocument[],
-  extraTestQueries: string[] = [],
-): Promise<
-  (CourseDocument & { enrollmentCount: number; testCount: number })[]
-> {
+  courses: CourseRow[],
+  extraTestFilter?: { is_published: boolean },
+): Promise<(CourseRow & { enrollment_count: number; test_count: number })[]> {
   if (courses.length === 0) return [];
 
-  const courseIds = courses.map((c) => c.$id);
+  const courseIds = courses.map((c) => c.id);
 
-  const [enrollmentResponse, testResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<TestDocument>(tables.tests!, [
-      Query.equal("courseId", courseIds),
-      ...extraTestQueries,
-    ]),
+  const [enrollments, tests] = await Promise.all([
+    fetchAllRows<EnrollmentRow>("enrollments", (q) =>
+      q.in("course_id", courseIds),
+    ),
+    fetchAllRows<TestRow>("tests", (q) => {
+      let query = q.in("course_id", courseIds);
+      if (extraTestFilter?.is_published !== undefined) {
+        query = query.eq("is_published", extraTestFilter.is_published);
+      }
+      return query;
+    }),
   ]);
 
   const enrollmentCountMap = buildCountMap(
-    enrollmentResponse.rows as unknown as Record<string, unknown>[],
-    "courseId",
+    enrollments as unknown as Record<string, unknown>[],
+    "course_id",
   );
   const testCountMap = buildCountMap(
-    testResponse.rows as unknown as Record<string, unknown>[],
-    "courseId",
+    tests as unknown as Record<string, unknown>[],
+    "course_id",
   );
 
   return courses.map((course) => ({
     ...course,
-    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
-    testCount: testCountMap.get(course.$id) || 0,
+    enrollment_count: enrollmentCountMap.get(course.id) || 0,
+    test_count: testCountMap.get(course.id) || 0,
   }));
 }
 
-/**
- * Get all published courses
- */
-export async function getCourses(options: QueryOptions = {}): Promise<
+export async function getCourses(
+  options: QueryOptions = {},
+): Promise<
   PaginatedResponse<
-    CourseDocument & {
-      enrollmentCount: number;
-      testCount: number;
-    }
+    CourseRow & { enrollment_count: number; test_count: number }
   >
 > {
-  const queries = [Query.equal("isPublished", true), ...buildQueries(options)];
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await typedListRows<CourseDocument>(
-    tables.courses!,
-    queries,
-  );
+  const { data, error, count } = await supabase
+    .from("courses")
+    .select("*", { count: "exact" })
+    .eq("is_published", true)
+    .order(options.orderBy || "created_at", {
+      ascending: options.orderType === "asc",
+    })
+    .range(offset, offset + limit - 1);
 
-  const documents = response.rows;
+  if (error) throw error;
+  const rows = (data ?? []) as CourseRow[];
 
-  if (documents.length === 0) {
+  if (rows.length === 0) {
     return { documents: [], total: 0, hasMore: false };
   }
 
-  const coursesWithStats = await enrichCoursesWithStats(documents);
+  const coursesWithStats = await enrichCoursesWithStats(rows);
 
   return {
     documents: coursesWithStats,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + documents.length,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get a single course by ID
- */
-export async function getCourseById(id: string): Promise<CourseDocument> {
-  const response = await databases.getRow<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    rowId: id,
+export async function getCourseById(id: string): Promise<CourseRow> {
+  const { data, error } = await supabase
+    .from("courses")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+  return data as CourseRow;
+}
+
+export async function getCoursesByTeacher(
+  teacher_id: string,
+  options: QueryOptions = {},
+): Promise<
+  PaginatedResponse<
+    CourseRow & { enrollment_count: number; test_count: number }
+  >
+> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("courses")
+    .select("*", { count: "exact" })
+    .eq("teacher_id", teacher_id)
+    .order(options.orderBy || "created_at", {
+      ascending: options.orderType === "asc",
+    })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as CourseRow[];
+
+  if (rows.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  const coursesWithStats = await enrichCoursesWithStats(rows);
+
+  return {
+    documents: coursesWithStats,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
+}
+
+export async function getEnrolledCourses(
+  student_id: string,
+  options: QueryOptions = {},
+): Promise<
+  PaginatedResponse<
+    CourseRow & { enrollment_count: number; test_count: number }
+  >
+> {
+  const { data: enrollmentData, error: enrollmentError } = await supabase
+    .from("enrollments")
+    .select("course_id")
+    .eq("student_id", student_id)
+    .eq("status", "active")
+    .limit(100);
+
+  if (enrollmentError) throw enrollmentError;
+  if (!enrollmentData || enrollmentData.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  const courseIds = enrollmentData.map((e) => e.course_id);
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("courses")
+    .select("*", { count: "exact" })
+    .in("id", courseIds)
+    .order(options.orderBy || "created_at", {
+      ascending: options.orderType === "asc",
+    })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as CourseRow[];
+
+  if (rows.length === 0) {
+    return { documents: [], total: 0, hasMore: false };
+  }
+
+  const coursesWithStats = await enrichCoursesWithStats(rows, {
+    is_published: true,
   });
 
-  return response as CourseDocument;
-}
-
-/**
- * Get courses by teacher ID with computed stats (enrollment count, test count)
- */
-export async function getCoursesByTeacher(
-  teacherId: string,
-  options: QueryOptions = {},
-): Promise<
-  PaginatedResponse<
-    CourseDocument & {
-      enrollmentCount: number;
-      testCount: number;
-    }
-  >
-> {
-  const queries = [
-    Query.equal("teacherId", teacherId),
-    ...buildQueries(options),
-  ];
-
-  const response = await typedListRows<CourseDocument>(
-    tables.courses!,
-    queries,
-  );
-
-  const documents = response.rows;
-
-  if (documents.length === 0) {
-    return { documents: [], total: 0, hasMore: false };
-  }
-
-  const coursesWithStats = await enrichCoursesWithStats(documents);
-
   return {
     documents: coursesWithStats,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + documents.length,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get enrolled courses for a student
- * Returns courses where student has an active enrollment, with stats
- */
-export async function getEnrolledCourses(
-  studentId: string,
-  options: QueryOptions = {},
-): Promise<
-  PaginatedResponse<
-    CourseDocument & {
-      enrollmentCount: number;
-      testCount: number;
-    }
-  >
-> {
-  // First, get enrollments for this student
-  const enrollmentResponse = await typedListRows<EnrollmentDocument>(
-    tables.enrollments!,
-    [
-      Query.equal("studentId", studentId),
-      Query.equal("status", "active"),
-      Query.limit(100),
-    ],
-  );
-
-  if (enrollmentResponse.rows.length === 0) {
-    return { documents: [], total: 0, hasMore: false };
-  }
-
-  // Get course IDs from enrollments
-  const courseIds = enrollmentResponse.rows.map((e) => e.courseId);
-
-  // Fetch courses by IDs
-  const queries = [Query.equal("$id", courseIds), ...buildQueries(options)];
-
-  const response = await typedListRows<CourseDocument>(
-    tables.courses!,
-    queries,
-  );
-
-  const documents = response.rows;
-
-  if (documents.length === 0) {
-    return { documents: [], total: 0, hasMore: false };
-  }
-
-  const coursesWithStats = await enrichCoursesWithStats(documents, [
-    Query.equal("isPublished", true),
-  ]);
-
-  return {
-    documents: coursesWithStats,
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + documents.length,
-  };
-}
-
-/**
- * Create a new course
- */
 export async function createCourse(
   data: CreateCourseInput,
   callingUserId: string,
-): Promise<CourseDocument> {
+): Promise<CourseRow> {
   createCourseInputSchema.parse(data);
   requireOwnership(
-    { teacherId: data.teacherId },
+    { teacher_id: data.teacher_id },
     callingUserId,
     "create",
     "courses",
   );
 
-  const response = await databases.createRow<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    rowId: ID.unique(),
-    data: {
-      teacherId: data.teacherId,
+  const { data: row, error } = await supabase
+    .from("courses")
+    .insert({
+      teacher_id: data.teacher_id,
       title: data.title,
       description: data.description,
-      imageUrl: data.imageUrl,
+      image_url: data.image_url,
       price: data.price,
       currency: data.currency || "INR",
       subjects: data.subjects,
-      estimatedHours: data.estimatedHours,
-      isPublished: data.isPublished ?? false,
-    },
-  });
+      estimated_hours: data.estimated_hours,
+      is_published: data.is_published ?? false,
+    })
+    .select()
+    .single();
 
-  return response;
+  if (error) throw error;
+  return row as CourseRow;
 }
 
-/**
- * Update an existing course
- */
 export async function updateCourse(
   id: string,
   data: UpdateCourseInput,
   callingUserId: string,
-): Promise<CourseDocument> {
+): Promise<CourseRow> {
   updateCourseInputSchema.parse(data);
   const course = await getCourseById(id);
   requireOwnership(course, callingUserId, "update", "courses");
 
-  const response = await databases.updateRow<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    rowId: id,
-    data,
-  });
+  const { data: row, error } = await supabase
+    .from("courses")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response;
+  if (error) throw error;
+  return row as CourseRow;
 }
 
-/**
- * Delete a course
- */
 export async function deleteCourse(
   id: string,
   callingUserId: string,
@@ -275,56 +246,45 @@ export async function deleteCourse(
   const course = await getCourseById(id);
   requireOwnership(course, callingUserId, "delete", "courses");
 
-  await databases.deleteRow({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    rowId: id,
-  });
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  if (error) throw error;
 }
 
-/**
- * Get course with computed stats (enrollment count, test count)
- */
 export async function getCourseWithStats(id: string): Promise<
-  CourseDocument & {
-    enrollmentCount: number;
-    testCount: number;
-    questionCount: number;
+  CourseRow & {
+    enrollment_count: number;
+    test_count: number;
+    question_count: number;
   }
 > {
-  // Fetch course
   const course = await getCourseById(id);
 
-  // Count enrollments and tests (independent queries — parallel)
-  const [enrollmentResponse, testResponse] = await Promise.all([
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.enrollments!,
-      queries: [Query.equal("courseId", id), Query.limit(1)],
-    }),
-    databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.tests!,
-      queries: [Query.equal("courseId", id), Query.limit(100)],
-    }),
+  const [enrollmentResult, testResult] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select("*", { count: "exact", head: true })
+      .eq("course_id", id),
+    supabase.from("tests").select("id").eq("course_id", id),
   ]);
 
-  // Count questions for all tests
-  let questionCount = 0;
-  if (testResponse.rows.length > 0) {
-    const testIds = testResponse.rows.map((t) => t.$id);
-    const questionResponse = await databases.listRows({
-      databaseId: databaseId!,
-      tableId: tables.questions!,
-      queries: [Query.equal("testId", testIds), Query.limit(1)],
-    });
-    questionCount = questionResponse.total;
+  if (enrollmentResult.error) throw enrollmentResult.error;
+  if (testResult.error) throw testResult.error;
+
+  let question_count = 0;
+  const testIds = (testResult.data ?? []).map((t) => t.id);
+  if (testIds.length > 0) {
+    const { count, error } = await supabase
+      .from("questions")
+      .select("*", { count: "exact", head: true })
+      .in("test_id", testIds);
+    if (error) throw error;
+    question_count = count ?? 0;
   }
 
   return {
     ...course,
-    enrollmentCount: enrollmentResponse.total,
-    testCount: testResponse.total,
-    questionCount,
+    enrollment_count: enrollmentResult.count ?? 0,
+    test_count: testIds.length,
+    question_count,
   };
 }

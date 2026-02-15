@@ -1,238 +1,208 @@
-/**
- * Question Service - CRUD operations for questions
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
+import { supabase } from "../supabase";
 import {
   createQuestionInputSchema,
   updateQuestionInputSchema,
 } from "../schemas";
 import { getCourseById } from "./courses";
-import { buildQueries, requireOwnership, type QueryOptions } from "./helpers";
+import {
+  requireOwnership,
+  DEFAULT_LIMIT,
+  MAX_LIMIT,
+  type QueryOptions,
+} from "./helpers";
 import { getTestById } from "./tests";
 import type {
   CreateQuestionInput,
   PaginatedResponse,
-  QuestionDocument,
+  QuestionRow,
   UpdateQuestionInput,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-/**
- * Get questions for a test
- */
 export async function getQuestionsByTest(
-  testId: string,
+  test_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<QuestionDocument>> {
-  const queries = [
-    Query.equal("testId", testId),
-    ...buildQueries({ ...options, orderBy: options.orderBy || "order" }),
-  ];
+): Promise<PaginatedResponse<QuestionRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<QuestionDocument>({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("questions")
+    .select("*", { count: "exact" })
+    .eq("test_id", test_id)
+    .order(options.orderBy || "order", {
+      ascending: options.orderType !== "desc",
+    })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as QuestionRow[];
 
   return {
-    documents: response.rows as QuestionDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get questions for a test by subject
- */
 export async function getQuestionsBySubject(
-  testId: string,
-  subjectId: string,
+  test_id: string,
+  subject_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<QuestionDocument>> {
-  const queries = [
-    Query.equal("testId", testId),
-    Query.equal("subjectId", subjectId),
-    ...buildQueries({ ...options, orderBy: options.orderBy || "order" }),
-  ];
+): Promise<PaginatedResponse<QuestionRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
 
-  const response = await databases.listRows<QuestionDocument>({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries,
-  });
+  const { data, error, count } = await supabase
+    .from("questions")
+    .select("*", { count: "exact" })
+    .eq("test_id", test_id)
+    .eq("subject_id", subject_id)
+    .order(options.orderBy || "order", {
+      ascending: options.orderType !== "desc",
+    })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as QuestionRow[];
 
   return {
-    documents: response.rows as QuestionDocument[],
-    total: response.total,
-    hasMore: response.total > (options.offset || 0) + response.rows.length,
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
   };
 }
 
-/**
- * Get a single question by ID
- */
-export async function getQuestionById(id: string): Promise<QuestionDocument> {
-  const response = await databases.getRow<QuestionDocument>({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    rowId: id,
-  });
+export async function getQuestionById(id: string): Promise<QuestionRow> {
+  const { data, error } = await supabase
+    .from("questions")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  return response as QuestionDocument;
+  if (error) throw error;
+  return data as QuestionRow;
 }
 
-/**
- * Create a new question
- */
 export async function createQuestion(
   data: CreateQuestionInput,
   callingUserId: string,
-): Promise<QuestionDocument> {
+): Promise<QuestionRow> {
   createQuestionInputSchema.parse(data);
-  const test = await getTestById(data.testId);
-  const course = await getCourseById(test.courseId);
+  const test = await getTestById(data.test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "create questions for", "courses");
 
-  const response = await databases.createRow<QuestionDocument>({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    rowId: ID.unique(),
-    data: {
-      testId: data.testId,
-      subjectId: data.subjectId,
-      subjectName: data.subjectName,
+  const { data: row, error } = await supabase
+    .from("questions")
+    .insert({
+      test_id: data.test_id,
+      subject_id: data.subject_id,
+      subject_name: data.subject_name,
       type: data.type || "mcq",
       text: data.text,
       options: data.options,
-      correctIndex: data.correctIndex,
+      correct_index: data.correct_index,
       explanation: data.explanation,
       order: data.order,
-    },
-  });
+    })
+    .select()
+    .single();
 
-  return response as QuestionDocument;
+  if (error) throw error;
+  return row as QuestionRow;
 }
 
-/**
- * Update an existing question
- */
 export async function updateQuestion(
   id: string,
   data: UpdateQuestionInput,
   callingUserId: string,
-): Promise<QuestionDocument> {
+): Promise<QuestionRow> {
   updateQuestionInputSchema.parse(data);
   const question = await getQuestionById(id);
-  const test = await getTestById(question.testId);
-  const course = await getCourseById(test.courseId);
+  const test = await getTestById(question.test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "update questions for", "courses");
 
-  const response = await databases.updateRow<QuestionDocument>({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    rowId: id,
-    data,
-  });
+  const { data: row, error } = await supabase
+    .from("questions")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response as QuestionDocument;
+  if (error) throw error;
+  return row as QuestionRow;
 }
 
-/**
- * Delete a question
- */
 export async function deleteQuestion(
   id: string,
   callingUserId: string,
 ): Promise<void> {
   const question = await getQuestionById(id);
-  const test = await getTestById(question.testId);
-  const course = await getCourseById(test.courseId);
+  const test = await getTestById(question.test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "delete questions for", "courses");
 
-  await databases.deleteRow({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    rowId: id,
-  });
+  const { error } = await supabase.from("questions").delete().eq("id", id);
+  if (error) throw error;
 }
 
-/**
- * Reorder questions in a test
- * @param testId - Test ID
- * @param questionIds - Array of question IDs in desired order
- */
 export async function reorderQuestions(
-  testId: string,
+  test_id: string,
   questionIds: string[],
   callingUserId: string,
 ): Promise<void> {
-  const test = await getTestById(testId);
-  const course = await getCourseById(test.courseId);
+  const test = await getTestById(test_id);
+  const course = await getCourseById(test.course_id);
   requireOwnership(course, callingUserId, "reorder questions for", "courses");
 
-  // Update each question with its new order
   const updates = questionIds.map((questionId, index) =>
-    databases.updateRow({
-      databaseId: databaseId!,
-      tableId: tables.questions!,
-      rowId: questionId,
-      data: { order: index + 1 },
-    }),
+    supabase
+      .from("questions")
+      .update({ order: index + 1 })
+      .eq("id", questionId),
   );
 
   await Promise.all(updates);
 }
 
-/**
- * Get question count for a test
- */
-export async function getQuestionCount(testId: string): Promise<number> {
-  const response = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.questions!,
-    queries: [Query.equal("testId", testId), Query.limit(1)],
-  });
+export async function getQuestionCount(test_id: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("questions")
+    .select("*", { count: "exact", head: true })
+    .eq("test_id", test_id);
 
-  return response.total;
+  if (error) throw error;
+  return count ?? 0;
 }
 
-/**
- * Bulk create questions for a test
- */
 export async function bulkCreateQuestions(
   questions: CreateQuestionInput[],
   callingUserId: string,
-): Promise<QuestionDocument[]> {
+): Promise<QuestionRow[]> {
   if (questions.length > 0) {
-    const test = await getTestById(questions[0].testId);
-    const course = await getCourseById(test.courseId);
+    const test = await getTestById(questions[0].test_id);
+    const course = await getCourseById(test.course_id);
     requireOwnership(course, callingUserId, "create questions for", "courses");
   }
 
-  const created = await Promise.all(
-    questions.map((data) =>
-      databases.createRow<QuestionDocument>({
-        databaseId: databaseId!,
-        tableId: tables.questions!,
-        rowId: ID.unique(),
-        data: {
-          testId: data.testId,
-          subjectId: data.subjectId,
-          subjectName: data.subjectName,
-          type: data.type || "mcq",
-          text: data.text,
-          options: data.options,
-          correctIndex: data.correctIndex,
-          explanation: data.explanation,
-          order: data.order,
-        },
-      }),
-    ),
-  );
+  const rows = questions.map((data) => ({
+    test_id: data.test_id,
+    subject_id: data.subject_id,
+    subject_name: data.subject_name,
+    type: data.type || "mcq",
+    text: data.text,
+    options: data.options,
+    correct_index: data.correct_index,
+    explanation: data.explanation,
+    order: data.order,
+  }));
 
-  return created as QuestionDocument[];
+  const { data, error } = await supabase
+    .from("questions")
+    .insert(rows)
+    .select();
+
+  if (error) throw error;
+  return (data ?? []) as QuestionRow[];
 }

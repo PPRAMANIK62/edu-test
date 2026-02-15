@@ -24,9 +24,9 @@ export default function EditQuestionScreen() {
 
   const [formData, setFormData] = useState<MCQFormData>({
     text: "",
-    subjectId: "",
+    subject_id: "",
     options: [],
-    correctOptionId: "",
+    correct_option_id: "",
     explanation: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,12 +40,12 @@ export default function EditQuestionScreen() {
   const test = useMemo(() => {
     if (!testData) return null;
     return {
-      id: testData.$id,
+      id: testData.id,
       title: testData.title,
       subjects: testData.subjects.map((s) => ({
-        id: s.$id,
+        id: s.id,
         name: s.name,
-        questionCount: s.questionCount || 0,
+        question_count: s.question_count || 0,
       })),
     };
   }, [testData]);
@@ -59,10 +59,10 @@ export default function EditQuestionScreen() {
     if (!questionData) return null;
     const labels = ["A", "B", "C", "D", "E", "F"] as const;
     return {
-      id: questionData.$id,
-      testId: questionData.testId,
-      subjectId: questionData.subjectId,
-      subjectName: questionData.subjectName,
+      id: questionData.id,
+      test_id: questionData.test_id,
+      subject_id: questionData.subject_id,
+      subject_name: questionData.subject_name,
       type: questionData.type as "mcq",
       text: questionData.text,
       options: questionData.options.map((text, i) => ({
@@ -70,7 +70,7 @@ export default function EditQuestionScreen() {
         label: labels[i] || "A",
         text,
       })) as QuestionOption[],
-      correctOptionId: `opt-${questionData.correctIndex}`,
+      correct_option_id: `opt-${questionData.correct_index}`,
       explanation: questionData.explanation,
       order: questionData.order,
     } as MCQQuestion;
@@ -84,9 +84,9 @@ export default function EditQuestionScreen() {
     if (question && !isInitialized) {
       setFormData({
         text: question.text,
-        subjectId: question.subjectId,
+        subject_id: question.subject_id,
         options: [...question.options],
-        correctOptionId: question.correctOptionId,
+        correct_option_id: question.correct_option_id,
         explanation: question.explanation,
       });
       setIsInitialized(true);
@@ -97,8 +97,8 @@ export default function EditQuestionScreen() {
     if (!question) return false;
     return (
       formData.text !== question.text ||
-      formData.subjectId !== question.subjectId ||
-      formData.correctOptionId !== question.correctOptionId ||
+      formData.subject_id !== question.subject_id ||
+      formData.correct_option_id !== question.correct_option_id ||
       formData.explanation !== question.explanation ||
       JSON.stringify(formData.options) !== JSON.stringify(question.options)
     );
@@ -116,7 +116,7 @@ export default function EditQuestionScreen() {
   const handleUpdate = () => {
     if (!validate() || !question || !test) return;
 
-    const subject = test.subjects.find((s) => s.id === formData.subjectId);
+    const subject = test.subjects.find((s) => s.id === formData.subject_id);
     const validOptions = formData.options.filter((o) => o.text.trim());
 
     updateMutation.mutate(
@@ -124,12 +124,12 @@ export default function EditQuestionScreen() {
         questionId: questionId,
         testId: testId,
         data: {
-          subjectId: formData.subjectId,
-          subjectName: subject?.name || question.subjectName || "",
+          subject_id: formData.subject_id,
+          subject_name: subject?.name || question.subject_name || "",
           text: formData.text.trim(),
           options: validOptions.map((o) => o.text),
-          correctIndex: validOptions.findIndex(
-            (o) => o.id === formData.correctOptionId,
+          correct_index: validOptions.findIndex(
+            (o) => o.id === formData.correct_option_id,
           ),
           explanation: formData.explanation.trim(),
         },

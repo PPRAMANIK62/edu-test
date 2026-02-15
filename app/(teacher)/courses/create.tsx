@@ -3,7 +3,7 @@ import FormSection from "@/components/teacher/form-section";
 import ImagePicker from "@/components/teacher/image-picker";
 import ScreenHeader from "@/components/teacher/screen-header";
 import SubjectPicker from "@/components/teacher/subject-picker";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { isTeacher } from "@/lib/permissions";
 import { courseFormSchema, validateForm } from "@/lib/schemas";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const CreateCourse = () => {
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

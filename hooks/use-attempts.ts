@@ -26,7 +26,7 @@ import {
   submitAnswersBatch,
 } from "@/lib/services/attempts";
 import type { QueryOptions } from "@/lib/services/helpers";
-import type { Answer, TestAttemptDocument } from "@/lib/services/types";
+import type { Answer, TestAttemptRow } from "@/lib/services/types";
 import { createQueryHook } from "./create-query-hook";
 
 // ============================================================================
@@ -173,8 +173,8 @@ export function useStartAttempt() {
     }) => startAttempt(studentId, testId, courseId),
     onSuccess: (newAttempt, { studentId, testId }) => {
       // Set the new attempt in cache
-      queryClient.setQueryData<TestAttemptDocument>(
-        queryKeys.attempts.detail(newAttempt.$id),
+      queryClient.setQueryData<TestAttemptRow>(
+        queryKeys.attempts.detail(newAttempt.id),
         newAttempt,
       );
 
@@ -220,7 +220,7 @@ export function useSubmitAnswer() {
       submitAnswer(attemptId, questionIndex, selectedIndex, isMarkedForReview),
     onSuccess: (updatedAttempt, { attemptId }) => {
       // Update the cache directly
-      queryClient.setQueryData<TestAttemptDocument>(
+      queryClient.setQueryData<TestAttemptRow>(
         queryKeys.attempts.detail(attemptId),
         updatedAttempt,
       );
@@ -252,7 +252,7 @@ export function useSubmitAnswersBatch() {
     }) => submitAnswersBatch(attemptId, answers),
     onSuccess: (updatedAttempt, { attemptId }) => {
       // Update the cache directly
-      queryClient.setQueryData<TestAttemptDocument>(
+      queryClient.setQueryData<TestAttemptRow>(
         queryKeys.attempts.detail(attemptId),
         updatedAttempt,
       );
@@ -284,7 +284,7 @@ export function useCompleteAttempt() {
     }) => completeAttempt(attemptId),
     onSuccess: (completedAttempt, { attemptId, studentId, testId }) => {
       // Update the cache directly
-      queryClient.setQueryData<TestAttemptDocument>(
+      queryClient.setQueryData<TestAttemptRow>(
         queryKeys.attempts.detail(attemptId),
         completedAttempt,
       );

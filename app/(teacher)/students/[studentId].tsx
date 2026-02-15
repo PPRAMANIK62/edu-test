@@ -1,10 +1,10 @@
 import ScreenHeader from "@/components/teacher/screen-header";
 import { useAttemptsByStudent } from "@/hooks/use-attempts";
 import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
-import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { supabase } from "@/lib/supabase";
 import { formatTimeAgo } from "@/lib/utils";
-import { useAppwrite } from "@/providers/appwrite";
-import type { UserDocument } from "@/lib/services/types";
+import { useAuth } from "@/providers/auth";
+import type { ProfileRow } from "@/lib/services/types";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -29,7 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const StudentDetail = () => {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
-  const { userProfile } = useAppwrite();
+  const { userProfile } = useAuth();
 
   const isTeacher = userProfile?.role === "teacher";
 
@@ -38,12 +38,13 @@ const StudentDetail = () => {
     queryKey: ["student", studentId],
     queryFn: async () => {
       if (!studentId) return null;
-      const response = await databases.getRow<UserDocument>({
-        databaseId: APPWRITE_CONFIG.databaseId!,
-        tableId: APPWRITE_CONFIG.tables.users!,
-        rowId: studentId,
-      });
-      return response as UserDocument;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", studentId)
+        .single();
+      if (error) throw error;
+      return data as ProfileRow;
     },
     enabled: !!studentId,
   });
@@ -61,11 +62,11 @@ const StudentDetail = () => {
     if (!enrollmentsData?.documents) return [];
 
     return enrollmentsData.documents.map((e) => ({
-      id: e.$id,
-      studentId: e.studentId,
-      courseId: e.courseId,
-      courseTitle: e.courseId.substring(0, 20) + "...", // Would need course lookup
-      enrolledAt: e.enrolledAt,
+      id: e.id,
+      studentId: e.student_id,
+      courseId: e.course_id,
+      courseTitle: e.course_id.substring(0, 20) + "...", // Would need course lookup
+      enrolled_at: e.enrolled_at,
       progress: e.progress,
       status: e.status as "active" | "completed",
     }));
@@ -79,13 +80,13 @@ const StudentDetail = () => {
       .filter((a) => a.status === "completed")
       .slice(0, 5)
       .map((a) => ({
-        id: a.$id,
-        studentId: a.studentId,
-        testId: a.testId,
-        testTitle: a.testId.substring(0, 20) + "...", // Would need test lookup
+        id: a.id,
+        studentId: a.student_id,
+        testId: a.test_id,
+        testTitle: a.test_id.substring(0, 20) + "...", // Would need test lookup
         score: a.score || 0,
         percentage: a.percentage || 0,
-        completedAt: a.completedAt || a.startedAt,
+        completed_at: a.completed_at || a.started_at,
         passed: a.passed || false,
       }));
   }, [attemptsData]);
@@ -117,10 +118,10 @@ const StudentDetail = () => {
   // Transform student for display
   const studentDisplay = student
     ? {
-        name: `${student.firstName} ${student.lastName}`,
+        name: `${student.first_name} ${student.last_name}`,
         email: student.email,
         status: "active" as const,
-        lastActive: student.$createdAt || new Date().toISOString(),
+        lastActive: student.created_at || new Date().toISOString(),
         ...studentStats,
       }
     : null;
@@ -277,7 +278,7 @@ const StudentDetail = () => {
                       </View>
                     </View>
                     <Text className="text-sm text-gray-500 mb-3">
-                      Enrolled {formatTimeAgo(enrollment.enrolledAt)}
+                      Enrolled {formatTimeAgo(enrollment.enrolled_at)}
                     </Text>
                     <View className="flex-row items-center justify-between mb-2">
                       <Text className="text-sm font-semibold text-gray-700">
@@ -317,7 +318,7 @@ const StudentDetail = () => {
                           {attempt.testTitle}
                         </Text>
                         <Text className="text-sm text-gray-500">
-                          {formatTimeAgo(attempt.completedAt)}
+                          {formatTimeAgo(attempt.completed_at)}
                         </Text>
                       </View>
                       <View className="items-end">

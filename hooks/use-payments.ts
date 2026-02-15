@@ -28,9 +28,9 @@ import {
 import type {
   CreateOrderInput,
   PaymentResult,
+  ProfileRow,
   PurchaseCourseOptions,
-  PurchaseDocument,
-  UserDocument,
+  PurchaseRow,
 } from "@/lib/services/types";
 
 // ============================================================================
@@ -204,55 +204,48 @@ export function usePurchaseCourse() {
   return useMutation({
     mutationFn: (options: PurchaseCourseOptions) => purchaseCourse(options),
     onMutate: async (options) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({
         queryKey: queryKeys.purchases.check(
-          options.student.$id,
-          options.courseId,
+          options.student.id,
+          options.course_id,
         ),
       });
 
-      // Snapshot the previous value for potential rollback
       const previousPurchased = queryClient.getQueryData(
-        queryKeys.purchases.check(options.student.$id, options.courseId),
+        queryKeys.purchases.check(options.student.id, options.course_id),
       );
 
       return { previousPurchased };
     },
     onSuccess: (result, options) => {
       if (result.success && result.purchase) {
-        // Invalidate and refetch relevant queries after successful purchase
         invalidateAfterPurchase(
           queryClient,
-          options.student.$id,
-          options.courseId,
+          options.student.id,
+          options.course_id,
         );
 
-        // Also invalidate enrollment queries since we auto-enroll
         invalidateAfterEnrollment(
           queryClient,
-          options.student.$id,
-          options.courseId,
+          options.student.id,
+          options.course_id,
         );
 
-        // Update the purchase check query optimistically
         queryClient.setQueryData(
-          queryKeys.purchases.check(options.student.$id, options.courseId),
+          queryKeys.purchases.check(options.student.id, options.course_id),
           true,
         );
 
-        // Update the purchase data
-        queryClient.setQueryData<PurchaseDocument>(
-          queryKeys.purchases.purchase(options.student.$id, options.courseId),
+        queryClient.setQueryData<PurchaseRow>(
+          queryKeys.purchases.purchase(options.student.id, options.course_id),
           result.purchase,
         );
       }
     },
     onError: (error, options, context) => {
-      // Rollback on error
       if (context?.previousPurchased !== undefined) {
         queryClient.setQueryData(
-          queryKeys.purchases.check(options.student.$id, options.courseId),
+          queryKeys.purchases.check(options.student.id, options.course_id),
           context.previousPurchased,
         );
       }
@@ -260,11 +253,10 @@ export function usePurchaseCourse() {
       console.error("[usePurchaseCourse] Error:", error);
     },
     onSettled: (_, __, options) => {
-      // Always refetch after error or success to ensure consistency
       queryClient.invalidateQueries({
         queryKey: queryKeys.purchases.check(
-          options.student.$id,
-          options.courseId,
+          options.student.id,
+          options.course_id,
         ),
       });
     },
@@ -294,15 +286,15 @@ export function usePurchaseCourseWithAlerts() {
   const mutation = usePurchaseCourse();
 
   const purchaseWithAlerts = async (
-    courseId: string,
-    student: UserDocument,
+    course_id: string,
+    student: ProfileRow,
     options?: {
-      onSuccess?: (purchase: PurchaseDocument) => void;
+      onSuccess?: (purchase: PurchaseRow) => void;
       onCancel?: () => void;
     },
   ): Promise<PaymentResult> => {
     const result = await mutation.mutateAsync({
-      courseId,
+      course_id,
       student,
       onPaymentSuccess: (purchase) => {
         Alert.alert(
@@ -352,8 +344,8 @@ export function usePurchaseCourseWithAlerts() {
  * @example
  * ```tsx
  * const { hasPurchased, isFree, canAccess, isLoading } = usePurchaseStatus(
- *   student.$id,
- *   course.$id,
+ *   student.id,
+ *   course.id,
  *   course.price
  * );
  *
@@ -371,7 +363,7 @@ export function usePurchaseStatus(
 
   const isFree = coursePrice !== undefined && coursePrice <= 0;
   const hasPurchased =
-    purchaseQuery.data?.paymentStatus === "completed" || false;
+    purchaseQuery.data?.payment_status === "completed" || false;
   const canAccess = isFree || hasPurchased;
 
   return {

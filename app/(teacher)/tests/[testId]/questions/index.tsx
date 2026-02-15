@@ -37,10 +37,10 @@ export default function QuestionListScreen() {
     const labels = ["A", "B", "C", "D", "E", "F"] as const;
     return questionsData.documents
       .map((q) => ({
-        id: q.$id,
-        testId: q.testId,
-        subjectId: q.subjectId,
-        subjectName: q.subjectName,
+        id: q.id,
+        test_id: q.test_id,
+        subject_id: q.subject_id,
+        subject_name: q.subject_name,
         type: q.type as "mcq",
         text: q.text,
         options: q.options.map((text, i) => ({
@@ -48,7 +48,7 @@ export default function QuestionListScreen() {
           label: labels[i] || "A",
           text,
         })) as QuestionOption[],
-        correctOptionId: `opt-${q.correctIndex}`,
+        correct_option_id: `opt-${q.correct_index}`,
         explanation: q.explanation,
         order: q.order,
       }))
@@ -196,7 +196,7 @@ export default function QuestionListScreen() {
                     </View>
                     {getQuestionTypeBadge(question)}
                     <Text className="text-xs text-gray-500">
-                      {question.subjectName}
+                      {question.subject_name}
                     </Text>
                   </View>
 
@@ -270,14 +270,14 @@ export default function QuestionListScreen() {
                       <View
                         key={option.id}
                         className={`px-3 py-1 rounded-full ${
-                          option.id === question.correctOptionId
+                          option.id === question.correct_option_id
                             ? "bg-green-100"
                             : "bg-gray-100"
                         }`}
                       >
                         <Text
                           className={`text-xs ${
-                            option.id === question.correctOptionId
+                            option.id === question.correct_option_id
                               ? "text-green-700 font-semibold"
                               : "text-gray-600"
                           }`}

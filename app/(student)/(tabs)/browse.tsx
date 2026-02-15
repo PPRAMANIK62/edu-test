@@ -1,6 +1,6 @@
 import ErrorState from "@/components/error-state";
 import BrowseCard from "@/components/student/browse-card";
-import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAuth } from "@/providers/auth";
 import { useCourses } from "@/hooks/use-courses";
 import { useEnrollmentsByStudent } from "@/hooks/use-enrollments";
 import { getUserNamesByIds } from "@/lib/user-management";
@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BrowseTab = () => {
   const insets = useSafeAreaInsets();
-  const { userProfile } = useAppwrite();
-  const studentId = userProfile?.$id;
+  const { userProfile } = useAuth();
+  const studentId = userProfile?.id;
 
   // Fetch all published courses with stats (test count, enrollment count)
   const {
@@ -28,7 +28,7 @@ const BrowseTab = () => {
 
   // Get unique teacher IDs
   const teacherIds = useMemo(
-    () => [...new Set(coursesData?.documents.map((c) => c.teacherId) || [])],
+    () => [...new Set(coursesData?.documents.map((c) => c.teacher_id) || [])],
     [coursesData],
   );
 
@@ -46,28 +46,28 @@ const BrowseTab = () => {
     if (!coursesData?.documents) return [];
 
     const enrolledCourseIds = new Set(
-      enrollmentsData?.documents.map((e) => e.courseId) || [],
+      enrollmentsData?.documents.map((e) => e.course_id) || [],
     );
 
     return coursesData.documents
-      .filter((course) => !enrolledCourseIds.has(course.$id))
+      .filter((course) => !enrolledCourseIds.has(course.id))
       .map(
         (course): Course => ({
-          id: course.$id,
+          id: course.id,
           title: course.title,
           description: course.description,
-          imageUrl: course.imageUrl,
+          image_url: course.image_url,
           price: course.price,
           currency: course.currency,
-          teacherId: course.teacherId,
-          teacherName:
-            teacherNamesMap?.get(course.teacherId) || "Course Instructor",
-          totalTests: course.testCount,
-          totalQuestions: 0,
-          estimatedHours: course.estimatedHours,
+          teacher_id: course.teacher_id,
+          teacher_name:
+            teacherNamesMap?.get(course.teacher_id) || "Course Instructor",
+          total_tests: course.test_count,
+          total_questions: 0,
+          estimated_hours: course.estimated_hours,
           subjects: course.subjects,
-          isPurchased: false,
-          enrollmentCount: course.enrollmentCount,
+          is_purchased: false,
+          enrollment_count: course.enrollment_count,
         }),
       );
   }, [coursesData, enrollmentsData, teacherNamesMap]);

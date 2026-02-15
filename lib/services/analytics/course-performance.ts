@@ -5,19 +5,16 @@
  */
 
 import type { AnalyticsQueryOptions, CoursePerformanceMetrics } from "@/types";
-import { Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../../appwrite";
-import { fetchAllRows } from "../../appwrite-helpers";
-import { dateRangeQuery, getDateRangeFromFilter } from "../helpers";
+import { supabase } from "../../supabase";
+import { fetchAllRows, TABLES } from "../../supabase-helpers";
+import { getDateRangeFromFilter } from "../helpers";
 import type {
-  CourseDocument,
-  EnrollmentDocument,
-  PurchaseDocument,
-  TestAttemptDocument,
+  CourseRow,
+  EnrollmentRow,
+  PurchaseRow,
+  TestAttemptRow,
 } from "../types";
 import { calculatePercentageChange, getPreviousPeriodRange } from "./helpers";
-
-const { databaseId, tables } = APPWRITE_CONFIG;
 
 /**
  * Calculate course performance metrics from database
@@ -26,46 +23,41 @@ export async function getCoursePerformanceMetrics(
   courseId: string,
   options: AnalyticsQueryOptions = {},
 ): Promise<CoursePerformanceMetrics> {
-  const { timeRange = "30d" } = options;
+  const { time_range = "30d" } = options;
 
   // Get course info
-  const course = await databases.getRow<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    rowId: courseId,
-  });
+  const { data: course, error: courseError } = await supabase
+    .from(TABLES.courses)
+    .select("*")
+    .eq("id", courseId)
+    .single();
 
-  if (!course) {
+  if (courseError || !course) {
     throw new Error(`Course ${courseId} not found`);
   }
 
-  // Build date range queries
-  const { start: currentStart } = getDateRangeFromFilter(timeRange);
-  const currentDateQueries = currentStart
-    ? dateRangeQuery("enrolledAt", currentStart)
-    : [];
-  const currentPurchaseDateQueries = currentStart
-    ? dateRangeQuery("purchasedAt", currentStart)
-    : [];
+  const typedCourse = course as CourseRow;
+
+  // Build date range
+  const { start: currentStart } = getDateRangeFromFilter(time_range);
 
   // Get enrollments for this course in current period
-  const enrollmentQueries = [
-    Query.equal("courseId", courseId),
-    ...currentDateQueries,
-  ];
-
-  const purchaseQueries = [
-    Query.equal("courseId", courseId),
-    ...currentPurchaseDateQueries,
-  ];
-
-  const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, enrollmentQueries),
-    fetchAllRows<PurchaseDocument>(tables.purchases!, purchaseQueries),
+  const [enrollments, purchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) => {
+      let query = q.eq("course_id", courseId);
+      if (currentStart) {
+        query = query.gte("enrolled_at", currentStart.toISOString());
+      }
+      return query;
+    }),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) => {
+      let query = q.eq("course_id", courseId);
+      if (currentStart) {
+        query = query.gte("purchased_at", currentStart.toISOString());
+      }
+      return query;
+    }),
   ]);
-
-  const enrollments = enrollmentResponse.rows;
-  const purchases = purchaseResponse.rows;
 
   // Calculate current period metrics
   const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
@@ -78,35 +70,28 @@ export async function getCoursePerformanceMetrics(
       : 0;
 
   // Calculate previous period metrics for trends
-  const previousRange = getPreviousPeriodRange(timeRange);
+  const previousRange = getPreviousPeriodRange(time_range);
 
-  const previousEnrollmentQueries = [
-    Query.equal("courseId", courseId),
-    ...dateRangeQuery("enrolledAt", previousRange.start, previousRange.end),
-  ];
+  const [previousEnrollments, previousPurchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q
+        .eq("course_id", courseId)
+        .gte("enrolled_at", previousRange.start.toISOString())
+        .lte("enrolled_at", previousRange.end.toISOString()),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q
+        .eq("course_id", courseId)
+        .gte("purchased_at", previousRange.start.toISOString())
+        .lte("purchased_at", previousRange.end.toISOString()),
+    ),
+  ]);
 
-  const previousPurchaseQueries = [
-    Query.equal("courseId", courseId),
-    ...dateRangeQuery("purchasedAt", previousRange.start, previousRange.end),
-  ];
-
-  const [previousEnrollmentResponse, previousPurchaseResponse] =
-    await Promise.all([
-      fetchAllRows<EnrollmentDocument>(
-        tables.enrollments!,
-        previousEnrollmentQueries,
-      ),
-      fetchAllRows<PurchaseDocument>(
-        tables.purchases!,
-        previousPurchaseQueries,
-      ),
-    ]);
-
-  const previousRevenue = previousPurchaseResponse.rows.reduce(
+  const previousRevenue = previousPurchases.reduce(
     (sum, p) => sum + p.amount,
     0,
   );
-  const previousEnrollmentCount = previousEnrollmentResponse.total;
+  const previousEnrollmentCount = previousEnrollments.length;
 
   // Calculate trends
   const revenueChange = calculatePercentageChange(
@@ -119,16 +104,16 @@ export async function getCoursePerformanceMetrics(
   );
 
   return {
-    courseId,
-    courseTitle: course.title,
-    totalRevenue,
-    totalEnrollments,
-    averageRating: 0, // Rating system not implemented yet
-    completionRate,
+    course_id: courseId,
+    course_title: typedCourse.title,
+    total_revenue: totalRevenue,
+    total_enrollments: totalEnrollments,
+    average_rating: 0, // Rating system not implemented yet
+    completion_rate: completionRate,
     trends: {
-      revenueChange,
-      enrollmentChange,
-      ratingChange: 0, // No historical rating data
+      revenue_change: revenueChange,
+      enrollment_change: enrollmentChange,
+      rating_change: 0, // No historical rating data
     },
   };
 }
@@ -143,32 +128,25 @@ export async function getCourseAnalyticsSummary(courseId: string): Promise<{
   averageTestScore: number;
   totalAttempts: number;
 }> {
-  const [enrollmentResponse, purchaseResponse, attemptResponse] =
-    await Promise.all([
-      fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-        Query.equal("courseId", courseId),
-      ]),
-      fetchAllRows<PurchaseDocument>(tables.purchases!, [
-        Query.equal("courseId", courseId),
-      ]),
-      fetchAllRows<TestAttemptDocument>(tables.testAttempts!, [
-        Query.equal("courseId", courseId),
-        Query.equal("status", "completed"),
-      ]),
-    ]);
+  const [enrollments, purchases, attempts] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.eq("course_id", courseId),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q.eq("course_id", courseId),
+    ),
+    fetchAllRows<TestAttemptRow>(TABLES.test_attempts, (q) =>
+      q.eq("course_id", courseId).eq("status", "completed"),
+    ),
+  ]);
 
-  const enrollments = enrollmentResponse.rows;
   const enrollmentCount = enrollments.length;
   const completedCount = enrollments.filter(
     (e) => e.status === "completed",
   ).length;
 
-  const totalRevenue = purchaseResponse.rows.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
+  const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
 
-  const attempts = attemptResponse.rows;
   const totalAttempts = attempts.length;
   const averageTestScore =
     attempts.length > 0
@@ -202,13 +180,13 @@ export async function getCoursePerformanceData(courseIds: string[]): Promise<
     return new Map();
   }
 
-  const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<PurchaseDocument>(tables.purchases!, [
-      Query.equal("courseId", courseIds),
-    ]),
+  const [enrollments, purchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.in("course_id", courseIds),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q.in("course_id", courseIds),
+    ),
   ]);
 
   // Calculate recent enrollments (last 30 days)
@@ -234,19 +212,19 @@ export async function getCoursePerformanceData(courseIds: string[]): Promise<
   });
 
   // Count enrollments
-  enrollmentResponse.rows.forEach((enrollment) => {
-    const stats = result.get(enrollment.courseId);
+  enrollments.forEach((enrollment) => {
+    const stats = result.get(enrollment.course_id);
     if (stats) {
       stats.enrollmentCount += 1;
-      if (new Date(enrollment.enrolledAt) >= thirtyDaysAgo) {
+      if (new Date(enrollment.enrolled_at) >= thirtyDaysAgo) {
         stats.recentEnrollments += 1;
       }
     }
   });
 
   // Sum revenue
-  purchaseResponse.rows.forEach((purchase) => {
-    const stats = result.get(purchase.courseId);
+  purchases.forEach((purchase) => {
+    const stats = result.get(purchase.course_id);
     if (stats) {
       stats.revenue += purchase.amount;
     }

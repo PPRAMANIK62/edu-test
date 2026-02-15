@@ -4,17 +4,14 @@
  * Functions for the teacher dashboard stats and enriched data.
  */
 
-import { Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../../appwrite";
-import { fetchAllRows, typedListRows } from "../../appwrite-helpers";
+import { supabase } from "../../supabase";
+import { fetchAllRows, TABLES } from "../../supabase-helpers";
 import type {
-  CourseDocument,
-  EnrollmentDocument,
-  PurchaseDocument,
-  UserDocument,
+  CourseRow,
+  EnrollmentRow,
+  ProfileRow,
+  PurchaseRow,
 } from "../types";
-
-const { databaseId, tables } = APPWRITE_CONFIG;
 
 /**
  * Get aggregated stats for teacher dashboard
@@ -26,15 +23,17 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
   averageCompletionRate: number;
 }> {
   // Get teacher's courses
-  const courseResponse = await databases.listRows<CourseDocument>({
-    databaseId: databaseId!,
-    tableId: tables.courses!,
-    queries: [Query.equal("teacherId", teacherId), Query.limit(100)],
-  });
+  const { data: courses, error: courseError } = await supabase
+    .from(TABLES.courses)
+    .select("*")
+    .eq("teacher_id", teacherId)
+    .limit(100);
 
-  const courses = courseResponse.rows as CourseDocument[];
-  const courseIds = courses.map((c) => c.$id);
-  const totalCourses = courses.length;
+  if (courseError) throw courseError;
+
+  const typedCourses = (courses ?? []) as CourseRow[];
+  const courseIds = typedCourses.map((c) => c.id);
+  const totalCourses = typedCourses.length;
 
   if (courseIds.length === 0) {
     return {
@@ -45,18 +44,16 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
     };
   }
 
-  const [enrollmentResponse, purchaseResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<PurchaseDocument>(tables.purchases!, [
-      Query.equal("courseId", courseIds),
-    ]),
+  const [enrollments, purchases] = await Promise.all([
+    fetchAllRows<EnrollmentRow>(TABLES.enrollments, (q) =>
+      q.in("course_id", courseIds),
+    ),
+    fetchAllRows<PurchaseRow>(TABLES.purchases, (q) =>
+      q.in("course_id", courseIds),
+    ),
   ]);
 
-  const enrollments = enrollmentResponse.rows;
-
-  const uniqueStudents = new Set(enrollments.map((e) => e.studentId));
+  const uniqueStudents = new Set(enrollments.map((e) => e.student_id));
   const totalStudents = uniqueStudents.size;
 
   const completedEnrollments = enrollments.filter(
@@ -67,10 +64,7 @@ export async function getTeacherDashboardStats(teacherId: string): Promise<{
       ? (completedEnrollments.length / enrollments.length) * 100
       : 0;
 
-  const totalRevenue = purchaseResponse.rows.reduce(
-    (sum, p) => sum + p.amount,
-    0,
-  );
+  const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
 
   return {
     totalCourses,
@@ -94,52 +88,51 @@ export async function getEnrichedRecentEnrollments(limit: number = 10): Promise<
     status: "active" | "completed";
   }[]
 > {
-  // Get recent enrollments
-  const enrollmentResponse = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.orderDesc("enrolledAt"), Query.limit(limit)],
-  });
+  const { data: enrollmentData, error: enrollmentError } = await supabase
+    .from(TABLES.enrollments)
+    .select("*")
+    .order("enrolled_at", { ascending: false })
+    .limit(limit);
 
-  const enrollments = enrollmentResponse.rows as EnrollmentDocument[];
+  if (enrollmentError) throw enrollmentError;
+
+  const enrollments = (enrollmentData ?? []) as EnrollmentRow[];
 
   if (enrollments.length === 0) {
     return [];
   }
 
-  // Get unique student and course IDs
-  const studentIds = [...new Set(enrollments.map((e) => e.studentId))];
-  const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
+  const studentIds = Array.from(new Set(enrollments.map((e) => e.student_id)));
+  const courseIds = Array.from(new Set(enrollments.map((e) => e.course_id)));
 
   const [studentResponse, courseResponse] = await Promise.all([
-    typedListRows<UserDocument>(tables.users!, [
-      Query.equal("$id", studentIds),
-      Query.limit(100),
-    ]),
-    typedListRows<CourseDocument>(tables.courses!, [
-      Query.equal("$id", courseIds),
-      Query.limit(100),
-    ]),
+    supabase.from(TABLES.profiles).select("*").in("id", studentIds).limit(100),
+    supabase.from(TABLES.courses).select("*").in("id", courseIds).limit(100),
   ]);
 
+  if (studentResponse.error) throw studentResponse.error;
+  if (courseResponse.error) throw courseResponse.error;
+
+  const students = (studentResponse.data ?? []) as ProfileRow[];
+  const courses = (courseResponse.data ?? []) as CourseRow[];
+
   const studentMap = new Map<string, string>();
-  studentResponse.rows.forEach((s) => {
-    studentMap.set(s.$id, `${s.firstName} ${s.lastName}`);
+  students.forEach((s) => {
+    studentMap.set(s.id, `${s.first_name} ${s.last_name}`);
   });
 
   const courseMap = new Map<string, string>();
-  courseResponse.rows.forEach((c) => {
-    courseMap.set(c.$id, c.title);
+  courses.forEach((c) => {
+    courseMap.set(c.id, c.title);
   });
 
-  // Build enriched results
   return enrollments.map((enrollment) => ({
-    id: enrollment.$id,
-    studentId: enrollment.studentId,
-    studentName: studentMap.get(enrollment.studentId) || "Unknown Student",
-    courseId: enrollment.courseId,
-    courseTitle: courseMap.get(enrollment.courseId) || "Unknown Course",
-    enrolledAt: enrollment.enrolledAt,
+    id: enrollment.id,
+    studentId: enrollment.student_id,
+    studentName: studentMap.get(enrollment.student_id) || "Unknown Student",
+    courseId: enrollment.course_id,
+    courseTitle: courseMap.get(enrollment.course_id) || "Unknown Course",
+    enrolledAt: enrollment.enrolled_at,
     status: enrollment.status as "active" | "completed",
   }));
 }

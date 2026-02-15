@@ -1,213 +1,201 @@
-/**
- * Enrollment Service - Student enrollment management
- */
-
-import { ID, Query } from "appwrite";
-import { APPWRITE_CONFIG, databases } from "../appwrite";
-import { paginatedQuery } from "../appwrite-helpers";
+import { supabase } from "../supabase";
 import { createEnrollmentInputSchema } from "../schemas";
-import { nowISO, type QueryOptions } from "./helpers";
+import { nowISO, DEFAULT_LIMIT, MAX_LIMIT, type QueryOptions } from "./helpers";
 import type {
   CreateEnrollmentInput,
-  EnrollmentDocument,
+  EnrollmentRow,
   PaginatedResponse,
 } from "./types";
 
-const { databaseId, tables } = APPWRITE_CONFIG;
-
-/**
- * Get enrollments for a student
- */
 export async function getEnrollmentsByStudent(
-  studentId: string,
+  student_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<EnrollmentDocument>> {
-  return paginatedQuery<EnrollmentDocument>(
-    tables.enrollments!,
-    [Query.equal("studentId", studentId)],
-    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
-  );
+): Promise<PaginatedResponse<EnrollmentRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact" })
+    .eq("student_id", student_id)
+    .order(options.orderBy || "enrolled_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as EnrollmentRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get active enrollments for a student
- */
 export async function getActiveEnrollmentsByStudent(
-  studentId: string,
+  student_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<EnrollmentDocument>> {
-  return paginatedQuery<EnrollmentDocument>(
-    tables.enrollments!,
-    [Query.equal("studentId", studentId), Query.equal("status", "active")],
-    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
-  );
+): Promise<PaginatedResponse<EnrollmentRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact" })
+    .eq("student_id", student_id)
+    .eq("status", "active")
+    .order(options.orderBy || "enrolled_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as EnrollmentRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get enrollments for a course
- */
 export async function getEnrollmentsByCourse(
-  courseId: string,
+  course_id: string,
   options: QueryOptions = {},
-): Promise<PaginatedResponse<EnrollmentDocument>> {
-  return paginatedQuery<EnrollmentDocument>(
-    tables.enrollments!,
-    [Query.equal("courseId", courseId)],
-    { ...options, orderBy: options.orderBy || "enrolledAt", orderType: "desc" },
-  );
+): Promise<PaginatedResponse<EnrollmentRow>> {
+  const limit = Math.min(options.limit || DEFAULT_LIMIT, MAX_LIMIT);
+  const offset = options.offset || 0;
+
+  const { data, error, count } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact" })
+    .eq("course_id", course_id)
+    .order(options.orderBy || "enrolled_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = (data ?? []) as EnrollmentRow[];
+  return {
+    documents: rows,
+    total: count ?? 0,
+    hasMore: (count ?? 0) > offset + rows.length,
+  };
 }
 
-/**
- * Get a specific enrollment
- */
-export async function getEnrollmentById(
-  id: string,
-): Promise<EnrollmentDocument> {
-  const response = await databases.getRow<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    rowId: id,
-  });
+export async function getEnrollmentById(id: string): Promise<EnrollmentRow> {
+  const { data, error } = await supabase
+    .from("enrollments")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  return response as EnrollmentDocument;
+  if (error) throw error;
+  return data as EnrollmentRow;
 }
 
-/**
- * Check if a student is enrolled in a course
- */
 export async function isStudentEnrolled(
-  studentId: string,
-  courseId: string,
+  student_id: string,
+  course_id: string,
 ): Promise<boolean> {
-  const response = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("courseId", courseId),
-      Query.limit(1),
-    ],
-  });
+  const { data, error } = await supabase
+    .from("enrollments")
+    .select("id")
+    .eq("student_id", student_id)
+    .eq("course_id", course_id)
+    .limit(1);
 
-  return response.rows.length > 0;
+  if (error) throw error;
+  return (data ?? []).length > 0;
 }
 
-/**
- * Get enrollment for a student in a specific course
- */
 export async function getEnrollment(
-  studentId: string,
-  courseId: string,
-): Promise<EnrollmentDocument | null> {
-  const response = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [
-      Query.equal("studentId", studentId),
-      Query.equal("courseId", courseId),
-      Query.limit(1),
-    ],
-  });
+  student_id: string,
+  course_id: string,
+): Promise<EnrollmentRow | null> {
+  const { data, error } = await supabase
+    .from("enrollments")
+    .select("*")
+    .eq("student_id", student_id)
+    .eq("course_id", course_id)
+    .maybeSingle();
 
-  return response.rows.length > 0
-    ? (response.rows[0] as EnrollmentDocument)
-    : null;
+  if (error) throw error;
+  return data as EnrollmentRow | null;
 }
 
-/**
- * Enroll a student in a course
- */
 export async function enrollStudent(
   data: CreateEnrollmentInput,
-): Promise<EnrollmentDocument> {
+): Promise<EnrollmentRow> {
   createEnrollmentInputSchema.parse(data);
-  const existing = await getEnrollment(data.studentId, data.courseId);
-  if (existing) {
-    return existing;
-  }
+  const existing = await getEnrollment(data.student_id, data.course_id);
+  if (existing) return existing;
 
   const now = nowISO();
 
-  const response = await databases.createRow<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    rowId: ID.unique(),
-    data: {
-      studentId: data.studentId,
-      courseId: data.courseId,
+  const { data: row, error } = await supabase
+    .from("enrollments")
+    .insert({
+      student_id: data.student_id,
+      course_id: data.course_id,
       status: "active",
       progress: 0,
-      enrolledAt: now,
-      completedAt: null,
-    },
-  });
+      enrolled_at: now,
+      completed_at: null,
+    })
+    .select()
+    .single();
 
-  return response as EnrollmentDocument;
+  if (error) throw error;
+  return row as EnrollmentRow;
 }
 
-/**
- * Update enrollment progress
- */
 export async function updateEnrollmentProgress(
   id: string,
   progress: number,
-): Promise<EnrollmentDocument> {
+): Promise<EnrollmentRow> {
   const clampedProgress = Math.max(0, Math.min(100, progress));
 
-  const response = await databases.updateRow<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    rowId: id,
-    data: { progress: clampedProgress },
-  });
+  const { data, error } = await supabase
+    .from("enrollments")
+    .update({ progress: clampedProgress })
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response as EnrollmentDocument;
+  if (error) throw error;
+  return data as EnrollmentRow;
 }
 
-/**
- * Mark enrollment as completed
- */
-export async function completeEnrollment(
-  id: string,
-): Promise<EnrollmentDocument> {
-  const response = await databases.updateRow<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    rowId: id,
-    data: {
+export async function completeEnrollment(id: string): Promise<EnrollmentRow> {
+  const { data, error } = await supabase
+    .from("enrollments")
+    .update({
       status: "completed",
       progress: 100,
-      completedAt: nowISO(),
-    },
-  });
+      completed_at: nowISO(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
 
-  return response as EnrollmentDocument;
+  if (error) throw error;
+  return data as EnrollmentRow;
 }
 
-/**
- * Get enrollment count for a course
- */
-export async function getEnrollmentCount(courseId: string): Promise<number> {
-  const response = await databases.listRows({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.equal("courseId", courseId), Query.limit(1)],
-  });
+export async function getEnrollmentCount(course_id: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact", head: true })
+    .eq("course_id", course_id);
 
-  return response.total;
+  if (error) throw error;
+  return count ?? 0;
 }
 
-/**
- * Get recent enrollments (for teacher dashboard)
- */
 export async function getRecentEnrollments(
   limit: number = 10,
-): Promise<EnrollmentDocument[]> {
-  const response = await databases.listRows<EnrollmentDocument>({
-    databaseId: databaseId!,
-    tableId: tables.enrollments!,
-    queries: [Query.orderDesc("enrolledAt"), Query.limit(limit)],
-  });
+): Promise<EnrollmentRow[]> {
+  const { data, error } = await supabase
+    .from("enrollments")
+    .select("*")
+    .order("enrolled_at", { ascending: false })
+    .limit(limit);
 
-  return response.rows as EnrollmentDocument[];
+  if (error) throw error;
+  return (data ?? []) as EnrollmentRow[];
 }
