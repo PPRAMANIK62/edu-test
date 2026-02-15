@@ -1,3 +1,4 @@
+import ErrorState from "@/components/error-state";
 import BrowseCard from "@/components/student/browse-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useCourses } from "@/hooks/use-courses";
@@ -15,7 +16,12 @@ const BrowseTab = () => {
   const studentId = userProfile?.$id;
 
   // Fetch all published courses with stats (test count, enrollment count)
-  const { data: coursesData, isLoading: coursesLoading } = useCourses();
+  const {
+    data: coursesData,
+    isLoading: coursesLoading,
+    isError: coursesError,
+    refetch: refetchCourses,
+  } = useCourses();
 
   // Fetch student's enrollments to filter out enrolled courses
   const { data: enrollmentsData } = useEnrollmentsByStudent(studentId);
@@ -62,7 +68,6 @@ const BrowseTab = () => {
           subjects: course.subjects,
           isPurchased: false,
           enrollmentCount: course.enrollmentCount,
-          rating: course.rating,
         }),
       );
   }, [coursesData, enrollmentsData, teacherNamesMap]);
@@ -84,6 +89,8 @@ const BrowseTab = () => {
             <View className="items-center justify-center py-20">
               <ActivityIndicator size="large" color="#1890ff" />
             </View>
+          ) : coursesError ? (
+            <ErrorState onRetry={refetchCourses} />
           ) : courses.length > 0 ? (
             courses.map((course) => (
               <BrowseCard key={course.id} course={course} />

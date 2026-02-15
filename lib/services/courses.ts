@@ -19,6 +19,53 @@ import type {
 const { databaseId, tables } = APPWRITE_CONFIG;
 
 /**
+ * Enrich courses with enrollment and test count stats.
+ * Fetches all enrollments and tests for the given courses in parallel,
+ * then builds count maps and merges with course data.
+ *
+ * @param extraTestQueries - Additional queries to filter tests (e.g. isPublished for student views)
+ */
+async function enrichCoursesWithStats(
+  courses: CourseDocument[],
+  extraTestQueries: string[] = [],
+): Promise<
+  (CourseDocument & { enrollmentCount: number; testCount: number })[]
+> {
+  if (courses.length === 0) return [];
+
+  const courseIds = courses.map((c) => c.$id);
+
+  const [enrollmentResponse, testResponse] = await Promise.all([
+    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
+      Query.equal("courseId", courseIds),
+    ]),
+    fetchAllRows<TestDocument>(tables.tests!, [
+      Query.equal("courseId", courseIds),
+      ...extraTestQueries,
+    ]),
+  ]);
+
+  const enrollmentCountMap = new Map<string, number>();
+  for (const enrollment of enrollmentResponse.rows) {
+    enrollmentCountMap.set(
+      enrollment.courseId,
+      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
+    );
+  }
+
+  const testCountMap = new Map<string, number>();
+  for (const test of testResponse.rows) {
+    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
+  }
+
+  return courses.map((course) => ({
+    ...course,
+    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
+    testCount: testCountMap.get(course.$id) || 0,
+  }));
+}
+
+/**
  * Get all published courses
  */
 export async function getCourses(options: QueryOptions = {}): Promise<
@@ -26,7 +73,6 @@ export async function getCourses(options: QueryOptions = {}): Promise<
     CourseDocument & {
       enrollmentCount: number;
       testCount: number;
-      rating?: number;
     }
   >
 > {
@@ -43,41 +89,7 @@ export async function getCourses(options: QueryOptions = {}): Promise<
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Get course IDs
-  const courseIds = documents.map((c) => c.$id);
-
-  // Count enrollments and tests per course (independent queries — parallel)
-  const [enrollmentResponse, testResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<TestDocument>(tables.tests!, [
-      Query.equal("courseId", courseIds),
-    ]),
-  ]);
-
-  // Build enrollment count map
-  const enrollmentCountMap = new Map<string, number>();
-  for (const enrollment of enrollmentResponse.rows) {
-    enrollmentCountMap.set(
-      enrollment.courseId,
-      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
-    );
-  }
-
-  // Build test count map
-  const testCountMap = new Map<string, number>();
-  for (const test of testResponse.rows) {
-    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
-  }
-
-  // Merge stats with courses
-  const coursesWithStats = documents.map((course) => ({
-    ...course,
-    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
-    testCount: testCountMap.get(course.$id) || 0,
-    rating: 4.5, // Placeholder - would come from reviews
-  }));
+  const coursesWithStats = await enrichCoursesWithStats(documents);
 
   return {
     documents: coursesWithStats,
@@ -110,7 +122,6 @@ export async function getCoursesByTeacher(
     CourseDocument & {
       enrollmentCount: number;
       testCount: number;
-      rating?: number;
     }
   >
 > {
@@ -130,41 +141,7 @@ export async function getCoursesByTeacher(
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Get course IDs
-  const courseIds = documents.map((c) => c.$id);
-
-  // Count enrollments and tests per course (independent queries — parallel)
-  const [enrollmentResponse, testResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<TestDocument>(tables.tests!, [
-      Query.equal("courseId", courseIds),
-    ]),
-  ]);
-
-  // Build enrollment count map
-  const enrollmentCountMap = new Map<string, number>();
-  for (const enrollment of enrollmentResponse.rows) {
-    enrollmentCountMap.set(
-      enrollment.courseId,
-      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
-    );
-  }
-
-  // Build test count map
-  const testCountMap = new Map<string, number>();
-  for (const test of testResponse.rows) {
-    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
-  }
-
-  // Merge stats with courses
-  const coursesWithStats = documents.map((course) => ({
-    ...course,
-    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
-    testCount: testCountMap.get(course.$id) || 0,
-    rating: 4.5, // Placeholder - would come from reviews
-  }));
+  const coursesWithStats = await enrichCoursesWithStats(documents);
 
   return {
     documents: coursesWithStats,
@@ -219,38 +196,9 @@ export async function getEnrolledCourses(
     return { documents: [], total: 0, hasMore: false };
   }
 
-  // Count enrollments and tests per course (independent queries — parallel)
-  const [allEnrollmentsResponse, testResponse] = await Promise.all([
-    fetchAllRows<EnrollmentDocument>(tables.enrollments!, [
-      Query.equal("courseId", courseIds),
-    ]),
-    fetchAllRows<TestDocument>(tables.tests!, [
-      Query.equal("courseId", courseIds),
-      Query.equal("isPublished", true),
-    ]),
+  const coursesWithStats = await enrichCoursesWithStats(documents, [
+    Query.equal("isPublished", true),
   ]);
-
-  // Build enrollment count map
-  const enrollmentCountMap = new Map<string, number>();
-  for (const enrollment of allEnrollmentsResponse.rows) {
-    enrollmentCountMap.set(
-      enrollment.courseId,
-      (enrollmentCountMap.get(enrollment.courseId) || 0) + 1,
-    );
-  }
-
-  // Build test count map
-  const testCountMap = new Map<string, number>();
-  for (const test of testResponse.rows) {
-    testCountMap.set(test.courseId, (testCountMap.get(test.courseId) || 0) + 1);
-  }
-
-  // Merge stats with courses
-  const coursesWithStats = documents.map((course) => ({
-    ...course,
-    enrollmentCount: enrollmentCountMap.get(course.$id) || 0,
-    testCount: testCountMap.get(course.$id) || 0,
-  }));
 
   return {
     documents: coursesWithStats,

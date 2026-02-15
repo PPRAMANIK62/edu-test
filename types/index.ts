@@ -32,7 +32,6 @@ export interface Course {
   subjects: string[];
   isPurchased: boolean;
   progress?: number;
-  rating?: number;
   enrollmentCount: number;
 }
 
@@ -176,7 +175,6 @@ export interface TeacherDashboardStats {
   coursesCreated: number;
   totalStudents: number;
   totalRevenue: number;
-  averageRating: number;
 }
 
 export interface RecentActivity {

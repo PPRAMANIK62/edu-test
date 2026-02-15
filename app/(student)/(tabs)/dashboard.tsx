@@ -1,3 +1,4 @@
+import ErrorState from "@/components/error-state";
 import QuickActionButton from "@/components/student/quick-action-button";
 import RecentActivityCard from "@/components/student/recent-activity-card";
 import TestProgressCard from "@/components/student/test-progress-card";
@@ -20,16 +21,45 @@ const StudentDashboard = () => {
   const studentId = userProfile?.$id;
 
   // Fetch enrolled courses for the student
-  const { data: enrolledCoursesData } = useEnrolledCourses(studentId);
+  const {
+    data: enrolledCoursesData,
+    isError: isCoursesError,
+    refetch: refetchCourses,
+  } = useEnrolledCourses(studentId);
 
   // Fetch active enrollments with progress
-  const { data: enrollmentsData } = useActiveEnrollmentsByStudent(studentId);
+  const {
+    data: enrollmentsData,
+    isError: isEnrollmentsError,
+    refetch: refetchEnrollments,
+  } = useActiveEnrollmentsByStudent(studentId);
 
   // Fetch recent activities for the student
-  const { data: recentActivities } = useRecentActivities(studentId, 5);
+  const {
+    data: recentActivities,
+    isError: isActivitiesError,
+    refetch: refetchActivities,
+  } = useRecentActivities(studentId, 5);
 
   // Fetch completed attempts to compute stats
-  const { data: attemptsData } = useAttemptsByStudent(studentId);
+  const {
+    data: attemptsData,
+    isError: isAttemptsError,
+    refetch: refetchAttempts,
+  } = useAttemptsByStudent(studentId);
+
+  const isError =
+    isCoursesError ||
+    isEnrollmentsError ||
+    isActivitiesError ||
+    isAttemptsError;
+
+  const refetchAll = () => {
+    refetchCourses();
+    refetchEnrollments();
+    refetchActivities();
+    refetchAttempts();
+  };
 
   // Get unique teacher IDs
   const teacherIds = useMemo(
@@ -113,6 +143,14 @@ const StudentDashboard = () => {
       enrollmentCount: 0,
     };
   }, [enrollmentsData, enrolledCoursesData, teacherNamesMap]);
+
+  if (isError) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <ErrorState onRetry={refetchAll} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-50">

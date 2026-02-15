@@ -1,6 +1,6 @@
 import { Course } from "@/types";
 import { router } from "expo-router";
-import { BookOpen, Edit3, Star, Trash2, Users } from "lucide-react-native";
+import { BookOpen, Edit3, Trash2, Users } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
@@ -45,12 +45,6 @@ const TeacherCourseCard = ({
               <Users size={16} color="#6b7280" />
               <Text className="text-gray-700 font-semibold text-sm">
                 {course.enrollmentCount}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Star size={16} color="#f59e0b" fill="#f59e0b" />
-              <Text className="text-gray-700 font-semibold text-sm">
-                {course.rating?.toFixed(1)}
               </Text>
             </View>
             <View className="flex-row items-center gap-1">

@@ -1,10 +1,8 @@
+import ErrorState from "@/components/error-state";
 import TestCard from "@/components/student/test-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
+import { useAvailableTests } from "@/hooks/use-available-tests";
 import { useEnrolledCourses } from "@/hooks/use-courses";
-import { getTestAttemptCount } from "@/lib/services/analytics";
-import { getPublishedTestsByCourse } from "@/lib/services/tests";
-import type { Test } from "@/types";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { FileText } from "lucide-react-native";
 import React from "react";
@@ -23,66 +21,27 @@ const TestsTab = () => {
   const { userProfile } = useAppwrite();
   const studentId = userProfile?.$id;
 
-  // Fetch enrolled courses
-  const { data: enrolledCoursesData, isLoading: coursesLoading } =
-    useEnrolledCourses(studentId);
+  const {
+    data: enrolledCoursesData,
+    isLoading: coursesLoading,
+    isError: isCoursesError,
+    refetch: refetchCourses,
+  } = useEnrolledCourses(studentId);
 
-  // Fetch tests for all enrolled courses
-  const { data: availableTests, isLoading: testsLoading } = useQuery({
-    queryKey: [
-      "available-tests",
-      studentId,
-      enrolledCoursesData?.documents?.map((c) => c.$id),
-    ],
-    queryFn: async () => {
-      if (
-        !enrolledCoursesData?.documents ||
-        enrolledCoursesData.documents.length === 0 ||
-        !studentId
-      ) {
-        return [];
-      }
-
-      // Fetch tests for each enrolled course
-      const testsPromises = enrolledCoursesData.documents.map(
-        async (course) => {
-          const testsResult = await getPublishedTestsByCourse(course.$id);
-          // Fetch attempt count for each test
-          const testsWithAttempts = await Promise.all(
-            testsResult.documents.map(async (test) => {
-              const attemptCount = await getTestAttemptCount(
-                studentId,
-                test.$id,
-              );
-              return {
-                id: test.$id,
-                courseId: test.courseId,
-                title: test.title,
-                description: test.description,
-                durationMinutes: test.durationMinutes,
-                totalQuestions: 0, // Will be fetched in test intro
-                subjects: [],
-                passingScore: test.passingScore,
-                attemptCount,
-                isAvailable: test.isPublished,
-                courseName: course.title,
-              } as Test & { courseName: string };
-            }),
-          );
-          return testsWithAttempts;
-        },
-      );
-
-      const testsArrays = await Promise.all(testsPromises);
-      return testsArrays.flat();
-    },
-    enabled:
-      !!studentId &&
-      !!enrolledCoursesData?.documents &&
-      enrolledCoursesData.documents.length > 0,
-  });
+  const {
+    data: availableTests,
+    isLoading: testsLoading,
+    isError: isTestsError,
+    refetch: refetchTests,
+  } = useAvailableTests(studentId, enrolledCoursesData?.documents);
 
   const isLoading = coursesLoading || testsLoading;
+  const isError = isCoursesError || isTestsError;
+
+  const refetchAll = () => {
+    refetchCourses();
+    refetchTests();
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -99,6 +58,8 @@ const TestsTab = () => {
             <View className="items-center justify-center py-20">
               <ActivityIndicator size="large" color="#1890ff" />
             </View>
+          ) : isError ? (
+            <ErrorState onRetry={refetchAll} />
           ) : availableTests && availableTests.length > 0 ? (
             availableTests.map((test) => (
               <TestCard

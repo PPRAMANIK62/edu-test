@@ -1,7 +1,7 @@
 import { PaymentButton } from "@/components/student/payment-button";
 import { Course } from "@/types";
 import { useRouter } from "expo-router";
-import { Clock, FileText, Star, Users } from "lucide-react-native";
+import { Clock, FileText, Users } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
@@ -48,12 +48,6 @@ const BrowseCard = ({ course }: { course: Course }) => {
           </Text>
 
           <View className="flex-row items-center gap-4 mb-4">
-            <View className="flex-row items-center">
-              <Star size={16} color="#f59e0b" fill="#f59e0b" />
-              <Text className="text-sm text-gray-600 ml-1">
-                {course.rating?.toFixed(1)}
-              </Text>
-            </View>
             <View className="flex-row items-center">
               <Users size={16} color="#6b7280" />
               <Text className="text-sm text-gray-600 ml-1">

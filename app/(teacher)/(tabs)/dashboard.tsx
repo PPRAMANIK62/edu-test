@@ -1,3 +1,4 @@
+import ErrorState from "@/components/error-state";
 import StatCard from "@/components/teacher/stat-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useCoursesByTeacher } from "@/hooks/use-courses";
@@ -18,7 +19,6 @@ import {
   DollarSign,
   Edit3,
   Plus,
-  Star,
   TrendingUp,
   Users,
 } from "lucide-react-native";
@@ -31,7 +31,6 @@ interface CoursePerformance {
   title: string;
   enrollmentCount: number;
   revenue: number;
-  rating: number;
   recentEnrollments: number;
 }
 
@@ -45,10 +44,18 @@ const TeacherDashboard = () => {
   const canCreate = userProfile ? isTeacher(userProfile.role) : false;
 
   // Fetch teacher's courses from database
-  const { data: coursesData } = useCoursesByTeacher(teacherId);
+  const {
+    data: coursesData,
+    isError: isCoursesError,
+    refetch: refetchCourses,
+  } = useCoursesByTeacher(teacherId);
 
   // Fetch teacher dashboard stats from analytics service
-  const { data: dashboardStats } = useQuery({
+  const {
+    data: dashboardStats,
+    isError: isStatsError,
+    refetch: refetchStats,
+  } = useQuery({
     queryKey: ["teacher-dashboard-stats", teacherId],
     queryFn: () => getTeacherDashboardStats(teacherId!),
     enabled: !!teacherId,
@@ -56,7 +63,11 @@ const TeacherDashboard = () => {
   });
 
   // Fetch enriched recent enrollments
-  const { data: recentEnrollmentsData } = useQuery({
+  const {
+    data: recentEnrollmentsData,
+    isError: isEnrollmentsError,
+    refetch: refetchEnrollments,
+  } = useQuery({
     queryKey: ["enriched-recent-enrollments"],
     queryFn: () => getEnrichedRecentEnrollments(10),
     staleTime: 2 * 60 * 1000,
@@ -68,12 +79,26 @@ const TeacherDashboard = () => {
     [coursesData],
   );
 
-  const { data: coursePerformanceData } = useQuery({
+  const {
+    data: coursePerformanceData,
+    isError: isPerfError,
+    refetch: refetchPerf,
+  } = useQuery({
     queryKey: ["course-performance-data", courseIds],
     queryFn: () => getCoursePerformanceData(courseIds),
     enabled: courseIds.length > 0,
     staleTime: 5 * 60 * 1000,
   });
+
+  const isError =
+    isCoursesError || isStatsError || isEnrollmentsError || isPerfError;
+
+  const refetchAll = () => {
+    refetchCourses();
+    refetchStats();
+    refetchEnrollments();
+    refetchPerf();
+  };
 
   // Use real stats from analytics service
   const stats = useMemo(() => {
@@ -83,7 +108,6 @@ const TeacherDashboard = () => {
       coursesCreated: dashboardStats.totalCourses,
       totalStudents: dashboardStats.totalStudents,
       totalRevenue: dashboardStats.totalRevenue,
-      averageRating: 4.5, // Rating would come from reviews/ratings collection
     };
   }, [dashboardStats, coursesData]);
 
@@ -98,7 +122,6 @@ const TeacherDashboard = () => {
         title: course.title,
         enrollmentCount: perfData?.enrollmentCount || 0,
         revenue: perfData?.revenue || 0,
-        rating: 4.5, // Rating would come from reviews collection
         recentEnrollments: perfData?.recentEnrollments || 0,
       };
     }) as CoursePerformance[];
@@ -109,6 +132,14 @@ const TeacherDashboard = () => {
     if (!recentEnrollmentsData) return [];
     return recentEnrollmentsData;
   }, [recentEnrollmentsData]);
+
+  if (isError) {
+    return (
+      <View className="flex-1 bg-gray-50">
+        <ErrorState onRetry={refetchAll} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -148,16 +179,6 @@ const TeacherDashboard = () => {
                 value={formatCurrency(stats?.totalRevenue || 0)}
                 bgColor="bg-emerald-50"
                 iconBgColor="bg-emerald-100"
-              />
-            )}
-            {/* Average rating - only visible to teachers */}
-            {canCreate && (
-              <StatCard
-                icon={<Star size={20} color="#f59e0b" />}
-                label="Avg Rating"
-                value={stats?.averageRating.toFixed(1) || "0.0"}
-                bgColor="bg-amber-50"
-                iconBgColor="bg-amber-100"
               />
             )}
           </View>
@@ -218,15 +239,9 @@ const TeacherDashboard = () => {
                       >
                         {course.title}
                       </Text>
-                      <View className="flex-row items-center gap-1">
-                        <Star size={14} color="#f59e0b" fill="#f59e0b" />
-                        <Text className="text-gray-600 text-sm font-semibold">
-                          {course.rating.toFixed(1)}
-                        </Text>
-                        <Text className="text-gray-400 text-sm ml-1">
-                          • {course.enrollmentCount} students
-                        </Text>
-                      </View>
+                      <Text className="text-gray-400 text-sm">
+                        {course.enrollmentCount} students
+                      </Text>
                     </View>
                     <TouchableOpacity
                       className="bg-violet-50 rounded-full p-2"

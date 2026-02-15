@@ -37,7 +37,6 @@ const TeacherCourses = () => {
       subjects: course.subjects,
       isPurchased: true,
       enrollmentCount: course.enrollmentCount,
-      rating: course.rating,
       isPublished: course.isPublished,
     }));
   }, [coursesData]);

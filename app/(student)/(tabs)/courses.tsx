@@ -1,3 +1,4 @@
+import ErrorState from "@/components/error-state";
 import StudentCourseCard from "@/components/student/course-card";
 import { useAppwrite } from "@/hooks/use-appwrite";
 import { useEnrolledCourses } from "@/hooks/use-courses";
@@ -24,8 +25,12 @@ const CoursesTab = () => {
   const studentId = userProfile?.$id;
 
   // Fetch enrolled courses for the student
-  const { data: enrolledCoursesData, isLoading } =
-    useEnrolledCourses(studentId);
+  const {
+    data: enrolledCoursesData,
+    isLoading,
+    isError,
+    refetch,
+  } = useEnrolledCourses(studentId);
 
   // Fetch enrollments to get progress info
   const { data: enrollmentsData } = useEnrollmentsByStudent(studentId);
@@ -94,6 +99,8 @@ const CoursesTab = () => {
             <View className="items-center justify-center py-20">
               <ActivityIndicator size="large" color="#1890ff" />
             </View>
+          ) : isError ? (
+            <ErrorState onRetry={refetch} />
           ) : courses.length > 0 ? (
             courses.map((course) => (
               <StudentCourseCard key={course.id} course={course} />
